@@ -1,0 +1,708 @@
+# Plasma 6 / Qt6 porting plan
+
+This fork starts from upstream KDE latte-dock's full history (last real
+commit before this port: Qt5 5.15.0 / KF5 5.88.0, X11 required
+unconditionally). The goal is a clean, upstream-mergeable Plasma 6/Qt6
+port, not a history-reset rewrite.
+
+Two independent community ports already exist and are used as
+**reference material, not as a base**: `~/Projects/latte-dock-ng`
+(ruizhi-lab, Wayland-only, 406 commits of port work, history reset by
+its maintainer) and `~/Projects/latte-dock-qt6` (CaptSilver, also
+Wayland-only despite some leftover dead `isPlatformX11()` branches -
+its own `1cef7fe7` commit confirms the X11 backend was actually
+removed - 194 commits of port work, real original history preserved).
+Neither fork's git history or commits are inherited here. This plan is
+the product of reading every commit message (not just subjects) in
+both forks' port-work ranges, cross-referenced against live testing of
+both (build, run, drive real interactions, capture real crash
+backtraces) - not just archaeology. See
+`~/Projects/latte-dock-ng/docs/fork-comparison-journal.md` for the fork
+comparison writeup and live-testing findings.
+
+Where a fork's approach to a subsystem is correct, it informs how we
+reimplement it. Where it isn't (both forks have real, live bugs -
+tracked below, and a few subsystems clearly took many repeated fix
+attempts to reach their current state in at least one fork), do it
+properly instead, even if that means more upfront research before
+writing code.
+
+## How to use this checklist
+
+Every task below is a checkbox: `- [ ]`. Each has a `Commits:` line.
+When a task lands, tick the box and fill in the commit hash(es) that
+implemented it (short hash is fine, e.g. `a1b2c3d`) - this is the
+traceability mechanism for the whole port: given any checklist item,
+you can find exactly which commit(s) did it, and given any commit, this
+doc says which task it was for. If a task ends up split across more
+commits than expected, or one commit covers two tasks, just list the
+hash(es) under each - don't force a 1:1 mapping that isn't real.
+
+If a task gets stubbed rather than fully done, tick it anyway but note
+that in the commit line (e.g. `Commits: a1b2c3d (stub - see
+STUB comment in tasksbackend.cpp)`) so it's clear from this doc alone,
+without cross-referencing git log, that follow-up work is owed.
+
+## Known bugs in the reference forks (don't reintroduce these)
+
+- **latte-dock-ng**: widget removal from the dock doesn't work (menu
+  item present, action doesn't function). Drag-reorder jitter, fought
+  four separate times by its maintainer via escalating
+  resistance/hysteresis tuning, still present per live testing.
+  Repeated drag-reordering can leave an icon stuck behind other
+  elements visually (not yet root-caused).
+- **latte-dock-qt6**: adding the task-manager widget crashes, both via
+  drag and via double-click (two different trigger paths - one
+  confirmed backtrace shows a null `QMimeData` during a Wayland drag
+  operation inside Qt/KDeclarative framework code, triggered from
+  `AppletDelegate.qml`'s drag handling; root cause for the
+  double-click-only path, which shares no drag code, not found).
+  Widget explorer window is also mispositioned, undecorated, and has
+  severe input-hover lag - a pattern of rough newer UI surfaces, not
+  an isolated bug.
+- **Both forks**: drag-reorder jitter, edit-mode entry/exit detection,
+  and session shutdown/logout hangs each consumed a large number of
+  iterative band-aid commits in at least one fork before reaching
+  (arguably still imperfect) stability. Treat these three subsystems as
+  places to research the actual root cause before writing the first
+  line of code, not places to start tuning constants.
+
+## Stub tracking
+
+See `CLAUDE.md` for the convention (`stub:` commit type + `// STUB:`
+code comment, both explaining what's missing and why). Applies from
+Phase 1 onward - this port will legitimately need stubs to keep phases
+moving (e.g. task manager backend before Phase 6 lands), and they must
+never be silent.
+
+## Phases
+
+Sequenced the way both reference forks actually did it, since that
+reflects real dependency constraints (QML controls can't be ported
+before the build produces a binary), not because we're following
+their commits.
+
+### Phase 1: Build system migration
+
+- [ ] Migrate top-level `find_package(Qt5 ...)` to
+      `find_package(Qt6 ...)`, bump `QT_MIN_VERSION` to 6.6.0
+      Commits:
+- [ ] Migrate `find_package(KF5 ...)` umbrella to individual
+      `find_package(KF6Xxx ...)` calls (KF6 dropped the single-umbrella
+      component list on some distros); decide `KF6_MIN_VERSION`
+      deliberately - latte-dock-ng uses 6.0.0 (broader compatibility
+      target), latte-dock-qt6 uses 6.5.0 (narrower)
+      Commits:
+- [ ] Add `find_package` for de-umbrella'd-from-Plasma frameworks:
+      `libplasma`, `PlasmaQuick`, `PlasmaActivities`,
+      `PlasmaActivitiesStats`, `KSvg`, `KWayland`, `LayerShellQt`,
+      `KSysGuard`
+      Commits:
+- [ ] Add `find_package(KF6KirigamiPlatform)` - transitively required
+      by `Plasma::Plasma`'s link interface, configure fails without it
+      even though nothing calls it directly
+      Commits:
+- [ ] Add `find_package(KF6Service)` and `find_package(LibNotificationManager)`
+      - needed by the tasks plugin for job/launcher data
+      Commits:
+- [ ] Drop the X11/XCB/X11Extras/`HAVE_X11` build path entirely (both
+      reference forks are Wayland-only, confirmed correct choice)
+      Commits:
+- [ ] `qt5_add_dbus_adaptor` -> `qt_add_dbus_adaptor`
+      Commits:
+- [ ] Add a CMake `try_compile` feature-detection guard for
+      `LayerShellQt::Window::setScreen(QScreen*)` (added in
+      LayerShellQt 6.6, later removed upstream - a real build
+      regression latte-dock-ng hit after depending on it
+      unconditionally); fall back to plain `QWindow::setScreen()` when
+      absent
+      Commits:
+- [ ] Milestone: `cmake` configures cleanly against Qt6/KF6, even if
+      nothing compiles yet
+      Commits:
+
+### Phase 2: Mechanical Qt5->Qt6 source conversions
+
+Should not require design decisions - if a change here needs one, it
+belongs in a later phase instead.
+
+- [ ] `QString::SkipEmptyParts` -> `Qt::SkipEmptyParts`
+      Commits:
+- [ ] `foreach` -> range-for (verify no mutate-during-iteration/detach
+      semantics changed per site)
+      Commits:
+- [ ] `QMouseEvent`/`QWheelEvent::pos()` -> `position().toPoint()`
+      Commits:
+- [ ] `QRegExp` -> `QRegularExpression` - **not always behavior-
+      identical**: latte-dock-qt6 needed a dedicated regression test
+      after this subtly changed the " - [0-9]+" copy-suffix match in
+      `Importer::uniqueLayoutName`. Verify each nontrivial pattern,
+      don't assume equivalence
+      Commits:
+- [ ] Drop the removed `QDesktopWidget` include and its usages
+      Commits:
+- [ ] `emit`/`signals`/`slots` -> `Q_EMIT`/`Q_SIGNALS`/`Q_SLOTS` (KDE
+      compiler settings strictness)
+      Commits:
+- [ ] Wrap bare string literals in `QStringLiteral`/`QLatin1String`
+      (`QT_NO_CAST_FROM_ASCII`/`_BYTEARRAY` - latte-dock-ng wrapped
+      ~720 sites doing this)
+      Commits:
+- [ ] C-style casts -> `static_cast<>()`
+      Commits:
+- [ ] `qrand` -> `QRandomGenerator`
+      Commits:
+- [ ] `QButtonGroup::idToggled` rename (from the removed
+      `buttonToggled`/similar Qt5 signal)
+      Commits:
+- [ ] `ManagedTextureNode` -> `QSGSimpleTextureNode`
+      Commits:
+- [ ] `QDBusInterface` -> `QDBusMessage`/`QDBusConnection::call()`
+      throughout - Qt 6.8+ deprecated the `serviceOwnerChanged` signal
+      `QDBusInterface` connects to internally, otherwise every D-Bus
+      call site prints a deprecation warning
+      Commits:
+- [ ] Milestone: compiles (a lot still functionally broken/stubbed -
+      mark those stubs per the convention in `CLAUDE.md`)
+      Commits:
+
+### Phase 3: KF5->KF6 framework API migration
+
+- [ ] `KActivities` includes -> `PlasmaActivities` (C++ namespace stays
+      `KActivities`)
+      Commits:
+- [ ] Replace removed `KActivities::Info::State`/
+      `Consumer::runningActivities()` with a helper that reads activity
+      state directly via `org.kde.ActivityManager` D-Bus
+      (`ListActivitiesWithInformation`), mapped onto a locally-defined
+      `Activity::State` enum. Without this every activity reads as
+      "running" (stopped layouts load, scroll-cycling includes dead
+      activities, settings dialog can't bold the real one)
+      Commits:
+- [ ] `ConfigPropertyMap` -> `KConfigPropertyMap` (header:
+      `KConfigQml/KConfigPropertyMap`)
+      Commits:
+- [ ] `Plasma::Svg`/`FrameSvg`/`Theme` -> `KSvg::Svg`/`FrameSvg`/`ImageSet`
+      Commits:
+- [ ] `QmlObjectSharedEngine` -> `PlasmaQuick::SharedQmlEngine`;
+      `QuickViewSharedEngine` -> `PlasmaQuick`
+      Commits:
+- [ ] `KMimeTypeTrader`/`KServiceTypeTrader` -> `KApplicationTrader`
+      Commits:
+- [ ] `KNS3` -> `KNSWidgets`
+      Commits:
+- [ ] `Plasma::Package` -> `KPackage`
+      Commits:
+- [ ] Switch every plain-JSON `KPluginMetaData(QString)` load site to
+      `KPluginMetaData::fromJsonFile()` - the bare single-string
+      constructor **resolves its argument as a loadable plugin library
+      on KF6**, not a parsed JSON file the way it did on KF5. Silent
+      failure mode: latte-dock-qt6 lost every indicator's running/
+      active dot this way with zero error message
+      Commits:
+- [ ] Rename the KNS install-structure key from the KF5-era
+      `KPackageType` to KF6's `KPackageStructure` - without this,
+      "Get New Indicators..." can't reach any provider
+      (`ConfigFileError`, store unreachable)
+      Commits:
+- [ ] `#include <Plasma>` -> `<Plasma/Plasma>`; link `KF6::Svg`,
+      `KF6::Package`, `KF6::IconWidgets`
+      Commits:
+- [ ] Add `compat/` shim headers for the nixpkgs-only include-path
+      issue (already solved once for latte-dock-ng, carry the solution
+      in from day one): `KIconThemes/KIconLoader`,
+      `KIconThemes/KIconEffect`, `KGuiAddons/KIconUtils`,
+      `KCoreAddons/KSignalHandler`, `KArchive/{KTar,KZip,
+      KArchiveEntry,KArchiveDirectory}`, `KConfigQml/KConfigPropertyMap`
+      (`__has_include` fallback chain: unprefixed spelling, then
+      lowercase real header, then `include_next`)
+      Commits:
+
+### Phase 4: Wayland backend
+
+Both reference forks confirm Wayland-only is the right scope, not a
+platform decision to relitigate.
+
+- [ ] Delete `XWindowInterface`, collapse to a single
+      `WaylandInterface`
+      Commits:
+- [ ] Strip `QX11Info`/`QtX11Extras`/xcb code: the xcb RandR native
+      event filter in `PrimaryOutputWatcher` (including its
+      `QAbstractNativeEventFilter` base), X11 branches in `ScreenPool`
+      and `GlobalShortcuts`, `QX11Info` in `tasktools`, dead `<NETWM>`
+      includes
+      Commits:
+- [ ] Move window tracking off the removed `PlasmaWindow::internalId()`
+      to `uuid()`-based ids carried as strings (`WindowId`); update
+      every id-validity check that assumed an integer (window tracker,
+      sub-windows, config views, positioner, main/child window
+      detection)
+      Commits:
+- [ ] Remove `View::surface()` (a `PlasmaShellSurface` accessor,
+      always null under layer-shell) and its dead callers; gate auto-
+      hide/dodge-reveal on `VisibilityManager::revealsOnScreenEdge()`
+      instead of the dead surface-null check
+      Commits:
+- [ ] Bind `kde_output_order_v1` for primary-output detection (Plasma
+      6 KWin no longer advertises `kde_primary_output_v1`), treat the
+      first output in the order as primary. Without this the dock can
+      silently land on the wrong monitor in multi-display setups
+      Commits:
+- [ ] Implement struts/exclusive-zone reservation via
+      `zwlr_layer_shell_v1`'s `exclusive_zone` through LayerShellQt
+      directly (`PlasmaShellSurface`'s `PanelBehavior` is deprecated
+      and ignored by KWin, reserves nothing). Reserve the zone equal to
+      *current visible* panel thickness, not a max-possible-expansion
+      value (over-reservation bug latte-dock-ng hit)
+      Commits:
+- [ ] In multi-screen setups, call `setScreen()` on both the `QWindow`
+      and the `LayerShellQt::Window` before configuring the surface, or
+      struts land on the wrong monitor
+      Commits:
+- [ ] Keep the ghost-window's visual surface at ~1px while its
+      exclusive zone reserves the full dock thickness (KWin renders
+      compositor blur behind the visual surface area independently of
+      the exclusive zone - without this a full-height blur bar becomes
+      a persistent artifact during visibility/style-mode switches); use
+      `LayerBackground`, not `LayerTop`, for the ghost-window layer
+      Commits:
+- [ ] Position config/edit-mode surfaces via layer-shell anchors +
+      margins, never `QWindow::setPosition()` (ignored entirely by a
+      wlr-layer-shell surface - missing this breaks the whole edit-mode
+      subsystem)
+      Commits:
+- [ ] Re-anchor layer-shell surfaces on dock edge/alignment *change*,
+      not just once at creation - anchoring only at startup leaves the
+      surface welded in place if the dock later moves to a different
+      edge
+      Commits:
+- [ ] Give the edit-mode canvas overlay its own anchor set, distinct
+      from the dock's strut-reserving edge, or KWin kills the surface
+      ("exclusive edge is not of the anchors") whenever the canvas is
+      up while the dock is mid-move
+      Commits:
+- [ ] Center settings windows via layer-shell margins instead of
+      anchoring them to the dock's edge (anchored, they stick to
+      whichever edge the dock had when they *opened*, not the current
+      one)
+      Commits:
+- [ ] Seed a legal initial size for any layer-shell surface whose
+      anchors don't span an axis it has zero size on yet (a single-edge
+      Center dock, or an as-yet-unsized edge helper) - the first
+      `wl_surface` commit is otherwise protocol-rejected
+      Commits:
+- [ ] Wire window activation/peek through KWin D-Bus
+      (`org.kde.KWin.Effect.WindowView1`, `org.kde.KWin.HighlightWindow`),
+      tracked via a service watcher, **with a real fallback to plain
+      window cycling** when the effect isn't available - both forks
+      found the no-fallback version silently no-ops the click
+      Commits:
+
+### Phase 5: QML controls & rendering migration
+
+- [ ] `PlasmaComponents 2.0` -> `3.0` everywhere on the load path (2.0
+      is removed in Plasma 6 - an unresolved import hard-fails the
+      *whole* QML load, not just the missing control)
+      Commits:
+- [ ] `PlasmaCore.FrameSvgItem`/`SvgItem`/`Svg` -> the `KSvg` module
+      (`org.kde.ksvg`) - moved out of `org.kde.plasma.core`
+      Commits:
+- [ ] Drop `QtQuick.Controls.Styles.Plasma` and `QtQuick.Dialogs 1.x`
+      imports
+      Commits:
+- [ ] Remove `ExclusiveGroup` usage everywhere - it's gone in Controls
+      2, and in both forks' experience every button using one already
+      had `checked` driven by an external binding (the group was dead
+      weight); drive exclusivity from data directly
+      Commits:
+- [ ] `Slider.minimumValue`/`maximumValue` -> `from`/`to`; drop
+      `tickmarksEnabled` (no Controls 2 equivalent)
+      Commits:
+- [ ] Collapse frameless/empty-title `GroupBox` wrappers to plain
+      `ColumnLayout` (Controls 2 `GroupBox` has no `flat` property)
+      Commits:
+- [ ] Replace `tooltip`/`iconSource`/`iconName` properties (removed
+      from Controls 2 `Button`/`ComboBox`/`ToolButton`) with
+      `icon.name` plus the `QQC2.ToolTip` attached property
+      (`text:`, `visible: hovered`)
+      Commits:
+- [ ] `TabBar.currentTab` -> `currentIndex`/`currentItem`
+      Commits:
+- [ ] Stop redeclaring `implicitWidth`/`implicitHeight` on custom
+      controls (`final` on Qt6 base controls - both forks hit this as
+      a *compile failure*, not a misbehavior, on
+      `TextField`/`ExternalShadow`/`HeaderSwitch`); bind instead
+      Commits:
+- [ ] Detect a `ListModel` by probing for `.get()`, not
+      `Array.isArray()` - a Qt6 sequence-type model needs the `.get()`
+      branch
+      Commits:
+- [ ] Replace removed `PlasmaExtras.ScrollArea` with `QtQuick Controls
+      ScrollView` everywhere it's used
+      Commits:
+- [ ] Port context menus from `PlasmaComponents` `ContextMenu`/
+      `MenuItem` (removed) to `org.kde.plasma.extras`'s `Menu`/
+      `MenuItem`; hold each item's `Connections` and submenu as named
+      properties since `QMenuItem` has no default property anymore
+      Commits:
+- [ ] Replace bare `theme`/`units` global context properties (removed)
+      with explicit `Kirigami.Theme`/`Kirigami.Units`
+      Commits:
+- [ ] Replace removed `ColorScope` accessors with `Kirigami`/`KSvg`
+      theming directly
+      Commits:
+- [ ] Build a `ShadowedItem`-style wrapper component (`MultiEffect`
+      preconfigured as a drop shadow, normalizing the old pixel radius
+      into `MultiEffect`'s 0..1 `shadowBlur`) to replace
+      `QtGraphicalEffects` drop shadows - **verify the QML type
+      actually resolves and renders at runtime early**; latte-dock-qt6
+      has an unresolved `LatteComponents.ShadowedItem is not a type`
+      bug with exactly this shape of component, never root-caused this
+      session
+      Commits:
+- [ ] Port glow/saturation/colorize/brightness effects (task icon
+      states, tooltip masks) from `QtGraphicalEffects` to
+      `QtQuick.Effects`'s `MultiEffect`
+      Commits:
+- [ ] Port scroll-edge shadows, scroll-opacity masks, glow-point
+      corner/band gradients to `QtQuick.Shapes` gradients
+      Commits:
+- [ ] Rewrite icon badge masking (info/progress cutouts) using
+      `MultiEffect`'s `maskEnabled`+`maskInverted` from the start - the
+      legacy inline GLSL `ShaderEffect` approach **does not compile
+      under Qt6 RHI** ("shaders must be preprocessed using qsb"), don't
+      port the old shader path first
+      Commits:
+- [ ] Fix bridge/interface discovery to check the applet item itself
+      first (not just its children) for the `latteBridge` property -
+      `AppletQuickItem::itemForApplet()` returns the applet's QML root
+      (the `PlasmoidItem`) directly on Plasma 6, one level higher than
+      Plasma 5's wrapping. Without this, Latte-aware applets (the tasks
+      plasmoid) never receive the bridge and silently run with zoom/
+      abilities disabled
+      Commits:
+- [ ] Replace removed `applet.action(name)` calls with
+      `Plasmoid.internalAction(name)` / `applet.plasmoid.internalAction(name)`
+      - the removed method throws a `TypeError` that can abort an
+      entire handler (both Configure and Remove broke this way in one
+      fork)
+      Commits:
+- [ ] Read dock location changes through `containment.plasmoid`
+      (`locationChanged` and `location` moved to the backing applet -
+      the containment graphic object no longer emits it itself)
+      Commits:
+- [ ] Handle the `appletAdded` signal's new `QRectF` geometry hint
+      (was `(int x, int y)`) - detect the shape (`typeof x === "object"`)
+      or move position logic to C++ entirely; a naive handler assuming
+      the old signature silently defaults to (0,0), landing new widgets
+      at the wrong end of the dock with no error
+      Commits:
+- [ ] Audit `Containment.onAppletAdded`/`onAppletRemoved` and other
+      signal handlers for whether they need explicit
+      `function(applet, rect)` parameters instead of Qt6's deprecated
+      implicit parameter injection - verify each one against a real
+      running dock, this is inconsistent across signal types
+      Commits:
+- [ ] Convert every `DropArea` `onDragEnter`/`onDragMove`/`onDrop`
+      handler from `function onDrop(event) {...}` form (does **not**
+      connect to the signal in Qt6, silently becomes a dead method - both
+      forks independently found this) to the arrow-function/binding
+      form: `onDrop: (event) => {...}`
+      Commits:
+- [ ] Audit every `when:`-gated `Binding` for whether it needs
+      `restoreMode: Binding.RestoreNone` - Qt6's default changed to
+      `RestoreBindingOrValue`, so any transient-gated binding (drag/
+      reorder, relocation, edit-mode transition, screen-gap animation,
+      zoom-size hold, indexer visible-index state) now snaps back to
+      its declared default instead of holding its last value. Both
+      forks hit this *repeatedly*, in different subsystems, discovered
+      piecemeal - do this as one deliberate audit pass, not as bugs
+      come in
+      Commits:
+- [ ] Contract-test each `Qt.MidButton`/`Qt.MiddleButton` site
+      individually rather than blanket-renaming - latte-dock-ng found
+      at least one site where keeping the *old* `Qt.MidButton` name was
+      required (the new name caused C++/QML double-handling of the same
+      event)
+      Commits:
+- [ ] Replace the `KWindowSystem` creatable-QML-element usage in the
+      widget explorer with the KF6 singleton form
+      Commits:
+- [ ] Rebuild `AppletDelegate` (widget explorer entry) around the
+      current upstream Plasma 6 layout (instance-count badge, remove/
+      uninstall buttons) - both forks did a substantial rewrite here,
+      not an incremental patch; load its context menus from
+      `org.kde.plasma.extras`
+      Commits:
+
+### Phase 6: Task manager subsystem
+
+`org.kde.plasma.private.taskmanager`'s `Backend`/`SmartLauncherItem`
+QML types were removed when Plasma 6 folded the Task Manager applet
+into C++. There is no drop-in replacement to import.
+
+- [ ] **Decision**: full vendor (copy the jump-list/places/recent-
+      document menu actions, process/desktop-file helpers, drag mime/
+      url helpers into Latte's own `org.kde.latte.private.tasks` module
+      - latte-dock-qt6's approach, self-contained but more surface area)
+      vs. a documented compat/fallback shim depending on the system
+      module when present (latte-dock-ng's approach, smaller footprint,
+      depends on an increasingly-undocumented Plasma internal) -
+      recorded decision:
+      Commits:
+- [ ] If compat-shim route chosen: wire the fallback into the actual
+      CMake install target (not just a convenience shell script) -
+      latte-dock-ng shipped a gap here where a direct `cmake --install`
+      (e.g. a distro ebuild) skipped the fallback entirely and the dock
+      came up completely empty with an unhelpful "module ... is not
+      installed" error
+      Commits:
+- [ ] Vendor `SmartLauncherItem`/launcher badge+progress into the tasks
+      plugin using the Unity launcher D-Bus API regardless of the
+      decision above - neither fork found a reusable Plasma 6 QML
+      module for this anymore
+      Commits:
+- [ ] Wire `activateWindowView`, `windowsHovered`,
+      `cancelHighlightWindows` to the KWin D-Bus interfaces from Phase
+      4, with the fallback behavior always present
+      Commits:
+- [ ] Decide and implement grouped-task window preview thumbnails:
+      either suppress them on Wayland entirely, or use
+      `org.kde.pipewire`'s `PipeWireThumbnail` (unversioned import in
+      Plasma 6) with a real fallback to the legacy path - verify the
+      `SIGSEGV`-under-`DodgeActive` crash class (stale texture pointer,
+      hit in latte-dock-ng) doesn't recur before shipping either choice
+      Commits:
+- [ ] Grouped-task click activation: fall back to real window cycling
+      (`activateNextTask()`) unconditionally rather than assuming a
+      window-effect-based path is reliable; skip phantom toplevels
+      (headless daemon processes with no real window surface) when
+      cycling
+      Commits:
+
+### Phase 7: Widget management, drag-and-drop, edit mode
+
+This phase took the most repeated fix attempts to reach its current
+(still imperfect) state in both forks. Research each bolded item below
+before implementing, not just before merging.
+
+- [ ] **Widget removal** (the confirmed latte-dock-ng bug): destroy the
+      applet container directly in `appletRemoved`, don't defer/park-
+      and-wait for a follow-up signal - Plasma 6's
+      `Containment::appletRemoved` fires with the applet **already**
+      marked `destroyed()` (Plasma 5 delivered it before `destroyed()`
+      was set), so a "wait for a follow-up to finish the job" pattern
+      waits forever and the widget is never actually removed
+      Commits:
+- [ ] **Widget add via drag** from the Widget Explorer: decide the
+      C++-vs-QML drop-handling ownership split explicitly and keep it
+      exclusive per mime type (e.g. Widget-Explorer-originated drops
+      identified by `text/x-plasmoidservicename` go through C++ only;
+      file/URL drops via `text/uri-list` go through QML `DragDropArea`)
+      - Qt6/Wayland's `View::event()` can intercept drag events before
+      Kirigami's `DropArea` QML ever sees them, and letting both paths
+      partially handle overlapping cases caused a double-widget-
+      creation bug in latte-dock-ng
+      Commits:
+- [ ] Position-aware drop insertion: defer QML item access via a 0ms
+      singleShot timer (immediate access breaks the Wayland event
+      chain), and carry the intended insertion index as an explicit
+      property rather than trusting the position Plasma's own signal
+      hands back
+      Commits:
+- [ ] **Widget add via double-click**: use `TapHandler.onTapped`
+      (coexists cleanly with a sibling `DragArea`) rather than
+      `MouseArea.onDoubleClicked` (one fork found it could race against
+      widget-explorer's own add/remove toggle, needing a debounce timer
+      band-aid)
+      Commits:
+- [ ] **Default insertion position**: implement boundary-applet
+      detection (system tray, the Latte tasks plasmoid) once, shared by
+      both the drag and double-click add paths, so new widgets land
+      just before the boundary rather than at the absolute end
+      Commits:
+- [ ] **Edit-mode entry/exit detection** - research first: determine
+      whether `plasmoid.userConfiguring`/
+      `plasmoid.containment.userConfiguring`'s QML change notification
+      is actually unreliable on Qt6/Plasma6, and why, before
+      implementing anything. Latte-dock-ng went through at least 8
+      distinct attempts here (direct property binding, containment
+      fallback, explicit signal connections, global block-everything
+      overlay, punch-through overlay, polling timers at several
+      different intervals in different components, C++-level
+      middle-button interception, a timer finally scoped to active
+      edit mode only) without landing on something clean. If polling
+      turns out to be genuinely necessary, start from whichever of
+      those iterations is closest to final, not from scratch
+      Commits:
+- [ ] **Drag-to-reorder jitter**: read latte-dock-qt6's actual reorder-
+      handling source (not just its commit log) to understand why it
+      works cleanly there before implementing, since it's the one
+      subsystem observed directly (via live testing) to work better in
+      one fork than the other. Latte-dock-ng fought this four times
+      (escalating cooldown/dead-zone/hysteresis tuning) and it's still
+      jittery per direct testing - don't start from that approach
+      Commits:
+- [ ] Investigate and fix whatever causes **icons to get stuck behind
+      other elements** after repeated drag-reordering (new bug found
+      via live testing in latte-dock-ng, not yet root-caused in either
+      fork - likely a z-order or reparenting mistake during/after the
+      reorder animation)
+      Commits:
+- [ ] If any edit-mode interaction needs to be blocked, put the guard
+      inside the specific handler that matters (e.g. an explicit
+      `!editMode` check in the click/context-menu handler) rather than
+      a blanket occlusion overlay - Qt6 Quick's pointer-handler delivery
+      (`DragHandler`, used for applet sort-drag) bypasses `MouseArea`-
+      based overlays entirely, so an overlay meant to block everything
+      except drag-to-reorder does not actually block a
+      `DragHandler`-driven drag no matter how it's layered
+      Commits:
+
+### Phase 8: Layout/config persistence, session shutdown, multi-screen
+
+- [ ] Implement session shutdown/logout handling as one deliberate
+      pattern rather than iterating - latte-dock-ng's end state (worth
+      adopting as the *starting* implementation, not rediscovering):
+      `setQuitLockEnabled(false)` (a `KJob` can otherwise silently
+      suppress `QCoreApplication::quit()` during logout); a 5-second
+      poller fallback for shutdown detection, checked only after the
+      confirmation phase (Wayland has no XSMP session management, so
+      `commitDataRequest` may simply never fire); the synchronous D-Bus
+      shutdown-check call's timeout reduced from the default 25s to
+      ~1s (25s can block the main thread through compositor teardown);
+      async-signal-safe `SIGINT`/`SIGTERM` handling via a self-pipe
+      (not relying on `signalfd`, which can silently miss signals on
+      some platforms)
+      Commits:
+- [ ] Unload the Corona's dependents in explicit dependency order
+      (`unload` before `setParent(nullptr)` before delete) rather than
+      ad-hoc deletion, to avoid a double-free when deferred-delete
+      events later reference already-gone objects; detach any shared
+      QML engine from `QApplication` before app teardown so it isn't
+      deleted twice (once by Qt's child-deletion, once by its own
+      shared_ptr)
+      Commits:
+- [ ] Fix the startup retry-exhaustion deadlock in
+      `LayoutManager::restore()`: gate `shouldRetry` explicitly on
+      retry count rather than letting it stay permanently true when
+      max retries are exhausted but `expectedAppletCount > 0` - without
+      this the dock never starts its "restored" timer and sits
+      positioned off-screen (-9999,-9999) forever with no visible error
+      Commits:
+- [ ] Fix multi-screen cloned-view applet-order sync: add an explicit
+      "if this initialization completion made `structuralSyncReady()`
+      become true, perform the deferred order sync now" path - a
+      clone's containment can finish initializing and receive its
+      first `appletDataCreated` signal before the sync guard is
+      actually true, and nothing re-triggers the sync once both sides
+      finish otherwise
+      Commits:
+- [ ] Fix multi-screen palette divergence: pin
+      `Kirigami.Theme.inherit: false` with an explicit `colorSet`, and
+      set `KDE_COLOR_SCHEME_PATH` explicitly and early (in the `View`
+      constructor) so every view starts from the same palette - each
+      `QQuickWindow` can otherwise resolve its `KDEPlatformTheme`
+      palette independently on Plasma 6/Wayland
+      Commits:
+- [ ] Name the context-menu plugin's built `.so` to exactly match its
+      `KPlugin::Id` (e.g. `org.kde.latte.contextmenu.so`) - KF6 derives
+      a containmentactions plugin's id from its **file name**, not the
+      metadata's embedded id, and Plasma's lookup-by-id silently fails
+      otherwise
+      Commits:
+- [ ] Explicitly re-assert the default `RightButton` -> context-menu-
+      plugin mapping whenever a containment is wired up, rather than
+      trusting it to persist from saved layout config - Plasma 6 no
+      longer restores a containment's configured mouse-action plugins
+      from saved config on its own
+      Commits:
+- [ ] Implement a per-applet-type wheel-event bypass list (system
+      tray, general external applets like volume/brightness/media) so
+      they receive their own wheel events past the containment-level
+      global wheel handler, while keeping the Latte tasks plasmoid's
+      area excluded from that bypass (its area is where containment-
+      level scroll actions are supposed to intercept)
+      Commits:
+
+### Phase 9: Theming, colorization, multi-monitor visual polish
+
+- [ ] Audit every Plasma/Kirigami color-group property read against
+      what object is genuinely guaranteed to be present at that call
+      site, not what's true in the common case - reading a property
+      that doesn't exist on whatever theme object is actually in scope
+      evaluates to `undefined` in QML silently (no warning, no crash,
+      just a wrong color - both forks hit this as literally invisible
+      UI, e.g. black indicator dots on a dark panel)
+      Commits:
+- [ ] For panel-contrast elements specifically, read the `Header` color
+      group (`[Colors:Header]` in kdeglobals) rather than whichever
+      `Theme` object is nearest at hand (which usually resolves the
+      *window* scheme) - needed for mixed-theme setups (dark panel +
+      light window scheme or vice versa)
+      Commits:
+- [ ] Audit for other properties assumed present on the containment
+      graphic object that Plasma 6 actually removed rather than
+      deprecated (e.g. `backgroundHints`, which silently takes the
+      undefined branch of any comparison rather than erroring)
+      Commits:
+
+### Phase 10: Stabilization / verification
+
+- [ ] Verify against the full known-bug list at the top of this doc by
+      actually driving each interaction (add/remove/drag/edit-mode/
+      right-click/task-manager) in a running session - not by reading
+      the code and concluding it looks right; both forks' history shows
+      real, reproducible, user-facing bugs went unnoticed for a long
+      time under exactly that kind of confidence
+      Commits:
+- [ ] Adopt a written "honest coverage" testing standard up front (no
+      test that doesn't assert something real/observable) - modeled on
+      latte-dock-qt6's documented standard (`5fcaa9f1`/`c903921d` in its
+      history), which explicitly bans gaming the metric
+      Commits:
+- [ ] Evaluate adopting (in some form, not necessarily identical)
+      latte-dock-qt6's test infrastructure: a coverage ratchet that
+      fails on regression below a baseline, a headless QML interaction-
+      test harness, an e2e harness driving real widget add/remove
+      through KWin D-Bus with actual screenshot capture
+      Commits:
+
+### Phase 11: Nix packaging + Docker build verification
+
+Directly reusable knowledge from this session, not new research -
+confirmed transferable today when the same include-path fix was
+applied to get latte-dock-qt6 building on Nix during live debugging.
+
+- [ ] Write `default.nix` (Qt6/KF6 dependency list, matching Phase 1-3
+      framework choices)
+      Commits:
+- [ ] Write `flake.nix` exposing `packages.default`, `overlays.default`,
+      `nixosModules.default`
+      Commits:
+- [ ] Confirm the Phase 3 `compat/` include-path shims are sufficient
+      for the Nix build (they should be, since they were written with
+      this in mind, but verify)
+      Commits:
+- [ ] Add a `nixos` target to Docker-based build verification, matching
+      the pattern already built for latte-dock-ng
+      (`Dockerfile.nixos` + `verify-nix-nixos.sh`)
+      Commits:
+
+### Phase 12: Upstream contribution prep
+
+- [ ] Pass over the whole diff for KDE coding style compliance
+      Commits:
+- [ ] Verify REUSE/SPDX license header compliance across
+      new/modified files
+      Commits:
+- [ ] Split the accumulated work into reviewable-sized chunks/merge
+      requests rather than one enormous diff
+      Commits:
+- [ ] Submit via invent.kde.org (KDE's GitLab - the GitHub mirror is
+      not where KDE reviews happen)
+      Commits:
+
+## Status
+
+Not started. Phase 1 is next.

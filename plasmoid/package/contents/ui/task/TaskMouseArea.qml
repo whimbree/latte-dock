@@ -11,6 +11,8 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.latte.core 0.2 as LatteCore
 import org.kde.latte.private.tasks 0.1 as LatteTasks
 
+import "../../code/TaskActions.js" as TaskActions
+
 MouseArea {
     id: taskMouseArea
     anchors.fill: parent
@@ -21,6 +23,38 @@ MouseArea {
     property bool pressed: false
 
     readonly property alias hoveredTimer: _hoveredTimer
+
+    //! Runs the window operation the middle-click / modifier-click combos map
+    //! their (identical) TaskAction set onto. The action->command mapping is
+    //! the single source of truth in code/TaskActions.js so the config combos
+    //! can never offer a value with no handler branch; this switch is the
+    //! executor for the tokens it returns.
+    function executeStandardAction(action) {
+        switch (TaskActions.standardCommandFor(action)) {
+        case "close":
+            tasksModel.requestClose(modelIndex());
+            break;
+        case "newInstance":
+            tasksModel.requestNewInstance(modelIndex());
+            break;
+        case "toggleMinimized":
+            tasksModel.requestToggleMinimized(modelIndex());
+            break;
+        case "cycleOrActivate":
+            if (isGroupParent) {
+                subWindows.activateNextTask();
+            } else {
+                activateTask();
+            }
+            break;
+        case "toggleGrouping":
+            tasksModel.requestToggleGrouping(modelIndex());
+            break;
+        default:
+            //! "" == NoneAction, a real no-op
+            break;
+        }
+    }
 
     Connections {
         target: taskMouseArea
@@ -147,39 +181,13 @@ MouseArea {
 
             if (modifierAccepted(mouse) && !root.disableAllWindowsFunctionality){
                 if( !taskItem.isLauncher ){
-                    if (root.modifierClickAction == LatteTasks.Types.NewInstance) {
-                        tasksModel.requestNewInstance(modelIndex());
-                    } else if (root.modifierClickAction == LatteTasks.Types.Close) {
-                        tasksModel.requestClose(modelIndex());
-                    } else if (root.modifierClickAction == LatteTasks.Types.ToggleMinimized) {
-                        tasksModel.requestToggleMinimized(modelIndex());
-                    } else if ( root.modifierClickAction == LatteTasks.Types.CycleThroughTasks) {
-                        if (isGroupParent)
-                            subWindows.activateNextTask();
-                        else
-                            activateTask();
-                    } else if (root.modifierClickAction == LatteTasks.Types.ToggleGrouping) {
-                        tasksModel.requestToggleGrouping(modelIndex());
-                    }
+                    executeStandardAction(root.modifierClickAction);
                 } else {
                     activateTask();
                 }
             } else if (mouse.button == Qt.MidButton && !root.disableAllWindowsFunctionality){
                 if( !taskItem.isLauncher ){
-                    if (root.middleClickAction == LatteTasks.Types.NewInstance) {
-                        tasksModel.requestNewInstance(modelIndex());
-                    } else if (root.middleClickAction == LatteTasks.Types.Close) {
-                        tasksModel.requestClose(modelIndex());
-                    } else if (root.middleClickAction == LatteTasks.Types.ToggleMinimized) {
-                        tasksModel.requestToggleMinimized(modelIndex());
-                    } else if ( root.middleClickAction == LatteTasks.Types.CycleThroughTasks) {
-                        if (isGroupParent)
-                            subWindows.activateNextTask();
-                        else
-                            activateTask();
-                    } else if (root.middleClickAction == LatteTasks.Types.ToggleGrouping) {
-                        tasksModel.requestToggleGrouping(modelIndex());
-                    }
+                    executeStandardAction(root.middleClickAction);
                 } else {
                     activateTask();
                 }

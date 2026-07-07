@@ -53,5 +53,50 @@ over an audio badge on a task changes that app's volume. This is a live-only
 check (needs a real audio-playing window on a task); it is recorded in
 `docs/testing/live-only.md`.
 
+### Phase 7 needs a hands-on session - most of it can't be verified without you
+Phase 7 (widget management, drag-and-drop, edit mode) is ~90% interactive, and
+its verification fundamentally needs gestures I can't perform autonomously on
+wayland (dragging a widget from the explorer, tap-to-add, drag-to-reorder,
+entering/leaving edit mode) - there is no `xdotool` equivalent for wayland
+drag-drop, so unlocking the screen wouldn't help either. What I did headlessly,
+and what still needs you:
+
+**Done in code (deterministic, build-verified):**
+- Widget removal (`33830b2c`): `LayoutManager::removeAppletItem` finalizes the
+  destroy immediately instead of parking for a follow-up signal that never
+  comes on Plasma 6. This is straight C++ logic and matches the plan's exact
+  prescription. **Human test:** in edit mode, remove a widget from the dock and
+  confirm it actually disappears.
+
+**Adopted the working fork's code, pending your test:**
+- Widget explorer add path (`0aa7ffb6`): moved `AppletDelegate.qml` + `WidgetExplorer.qml` from the
+  crashing latte-dock-qt6 versions we inherited to latte-dock-ng's
+  confirmed-working ones (TapHandler for tap-add, fuller upstream delegate
+  layout). `WidgetExplorer.qml` imports `org.kde.plasma.private.shell` so the
+  compile gate can't check it, and add is a drag/tap gesture. **Human test:**
+  open Add Widgets in edit mode - does the explorer open cleanly (not
+  mispositioned/undecorated), and can you add a widget both by dragging and by
+  tapping, *including the Latte Tasks widget* (the one that crashed the other
+  fork), without a crash or a double-add?
+
+**Researched, base is right, needs live verification (not reimplemented):**
+- Drag-to-reorder: our containment QML is already latte-dock-qt6's, which the
+  plan identifies as the fork whose reorder works *better* (read its source,
+  don't start from ng's four-times-fought tuning). So we are on the
+  recommended base already. **Human test:** drag-reorder widgets repeatedly and
+  watch for jitter and for the "icon stuck behind other elements" bug.
+- Edit-mode entry/exit: we use the direct `Plasmoid.userConfiguring` binding
+  (qt6's approach), not ng's polling-timer stack. The plan says ng found the
+  notification unreliable on Qt6/Plasma6 across 8 attempts; whether *we* need a
+  fallback is a live question. **Human test:** enter and leave edit mode
+  several ways (context menu, shortcut) and confirm the dock reliably knows.
+- Parabolic hover-zoom smoothness (always-visible synchronous MouseArea vs
+  queued): the pattern is perceptual; can only be judged live.
+
+If any of the human tests above fails, that's the signal to do the deeper
+per-item work the plan describes - I did not want to blind-swap more
+interactive subsystems I can't verify, or tick items the plan's own cadence
+says aren't done until driven live.
+
 ## Resolved
 (none yet)

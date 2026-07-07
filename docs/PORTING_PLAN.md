@@ -773,14 +773,19 @@ This phase took the most repeated fix attempts to reach its current
 (still imperfect) state in both forks. Research each bolded item below
 before implementing, not just before merging.
 
-- [ ] **Widget removal** (the confirmed latte-dock-ng bug): destroy the
+- [x] **Widget removal** (the confirmed latte-dock-ng bug): destroy the
       applet container directly in `appletRemoved`, don't defer/park-
       and-wait for a follow-up signal - Plasma 6's
       `Containment::appletRemoved` fires with the applet **already**
       marked `destroyed()` (Plasma 5 delivered it before `destroyed()`
       was set), so a "wait for a follow-up to finish the job" pattern
       waits forever and the widget is never actually removed
-      Commits:
+      Commits: 33830b2c (LayoutManager::removeAppletItem finalizes
+      immediately via destroyAppletContainer instead of parking in
+      m_appletsInScheduledDestruction; the deterministic C++ fix is in
+      place and matches the prescription. Final "the widget visibly
+      disappears" confirmation is a human click-test, queued in
+      docs/REVIEW_NOTES.md)
 - [ ] **Widget add via drag** from the Widget Explorer: decide the
       C++-vs-QML drop-handling ownership split explicitly and keep it
       exclusive per mime type (e.g. Widget-Explorer-originated drops

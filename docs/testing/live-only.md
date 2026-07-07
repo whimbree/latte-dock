@@ -19,3 +19,19 @@ each gap is recorded instead of papered over with a dishonest test.
   test; only the cross-boundary delivery does.
 - **Verify at:** Phase 8 (wheel bridge), and again in the Phase 10 e2e sweep.
 - **Related:** `docs/REVIEW_NOTES.md` "In-plasmoid wheel routing".
+
+### Phase 7 widget management / drag-drop / edit mode (whole subsystem)
+- **What:** widget removal actually removes; opening the widget explorer;
+  adding a widget by drag and by tap (including the Latte Tasks widget that
+  crashed latte-dock-qt6); drag-to-reorder without jitter or stuck icons;
+  edit-mode entry/exit detection; hover-zoom smoothness.
+- **Why live-only:** every one of these is a pointer gesture (drag, tap,
+  reorder) or a perceptual property (jitter, smoothness) that cannot be driven
+  or judged in an offscreen engine, and wayland has no scriptable drag-drop.
+  The code is in place (widget removal fixed in C++; the add path swapped to
+  the confirmed-working fork's QML; reorder/edit-mode already on the
+  recommended base), but "done" per the plan's cadence needs a human to drive
+  each interaction.
+- **Verify at:** the next hands-on session, and again in the Phase 10 e2e
+  sweep.
+- **Related:** `docs/REVIEW_NOTES.md` "Phase 7 needs a hands-on session".

@@ -426,7 +426,11 @@ WindowId WaylandInterface::activeWindow()
 
 void WaylandInterface::skipTaskBar(const QDialog &dialog)
 {
-    KWindowSystem::setState(dialog.winId(), NET::SkipTaskbar);
+    //! STUB: Phase 4 - KF6 removed WId-based KWindowSystem::setState, and as
+    //! an X11 call it never worked under wayland anyway; the dialog's
+    //! PlasmaShellSurface should request skip-taskbar when the window-system
+    //! backend phase reworks surface management
+    Q_UNUSED(dialog);
 }
 
 void WaylandInterface::slideWindow(QWindow &view, AbstractWindowInterface::Slide location)

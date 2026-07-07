@@ -327,8 +327,20 @@ void Effects::setInputMask(QRect area)
 
         m_corona->wm()->setInputMask(m_view, area);
     } else {
-        //under wayland mask() is providing the Input Area
-        m_view->setMask(area);
+        //! Under Qt6's wayland backend the window mask no longer carries
+        //! only the input area: Qt also restricts each frame's submitted
+        //! damage to it, so an empty or degenerate region freezes the
+        //! surface at its last content - initially fully transparent, which
+        //! made the whole dock render 30fps into buffers that never showed.
+        //! The mask computation legitimately passes degenerate rects while
+        //! the layouter is still warming up (localGeometry width 0) and
+        //! Qt.rect(0,0,-1,-1) as the explicit clear request; both must clear
+        //! the mask instead of being forwarded.
+        if (area.isValid() && !area.isEmpty()) {
+            m_view->setMask(area);
+        } else {
+            m_view->setMask(QRegion());
+        }
     }
 
     Q_EMIT inputMaskChanged();

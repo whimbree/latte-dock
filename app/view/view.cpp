@@ -382,8 +382,11 @@ void View::init(Plasma::Containment *plasma_containment)
 
     connect(m_corona->indicatorFactory(), &Latte::Indicator::Factory::indicatorRemoved, this, &View::indicatorPluginRemoved);
 
-    //! Assign app interfaces in be accessible through containment graphic item
-    QQuickItem *containmentGraphicItem = qobject_cast<QQuickItem *>(plasma_containment->property("_plasma_graphicObject").value<QObject *>());
+    //! Assign app interfaces in be accessible through containment graphic item.
+    //! On Plasma 6 the _plasma_graphicObject property is gone; the graphic
+    //! item is resolved through AppletQuickItem (it exists by now because the
+    //! shell created the containment's QML before this View wrapper).
+    QQuickItem *containmentGraphicItem = PlasmaQuick::AppletQuickItem::itemForApplet(plasma_containment);
 
     if (containmentGraphicItem) {
         containmentGraphicItem->setProperty("_latte_globalShortcuts_object", QVariant::fromValue(m_corona->globalShortcuts()->shortcutsTracker()));
@@ -392,7 +395,15 @@ void View::init(Plasma::Containment *plasma_containment)
         containmentGraphicItem->setProperty("_latte_universalSettings_object", QVariant::fromValue(m_corona->universalSettings()));
         containmentGraphicItem->setProperty("_latte_view_object", QVariant::fromValue(this));
 
+        //! The containment QML (and its Interfaces object) was created before
+        //! this View existed, so Interfaces already read null _latte_* values
+        //! and nothing re-triggers it from the QML side - locate it and force
+        //! the re-read now that the properties are set.
         Latte::Interfaces *ifacesGraphicObject = qobject_cast<Latte::Interfaces *>(containmentGraphicItem->property("_latte_view_interfacesobject").value<QObject *>());
+
+        if (!ifacesGraphicObject) {
+            ifacesGraphicObject = containmentGraphicItem->findChild<Latte::Interfaces *>();
+        }
 
         if (ifacesGraphicObject) {
             ifacesGraphicObject->updateInterfaces();

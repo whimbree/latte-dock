@@ -54,6 +54,15 @@ ecm_add_qtwayland_client_protocol(lattedock-app_SRCS
     BASENAME kde-primary-output-v1
 )
 
+# Plasma 6 KWin no longer advertises kde_primary_output_v1;
+# kde_output_order_v1 replaces it (the compositor sends the desktop output
+# order, first entry is the logical primary). Bind both so old and new
+# sessions work.
+ecm_add_qtwayland_client_protocol(lattedock-app_SRCS
+    PROTOCOL ${PLASMA_WAYLAND_PROTOCOLS_DIR}/kde-output-order-v1.xml
+    BASENAME kde-output-order-v1
+)
+
 # everything except main() lives in an object library so the tests can link
 # the real compiled code instead of re-building or mocking it
 add_library(lattedock-core OBJECT ${lattedock-app_SRCS})

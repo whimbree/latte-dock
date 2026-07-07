@@ -395,7 +395,7 @@ void View::init(Plasma::Containment *plasma_containment)
         Latte::Interfaces *ifacesGraphicObject = qobject_cast<Latte::Interfaces *>(containmentGraphicItem->property("_latte_view_interfacesobject").value<QObject *>());
 
         if (ifacesGraphicObject) {
-            ifacesGraphicObject->updateView();
+            ifacesGraphicObject->updateInterfaces();
             setInterfacesGraphicObj(ifacesGraphicObject);
         }
     }

@@ -123,7 +123,9 @@ QPoint ContextMenuLayerQuickItem::popUpRelevantToGlobalPoint(const QRect &parent
 
 QPoint ContextMenuLayerQuickItem::popUpTopLeft(Plasma::Applet *applet, const QRect popUpRect)
 {
-    PlasmaQuick::AppletQuickItem *ai = applet->property("_plasma_graphicObject").value<PlasmaQuick::AppletQuickItem *>();
+    //! Plasma 6: the graphic item is resolved through AppletQuickItem, the
+    //! _plasma_graphicObject property is not reliably set anymore
+    PlasmaQuick::AppletQuickItem *ai = PlasmaQuick::AppletQuickItem::itemForApplet(applet);
 
     QRect globalItemRect = m_latteView->absoluteGeometry();
 
@@ -214,7 +216,7 @@ void ContextMenuLayerQuickItem::mousePressEvent(QMouseEvent *event)
     }
 
     for (const Plasma::Applet *appletTemp : m_latteView->containment()->applets()) {
-        PlasmaQuick::AppletQuickItem *ai = appletTemp->property("_plasma_graphicObject").value<PlasmaQuick::AppletQuickItem *>();
+        PlasmaQuick::AppletQuickItem *ai = PlasmaQuick::AppletQuickItem::itemForApplet(const_cast<Plasma::Applet *>(appletTemp));
 
         bool appletContainsMouse = false;
 

@@ -733,7 +733,7 @@ into C++. There is no drop-in replacement to import.
       Commits: 14c973b3 (TaskMouseArea falls back to
       subWindows.activateNextTask() per click type when the effect
       path is unavailable)
-- [ ] Audit every enum-driven click/action handler (left-click, middle-
+- [x] Audit every enum-driven click/action handler (left-click, middle-
       click, modifier-click, scroll actions, etc.) for completeness
       against the full enum, not just the common cases - latte-dock-ng
       shipped a Tasks config UI offering all 9 `TaskAction` values while
@@ -743,8 +743,13 @@ into C++. There is no drop-in replacement to import.
       through to a default instead of erroring. Write a completeness
       test per enum/handler pair rather than trusting the handler was
       updated in lockstep with the enum
-      Commits:
-- [ ] Route wheel events to badges/sub-regions *inside* the tasks
+      Commits: e9754810 (extracted the dispatch into
+      code/TaskActions.js as the single source of truth; the middle/
+      modifier chains collapse into one executeStandardAction executor;
+      tst_taskactions.qml pins that every config-offered enum resolves
+      to a real command. The offered set is transcribed from the config
+      combos - see docs/REVIEW_NOTES.md for the review item)
+- [x] Route wheel events to badges/sub-regions *inside* the tasks
       plasmoid explicitly, not just per-applet: `DragDrop.DropArea`
       blocks wheel event delivery in Qt6, so even though the
       containment-level wheel bridge (Phase 8) already passes wheel
@@ -754,7 +759,13 @@ into C++. There is no drop-in replacement to import.
       `mapFromItem` from containment -> plasmoid -> badge) since the
       tasks plasmoid itself isn't in the external-applet passthrough
       path
-      Commits:
+      Commits: e9754810 (audit only - no fix needed. The badge
+      MouseArea sits in the icon's z:10 Flow above the whole-task
+      handler at z:0, so sub-region routing is correct by z-order; the
+      preventStealing DropArea is stacked below the task list. The
+      cross-boundary "does the containment deliver wheel into the
+      plasmoid at all" question depends on the Phase 8 wheel bridge and
+      is recorded in docs/testing/live-only.md for live verification)
 
 ### Phase 7: Widget management, drag-and-drop, edit mode
 
@@ -1037,15 +1048,18 @@ polished, distributable form of it.
 
 ## Status
 
-Phases 0-2 done, Phase 3 nearly done, Phases 4 and 5 done, Phase 6
-nearly done (86 of 128 items ticked). The dock runs on the live
+Phases 0-2 done, Phase 3 nearly done, Phases 4, 5 and 6 done (88 of
+128 items ticked). The dock runs on the live
 Plasma 6 Wayland session with the task manager alive: real task icons
 from libtaskmanager, the vendored backend (jump lists, KWin D-Bus
 activation with cycling fallback, smart-launcher badges), pipewire
 thumbnails, and struts that resize maximized windows -
-screenshot-verified. Open Phase 6 items: the per-enum click-handler
-completeness test and the in-plasmoid wheel routing audit, both
-queued with live interaction testing.
+screenshot-verified. The two behavior-audit items closed: the
+click-action dispatch is now data-driven through code/TaskActions.js
+with a completeness test, and the wheel-routing audit found the
+existing z-ordering already correct (cross-boundary wheel delivery
+deferred to the Phase 8 bridge). Next: Phase 7 - widget management,
+drag-and-drop, edit mode.
 
 The first runnable milestone (end of Phase 5) is reached and exceeded:
 the dock creates its wlr-layer-shell surface, gets configured by KWin

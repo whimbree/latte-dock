@@ -60,7 +60,7 @@
 #include <QProcess>
 
 // Plasma
-#include <Plasma>
+#include <Plasma/Plasma>
 #include <Plasma/Corona>
 #include <Plasma/Containment>
 #include <PlasmaQuick/ConfigView>

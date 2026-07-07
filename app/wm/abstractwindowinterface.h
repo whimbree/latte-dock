@@ -35,7 +35,7 @@
 #include <KActivities/Consumer>
 
 // Plasma
-#include <Plasma>
+#include <Plasma/Plasma>
 
 
 namespace Latte {

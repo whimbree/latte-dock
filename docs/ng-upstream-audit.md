@@ -31,39 +31,86 @@ so "HAVE" means the specific fix is present in our file, not just that the file
 exists. Where our port deliberately took latte-dock-qt6's QML instead of ng's,
 that is called out.
 
-**Progress: 235 / 249 audited.**
+**Progress: 249 / 249 audited — COMPLETE.**
 
-Tally through 139: 71 CHECK · 23 SKIP · 17 HAVE · 17 ADOPT-candidate (ADOPT+PORT)
-· 7 N/A · 4 GAP. Most commits are ng-did-it-differently (expected). The value is
-the small set of real bugs we plausibly share.
+Rough tally across all 249: ~95 CHECK · ~30 SKIP · ~33 HAVE · ~23 ADOPT-candidate
+· ~24 N/A · 4 GAP. Most commits are ng-did-it-differently (expected). The value is
+the small set of real bugs we plausibly share, listed below.
 
-### Standout ADOPT candidates (as of 139/249) — ranked by confidence
+### Top ADOPT — confirmed or high-confidence bugs in our port
 
-1. **inNormalState binding loop** (`73d982f0b`) — **reproduced in our build's log**
-   (`Binding loop detected for inNormalState`, VisibilityManager.qml:32). Highest
-   confidence; imperative recompute.
-2. **Shutdown double-free / `flushDelete`** (`a9c200fe2`) — plausible fix for our
-   **KSvg static-destructor exit crash** (see REVIEW_NOTES). Deferred-delete flush
-   at teardown.
-3. **Parabolic zoom jitter debounce** (`c917f7936`,`a118b91dc`) — journal flagged
-   zoom/reorder jitter; our `parabolic.cpp` has no switch-interval guard.
-4. **Widget-explorer double-click add debounce** (`c70988a3f`) — journal flagged
-   double-click crashes; no `addDebounceTimer` in our shell.
-5. **Audio-badge stuck highlight** (`2d130fed6`) — old MouseArea → HoverHandler/
-   TapHandler.
-6. **Indicator panel-contrast theming** (`adde24b14`,`f559f521b`,`74a2f9ef2`) —
-   indicators mis-contrast on custom panel colors; we have none of the color-safe
-   logic.
-7. Small, cheap, safe: context-menu More Places null-guard (`af6a90767`), indicator
-   user-package override (`7ce95f470`), `KDE_COLOR_SCHEME_PATH` pin (`9fe135422`),
-   dbus `setWatchMode` (`603a9871c`).
-8. Widget drag-to-add UX: position-aware drop insertion (`735525810`) + text-heavy
-   external-applet sizing (`544479586`); and `LatteCore.Dialog`→`AppletPopup`
-   (`29a515f59`) for P6 applet-config popups.
+These are ranked; the top two are the ones to act on first.
+
+- **A. Middle-click is dead (`Qt.MidButton` undefined in Qt6)** — `613ddcc3b`,
+  `871c4322d`. **Confirmed**, not speculative: `Qt.MidButton` was removed in Qt6
+  QML, so every `mouse.button === Qt.MidButton` in our port is always false. Task
+  middle-click actions (`TaskMouseArea.qml:19/155/188`), the middle-click click
+  animation (`ClickedAnimation.qml:35`), and the EnvironmentActions middle path
+  (`44/53`) are all inert. This **overturns our deliberate-retention note**
+  (`PORTING_PLAN.md:636-643`). ng's fix: rename to `Qt.MiddleButton` where QML must
+  handle it, but make `EnvironmentActions` accept **only** `Qt.LeftButton` so
+  empty-area middle-click propagates to the C++ `ContextMenuLayerQuickItem` handler
+  (this is what avoids the double-handling the plan feared). Also flips the
+  `middleClickAction` default to Close. **Fix and update PORTING_PLAN + REVIEW_NOTES.**
+- **B. Duplicate widget creation from the Widget Explorer** — `1b07df291`.
+  Matches the journal's double-add/double-click-widget symptom. Our C++ path
+  (`view.cpp:1390`, `text/x-plasmoidservicename`) and our QML `onDrop`
+  (`DragDropArea.qml:198` `processMimeData`) both fire for an explorer drop → two
+  applets. Fix = QML `onDrop` returns early for that mime (file/URL drops stay on
+  the QML path).
+- **C. Shutdown/exit crash on the duplicate-instance path** — `2437a92ad`
+  (+ `a9c200fe2` `flushDelete`). Our dup-instance guard calls `qGuiApp->exit()`
+  (`main.cpp:193/211/229/247/278`), tearing down Qt globals never fully inited —
+  the exact class of our **KSvg static-destructor exit crash** (REVIEW_NOTES). ng
+  uses a bare `return 0` and defers `SharedQmlEngine` creation past the guard.
+- **D. inNormalState binding loop** (`73d982f0b`) — **reproduced in our log**
+  (`Binding loop detected for inNormalState`, VisibilityManager.qml:32); imperative recompute.
+- **E. Reorder jitter** (`c4e7bcb62` tasks + `924a8ac41`/`cf6aa1ec0` applets) —
+  journal-flagged. We have no drag-reorder hysteresis; ng adds a 12px Manhattan
+  dead-zone + higher resistance. Pairs with `84e7c9d10` and the parabolic-jitter
+  debounce (`c917f7936`/`a118b91dc`, our `parabolic.cpp` has no switch-interval guard).
+- **F. Task icons don't refresh on icon-theme change** (`ef2989ec2`) — GAP: no
+  `forceRefreshTaskIconSource()` / `QPixmapCache::clear()` in our port; icons go
+  stale until restart.
+
+### Also worth taking (lower risk / smaller)
+- Widget-explorer double-click add debounce (`c70988a3f`); audio-badge stuck
+  highlight (`2d130fed6`); indicator panel-contrast theming
+  (`adde24b14`/`f559f521b`/`74a2f9ef2`); context-menu More Places null-guard
+  (`af6a90767`); EnvironmentActions null-tracker guard (`3a1aeaf53`); indicator
+  user-package override (`7ce95f470`); `KDE_COLOR_SCHEME_PATH` pin (`9fe135422`);
+  dbus `setWatchMode` (`603a9871c`); `grabToImage` targetSize (`cbb2f8199`);
+  position-aware drop insertion (`735525810`) + text-heavy applet sizing
+  (`544479586`); `LatteCore.Dialog`→`AppletPopup` (`29a515f59`).
+
+### Needs a live check (ng bled here; our simpler code is unverified)
+- **Edit-mode detection + middle-button-in-edit-mode**: ng spent ~24 commits on
+  2026-07-03 (the two edit-mode clusters) fighting reliable `userConfiguring`
+  detection and a QML input-blocking overlay. We use the simple direct binding
+  (`Plasmoid.userConfiguring`) and a C++ input region — deliberately NOT ng's
+  polling stack — but the sheer thrash is a strong signal to verify our edit-mode
+  entry/exit and drag-to-reorder actually work live (`618ed8f50` cluster,
+  `565ffed9e` middle-button cluster, `b12cce721`/`480a3ba84` detection).
+- **Containment→plasmoid wheel bridge for audio-badge volume** (`b6693e7c4`) — the
+  Phase 8 item REVIEW_NOTES deferred; ng's is the reference implementation.
+- **Tasks config tab actually applying** (`eabf7c89a`/`ed0afd054`/`2b0963186`/
+  `94f87ba66`) — dual `KConfigPropertyMap` loaders make writes invisible; verify
+  our exposed Tasks tab takes effect, or hide it like `9faccabda`.
+- **Parabolic wave smoothness** (`0deca9e18`) — always-visible synchronous MouseArea;
+  we look close already.
 
 ### Feature GAPs (whole features we lack)
 - **Separator widgets** (`org.kde.latte.separator`) — no `separator/` package.
 - **KNS download** (`knscompat`) — "Get New Widgets/Indicators" from store.kde.org.
+- **Auto-pin on drag into launcher zone** (`8410b0400`/`4386dfd9d`) — drag a running
+  task into the pinned area to pin it; our qt6-derived drag lacks it.
+- **Live task-icon refresh on icon-theme change** (`ef2989ec2`, see F above).
+
+### HAVE-by-convergence (nice confirmations)
+Several ng fixes we independently already carry: the LayerShellQt `setScreen` CMake
+guard (`1f96a06b0`), the clean cancellable-shutdown lambda (`2d5d4408e`), all the
+Qt5→Qt6 handler-binding conversions (`fe4e1154b`/`80bb966c8`/`319232fc4`/`a34009b93`/…),
+`itemForApplet()` for P6 applet resolution, and `MultiEffect`/`internalAction()`.
 
 ### Recurring theme worth noting
 ng **twice removed** view/surface recreate paths (`1b424bae9`, `dc5fa3b0c`) and a
@@ -312,3 +359,17 @@ the hotplug surface-recreate. Our port still calls `recreateView`; worth auditin
 | 33390d702 | 2026-07-03 | feat: add NixOS build verification to the Docker pipeline | N/A | ng CI (Docker + verify scripts). |
 | b6693e7c4 | 2026-07-04 | fix: route containment wheel events to audio badge for volume adjustment | CHECK (priority) | **This is the Phase 8 containment→plasmoid wheel bridge that REVIEW_NOTES deferred as live-only.** ng routes wheel events from the containment through to the task's audio badge so scrolling over a playing task changes its volume (`containment/main.qml` + `plasmoid/main.qml` + `TaskIcon.qml`). Our AudioStream badge (`TaskIcon.qml:308`) has its own `onWheel` (`AudioStream.qml:95`), but whether the containment actually delivers the wheel into it is the open Phase 8 question. Use this as the reference implementation; live-test scroll-over-badge volume. |
 | b5f4a2649 | 2026-07-04 | feat: add volume level bar and percentage indicator on audio badge | CHECK | Optional UX feat: draw a volume-level bar + percentage on the audio badge (`AudioStream.qml`). Our audio badge is a mute/stream indicator with no level bar. Adopt only if we want the richer badge; pairs with b6693e7c4 (the wheel-to-volume interaction it visualizes). |
+| 3d7cd3a6a | 2026-07-04 | fix: keep icon always visible and fix volume bar fill rendering | CHECK | Audio-badge cluster follow-up (with fcbb6ecc4, a dup): keep the task icon visible when the badge shows and fix the volume-bar fill. The icon-visibility half ties to 133043754. Relevant only if we adopt the ng volume-bar badge (b5f4a2649). |
+| 94f87ba66 | 2026-07-04 | fix: populate latteTasksModel and enable Tasks config tab | CHECK | ng **re-enables** the Tasks config tab it had hidden in 9faccabda, now that `latteTasksModel` is populated (`containmentinterface.cpp` + `LatteDockConfiguration.qml`). Our port already exposes the tab (`LatteDockConfiguration.qml:477`) — the open question is whether ours is actually populated/wired (see eabf7c89a). |
+| 67fa82e90 | 2026-07-04 | fix: route containment wheel events to audio badge for volume adjustment | CHECK | Same as b6693e7c4 (rebased/dup on the PR-merge day). Phase 8 wheel bridge — see b6693e7c4. |
+| ad5978526 | 2026-07-04 | feat: add volume level bar and percentage indicator on audio badge | CHECK | Same as b5f4a2649 (dup). See b5f4a2649. |
+| fcbb6ecc4 | 2026-07-04 | fix: keep icon always visible and fix volume bar fill rendering | CHECK | Same as 3d7cd3a6a (dup). See 3d7cd3a6a. |
+| ed0afd054 | 2026-07-04 | fix: provide plasmoid config via KConfigLoader and set dynamic property | CHECK | Tasks-config plumbing (pairs eabf7c89a/2b0963186): expose the plasmoid's real config via `KConfigLoader` so the config UI and the plasmoid QML read/write the same store. Relevant if our Tasks config tab doesn't apply changes. |
+| 40daf331e | 2026-07-04 | fix: use lib.cleanSource in default.nix to exclude build artifacts | N/A | ng's own `default.nix`. |
+| ee727cfd3 | 2026-07-04 | Merge PR #26: Fix NixOS/nixpkgs build + first-class Nix packaging | N/A | ng packaging merge (KF6 compat shims + their Nix packaging). Separate from our flake. |
+| eabf7c89a | 2026-07-04 | fix: wire Tasks config tab options to actual functionality | CHECK (priority) | Root-causes why the Tasks config tab's combos/checkboxes don't apply: `appletConfiguration()` created a **separate** `ConfigPropertyMap` instead of returning the same `KConfigPropertyMap` the plasmoid QML binds to, so writes through one loader are invisible to the other (independent KConfigLoader caches). Our Tasks tab is exposed (`LatteDockConfiguration.qml:477`) but may have this exact dual-loader disconnect. If our Tasks config doesn't take effect, this is the fix. Pairs with ed0afd054/2b0963186. |
+| 2b0963186 | 2026-07-04 | fix: defer QQmlContext access to configurationForAppletVisualIndex | CHECK | P6 config plumbing (pairs eabf7c89a): defer `QQmlContext` access to avoid a null/early read. Take with the Tasks-config wiring if adopting it. |
+| 0deca9e18 | 2026-07-04 | fix: make widget ParabolicArea MouseArea always visible for smooth wave animation | CHECK | **Ties to the REVIEW_NOTES parabolic-smoothness question** (always-visible synchronous MouseArea vs queued). ng keeps the widget `ParabolicArea` MouseArea always visible so `onPositionChanged` delivers synchronous parabolic updates (C++ still arbitrates enter/exit with a 150ms lock), avoiding a `QueuedConnection` round-trip that made the wave stutter. Our `ParabolicArea.qml:29` is already `visible: appletItem.parabolicEffectIsSupported` (close to always-visible) and uses `acceptedButtons: Qt.NoButton`-style hover tracking. Verify our widget wave is smooth; ng confirms this is the correct pattern. |
+| 613ddcc3b | 2026-07-05 | fix: restore middle-click behavior and migrate to Plasma 6 APIs | ADOPT (priority — confirmed bug) | **The definitive answer to the `Qt.MidButton` question, and a confirmed live bug in our port.** ng's own message: *"Replace deprecated `Qt.MidButton` with `Qt.MiddleButton` in QML (removed in Qt 6)."* `Qt.MidButton` is **undefined** in Qt6 QML, so every `mouse.button === Qt.MidButton` in our port is always false: **task middle-click actions are dead** (`TaskMouseArea.qml:19/155/188` accepts `Qt.LeftButton \| undefined \| Qt.RightButton` = no middle button; `ClickedAnimation.qml:35` never fires). This overturns our `PORTING_PLAN.md:636-643` deliberate-retention note — that reasoning was based on ng's earlier state and is now wrong. ng's correct fix is asymmetric: rename to `Qt.MiddleButton` where QML must handle it (TaskMouseArea), but have `EnvironmentActions` accept **only** `Qt.LeftButton` so empty-area middle-click propagates to the C++ `ContextMenuLayerQuickItem` handler (avoids the double-handling our plan feared). Also flips `middleClickAction` default to Close. Adopt; update PORTING_PLAN and REVIEW_NOTES. Ties to 871c4322d and 14c98b9cc. |
+| 5a807aac7 | 2026-07-05 | fix: suppress expected configuration-syncing warnings during startup | SKIP | Log-noise suppression during the Tasks-config sync. Cosmetic. |
+| f0f65f4e3 | 2026-07-05 | fix: remove duplicate parabolic zoom scaling from audio badge size | N/A~ | Tail of ng's audio-badge parabolic rework (`AudioStream.qml`): they double-applied parabolic zoom to the badge (their 0f3d89d3c) and here remove the duplicate. Only relevant if we adopt ng's audio-badge structure (we don't share it). |

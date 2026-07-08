@@ -31,7 +31,7 @@ so "HAVE" means the specific fix is present in our file, not just that the file
 exists. Where our port deliberately took latte-dock-qt6's QML instead of ng's,
 that is called out.
 
-**Progress: 115 / 249 audited.**
+**Progress: 127 / 249 audited.**
 
 **Emerging finding (after 13):** ng and our port solved the same original
 independently, so most ng commits describe changes we simply did differently or
@@ -164,3 +164,15 @@ actually right before we take it.
 | 00ae44348 | 2026-06-13 | fix(audio): drive SinkModel with Instantiator to prime PA | CHECK | Same audio-priming cluster. |
 | 7556d052a | 2026-06-13 | fix(audio): force PreferredDevice initial sink read | CHECK | Same audio-priming cluster (`paFixTimer`). |
 | b7dab7a90 | 2026-06-13 | fix(audio): back off paFixTimer to 30s after priming | CHECK | Same audio-priming cluster; the debounce tail. |
+| c8875ee28 | 2026-06-13 | feat(applet): always show Remove in applet context menu | CHECK | Our `CompactApplet.qml` has no `closeApplet`/Remove wiring. Ties to your reported widget right-click issues; verify Remove is offered on widgets. |
+| 43f86bd09 | 2026-06-13 | fix(shell): propagate Layout min/max to applet popup | CHECK | Applet-popup sizing; pairs with 29a515f59. |
+| f14778efe | 2026-06-13 | fix(systray): reclaim dock space on applet removal | CHECK | Verify removing a widget immediately frees its dock space. |
+| 7b8d9e0ff | 2026-06-13 | fix(layout): remove systray from default insertion boundary | CHECK | Insertion-order tweak; pairs with 0e7d8e065. |
+| 70eced15e | 2026-06-13 | fix(wheel): restore containment scroll over latte plasmoid | CHECK | Scroll-action routing; verify scroll over the tasks area triggers containment scroll actions. |
+| ad0d2c2e5 | 2026-06-14 | fix(widget): exclude analog clock from text-applet slot sizing | CHECK | Special-cases `digitalclock` sizing (the widget I test-added). Pairs with 544479586. |
+| 3a2ce268a | 2026-06-14 | fix(cast): replace C-style enum cast in visibilitymanager | SKIP | Cleanup; also confirms ng's default visibility is DodgeActive (same as ours). |
+| beff425d9 | 2026-06-15 | fix: audit compliance and shutdown stability | HAVE~ | We have `m_lastContainmentStatus` in `contextmenulayerquickitem`. Verify the shutdown-stability bits; relates to the KSvg exit crash note in this doc's peers. |
+| ab3092e66 | 2026-06-15 | fix: reduce AlwaysVisible ghost window visibility | CHECK | We have the ghost window (`screenedgeghostwindow.cpp`). ng sets an alpha buffer to hide it; verify ours isn't visible. |
+| a66c24145 | 2026-06-15 | fix: eliminate ghost window artifact during mode switches | CHECK | Ghost-window artifact on Dodge↔AlwaysVisible switch (exactly the modes I toggled). We have the ghost window; verify no flash on mode switch. |
+| 30637c1cd | 2026-06-16 | fix: prevent dock collapse when adding fillWidth applets | HAVE~ | We have `inNormalFillCalculationsState` in our Layouter. Verify adding a fillWidth widget doesn't collapse the dock. |
+| 2146e5564 | 2026-06-16 | fix: quit() in commitDataRequest to prevent logout hang | CHECK | Our `main.cpp:261` sets `RestartNever` on `commitDataRequest` but ng additionally forces `quit()` to avoid a logout hang. Verify our dock doesn't hang logout; cheap ADOPT if it does. |

@@ -31,7 +31,7 @@ so "HAVE" means the specific fix is present in our file, not just that the file
 exists. Where our port deliberately took latte-dock-qt6's QML instead of ng's,
 that is called out.
 
-**Progress: 103 / 249 audited.**
+**Progress: 115 / 249 audited.**
 
 **Emerging finding (after 13):** ng and our port solved the same original
 independently, so most ng commits describe changes we simply did differently or
@@ -152,3 +152,15 @@ actually right before we take it.
 | 544479586 | 2026-06-12 | fix(widget): multi-cell slot for text-heavy external applets | ADOPT? | `externalAppletForcedSlots`/`externalAppletNaturalWidth` absent. Text-heavy widgets (clock, etc. — the one I test-added) may be squashed into one icon cell. Verify external widget sizing; good candidate. |
 | be72dd5f4 | 2026-06-12 | fix: suppress KDE framework property override warnings | CHECK | More log-noise filters; pairs with 95b1f7cd8. Cosmetic. |
 | 88ee2b8ab | 2026-06-12 | fix(systray): drag-drop reorder without breaking layout | CHECK | Systray reorder + sort-drag z-order. Verify systray widget behaves in our dock. |
+| 078c1e1ef | 2026-06-12 | fix(popup): Wayland destroying applet popup on open | CHECK | Applet-popup lifetime on Wayland (block-hiding on NeedsAttention). Verify applet popups survive open in our dock. |
+| c3db3ded0 | 2026-06-12 | fix(widget): show external C++ plasmoids requesting fillWidth | HAVE~ | Our `containment/…/AppletItem.qml`/`ItemWrapper.qml`/`LayouterPrivate.qml` already have `minAutoFillLength`/`maxAutoFillLength`. Verify fillWidth widgets expand. |
+| ccc86c428 | 2026-06-13 | fix(wheel): pass wheel to all external applets | CHECK | `resolveAppletQuickItem` wheel routing. Verify scrolling over any widget (not just systray) reaches it. |
+| f7dcc58cb | 2026-06-13 | fix(audio): no false muted icon when no stream | HAVE~ | Our `TaskItem.qml:215` has `hasAudioStream`; verify the muted icon is gated on it. |
+| 73d982f0b | 2026-06-13 | fix(visibility): eliminate binding loop on inNormalState | ADOPT | **Confirmed: our dock logs `Binding loop detected for inNormalState` (VisibilityManager.qml:32).** ng replaced the binding with an imperative `recomputeInNormalState()`. Real, reproduced-in-our-build bug. Take it. |
+| ea760f68f | 2026-06-13 | fix(cache): auto-clear stale QML disk cache on version change | CHECK | `autoClearQmlCacheOnVersionChange` absent. Avoids stale QML after upgrades; nice robustness. Evaluate. |
+| 00fe319d7 | 2026-06-13 | fix(install): never purge user config during update | N/A | ng `install.sh`; our nix install doesn't do this. |
+| 9ff5e6a5f | 2026-06-13 | fix(applet): defer container creation for new applets | CHECK | Applet-creation-timing cluster (with 1c96f2b4c). Verify no stale initial state when adding widgets. |
+| dfafd07af | 2026-06-13 | fix(audio): prime PulseAudio SinkModel at startup | CHECK | Audio-priming cluster (4 commits: +00ae44348/7556d052a/b7dab7a90) to kill a false muted icon before PA is ready. We have a PulseAudio `Instantiator` but maybe not sink priming. Verify no false muted icon at startup; adopt the priming if so. |
+| 00ae44348 | 2026-06-13 | fix(audio): drive SinkModel with Instantiator to prime PA | CHECK | Same audio-priming cluster. |
+| 7556d052a | 2026-06-13 | fix(audio): force PreferredDevice initial sink read | CHECK | Same audio-priming cluster (`paFixTimer`). |
+| b7dab7a90 | 2026-06-13 | fix(audio): back off paFixTimer to 30s after priming | CHECK | Same audio-priming cluster; the debounce tail. |

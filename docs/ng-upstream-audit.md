@@ -33,14 +33,42 @@ that is called out.
 
 **Progress: 139 / 249 audited.**
 
-**Emerging finding (after 13):** ng and our port solved the same original
-independently, so most ng commits describe changes we simply did differently or
-not at all — that is expected, not a gap. The useful output is the subset where
-ng fixed a real bug we plausibly also have (candidate ADOPTs so far: audio-badge
-stuck highlight, context-menu null-guard, indicator panel-contrast theming,
-indicator user-package override) and the CHECKs where we must verify our own
-behavior. Each ADOPT still needs a look at whether ng's implementation is
-actually right before we take it.
+Tally through 139: 71 CHECK · 23 SKIP · 17 HAVE · 17 ADOPT-candidate (ADOPT+PORT)
+· 7 N/A · 4 GAP. Most commits are ng-did-it-differently (expected). The value is
+the small set of real bugs we plausibly share.
+
+### Standout ADOPT candidates (as of 139/249) — ranked by confidence
+
+1. **inNormalState binding loop** (`73d982f0b`) — **reproduced in our build's log**
+   (`Binding loop detected for inNormalState`, VisibilityManager.qml:32). Highest
+   confidence; imperative recompute.
+2. **Shutdown double-free / `flushDelete`** (`a9c200fe2`) — plausible fix for our
+   **KSvg static-destructor exit crash** (see REVIEW_NOTES). Deferred-delete flush
+   at teardown.
+3. **Parabolic zoom jitter debounce** (`c917f7936`,`a118b91dc`) — journal flagged
+   zoom/reorder jitter; our `parabolic.cpp` has no switch-interval guard.
+4. **Widget-explorer double-click add debounce** (`c70988a3f`) — journal flagged
+   double-click crashes; no `addDebounceTimer` in our shell.
+5. **Audio-badge stuck highlight** (`2d130fed6`) — old MouseArea → HoverHandler/
+   TapHandler.
+6. **Indicator panel-contrast theming** (`adde24b14`,`f559f521b`,`74a2f9ef2`) —
+   indicators mis-contrast on custom panel colors; we have none of the color-safe
+   logic.
+7. Small, cheap, safe: context-menu More Places null-guard (`af6a90767`), indicator
+   user-package override (`7ce95f470`), `KDE_COLOR_SCHEME_PATH` pin (`9fe135422`),
+   dbus `setWatchMode` (`603a9871c`).
+8. Widget drag-to-add UX: position-aware drop insertion (`735525810`) + text-heavy
+   external-applet sizing (`544479586`); and `LatteCore.Dialog`→`AppletPopup`
+   (`29a515f59`) for P6 applet-config popups.
+
+### Feature GAPs (whole features we lack)
+- **Separator widgets** (`org.kde.latte.separator`) — no `separator/` package.
+- **KNS download** (`knscompat`) — "Get New Widgets/Indicators" from store.kde.org.
+
+### Recurring theme worth noting
+ng **twice removed** view/surface recreate paths (`1b424bae9`, `dc5fa3b0c`) and a
+redundant `ls->setScreen` (`911dd1a59`) — corroborates our own decision to drop
+the hotplug surface-recreate. Our port still calls `recreateView`; worth auditing.
 
 ## Audit log
 

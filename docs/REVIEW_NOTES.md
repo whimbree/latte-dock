@@ -8,6 +8,35 @@ decision the driver shouldn't make alone.
 
 ## Open
 
+### KSvg static-destructor crash on the single-instance early-exit path
+When a second latte-dock starts while another instance already owns the
+`org.kde.lattedock` D-Bus name, ours does its init then exits, and segfaults
+during static teardown: `__cxa_finalize` -> `_dl_call_fini` ->
+`~QThreadDataDestroyer` -> a static `KSvg::Svg` destructor ->
+`KSvg::SvgPrivate::eraseRenderer()`. Backtrace captured from a core dump on
+2026-07-07. Only triggers on the abnormal early-exit path (a theme SVG is
+still alive at global-destructor time). Does not affect a normally-running
+sole instance. Needs the theme/KSvg singletons torn down before the app-exit
+static-destruction phase, or the early-exit made to `_exit()` without running
+static dtors. Low priority (only bites when launching a duplicate), but it is
+a real crash. **Human/dev check:** reproduce by launching a second instance,
+then decide whether to fix teardown order or short-circuit the duplicate-exit.
+
+### Enumeration ("missing running apps") root cause: KWin permission gate
+Not a code bug. KWin gates `org_kde_plasma_window_management` (libtaskmanager's
+window source) behind a `.desktop` match: the canonicalized first token of an
+installed desktop file's `Exec=` must equal the client's `/proc/PID/exe`, and
+that service must list the interface in `X-KDE-Wayland-Interfaces`. Our
+`app/org.kde.latte-dock.desktop.cmake` already declares it correctly, so a
+normal install (`Exec=/usr/bin/latte-dock`, process at the same path) works.
+Fails for dev builds run from `build/bin/` (no matching installed desktop
+file) and for Nix-wrapped installs (`Exec` points at the makeWrapper script,
+`/proc/exe` at the `.*-wrapped` binary). Dev workaround: a throwaway
+`.desktop` in `~/.local/share/applications` with `Exec=<repo>/build/bin/
+latte-dock` plus the interface line, then `kbuildsycoca6`. Full write-up and
+proof in the fork-comparison journal, 2026-07-07 entry. **No source change
+needed**; flagged so nobody re-hunts this as a code defect.
+
 ### Tasks click-action completeness test uses a transcribed "offered" set
 `tests/qml/tst_taskactions.qml` guards the enum/handler contract for task
 click actions (the plan's "config offers 9, handler handles 3" regression

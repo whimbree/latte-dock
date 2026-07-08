@@ -431,8 +431,20 @@ int main(int argc, char **argv)
     KCrash::setDrKonqiEnabled(true);
     KCrash::setFlags(KCrash::AutoRestart | KCrash::AlwaysDirectly);
 
-    Latte::Corona corona(defaultLayoutOnStartup, layoutNameOnStartup, addViewTemplateNameOnStartup, memoryUsage);
+    //! Claim single-instance ownership BEFORE building the Corona. If another
+    //! process already owns org.kde.lattedock (e.g. a differently-installed
+    //! Latte whose lock file we didn't match), KDBusService::Unique forwards to
+    //! it and this instance must exit. Doing that here, before the Corona and
+    //! the theme/KSvg singletons it constructs exist, avoids the segfault we
+    //! otherwise hit tearing those statics down on the duplicate-exit path
+    //! (a static KSvg::Svg destructor -> eraseRenderer()). See REVIEW_NOTES.
     KDBusService service(KDBusService::Unique);
+
+    if (!service.isRegistered()) {
+        return 0;
+    }
+
+    Latte::Corona corona(defaultLayoutOnStartup, layoutNameOnStartup, addViewTemplateNameOnStartup, memoryUsage);
 
     return app.exec();
 }

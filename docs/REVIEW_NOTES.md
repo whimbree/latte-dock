@@ -41,19 +41,21 @@ by this test: the drag-from-explorer / tap-to-add gesture itself (can't drive
 the pointer headlessly) - still needs a human to confirm the DnD handler.
 
 
-### KSvg static-destructor crash on the single-instance early-exit path
-When a second latte-dock starts while another instance already owns the
-`org.kde.lattedock` D-Bus name, ours does its init then exits, and segfaults
+### KSvg static-destructor crash on the single-instance early-exit path - FIXED 2026-07-08
+When a second latte-dock started while another instance already owned the
+`org.kde.lattedock` D-Bus name, ours did its init then exited, and segfaulted
 during static teardown: `__cxa_finalize` -> `_dl_call_fini` ->
 `~QThreadDataDestroyer` -> a static `KSvg::Svg` destructor ->
 `KSvg::SvgPrivate::eraseRenderer()`. Backtrace captured from a core dump on
-2026-07-07. Only triggers on the abnormal early-exit path (a theme SVG is
-still alive at global-destructor time). Does not affect a normally-running
-sole instance. Needs the theme/KSvg singletons torn down before the app-exit
-static-destruction phase, or the early-exit made to `_exit()` without running
-static dtors. Low priority (only bites when launching a duplicate), but it is
-a real crash. **Human/dev check:** reproduce by launching a second instance,
-then decide whether to fix teardown order or short-circuit the duplicate-exit.
+2026-07-07. Root cause: `main.cpp` constructed `Latte::Corona` (which builds the
+theme/KSvg singletons) BEFORE `KDBusService(KDBusService::Unique)`, so a
+duplicate launch built the full theme stack and only then found it was not
+unique and exited, tearing a live static `KSvg::Svg` down at `__cxa_finalize`.
+Fixed by moving the `KDBusService(Unique)` guard ahead of the Corona and
+`return 0`ing when `!service.isRegistered()`, so the duplicate path exits before
+any KSvg object exists (commit d45c7a38, build-verified). **Human test:** launch
+a second instance while one runs (or with a different Latte owning the D-Bus
+name) and confirm it exits cleanly with no KCrash.
 
 ### Packaging (flake packages.default) follow-ups
 The nix package builds, wraps, and passes the KWin enumeration gate (verified

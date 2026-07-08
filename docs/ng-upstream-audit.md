@@ -57,11 +57,14 @@ These are ranked; the top two are the ones to act on first.
   forwards (no `handlePlasmoidDrop`), so the QML `onDrop`→`processMimeData` is the
   sole creation path. If a double-add is ever seen, chase the explorer
   double-click debounce (`c70988a3f`) instead.
-- **C. Shutdown/exit crash on the duplicate-instance path** — `2437a92ad`
-  (+ `a9c200fe2` `flushDelete`). Our dup-instance guard calls `qGuiApp->exit()`
-  (`main.cpp:193/211/229/247/278`), tearing down Qt globals never fully inited —
-  the exact class of our **KSvg static-destructor exit crash** (REVIEW_NOTES). ng
-  uses a bare `return 0` and defers `SharedQmlEngine` creation past the guard.
+- **C. Shutdown/exit crash on the duplicate-instance path — FIXED 2026-07-08
+  (commit d45c7a38).** The real cause was ordering, not `qGuiApp->exit()`:
+  `main.cpp` built the `Corona` (and its KSvg singletons) *before* the
+  `KDBusService(Unique)` guard, so a duplicate launch built the theme stack then
+  crashed tearing a static `KSvg::Svg` down at exit. Fixed by claiming
+  uniqueness first and `return 0`ing before the Corona when not the owner.
+  (ng's `2437a92ad`/`a9c200fe2` were the pointers; our fix is our own, matched to
+  our startup structure.)
 - **D. inNormalState binding loop** (`73d982f0b`) — **reproduced in our log**
   (`Binding loop detected for inNormalState`, VisibilityManager.qml:32); imperative recompute.
 - **E. Reorder jitter** (`c4e7bcb62` tasks + `924a8ac41`/`cf6aa1ec0` applets) —

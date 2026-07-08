@@ -312,16 +312,27 @@ PlasmaExtras.Menu {
         ActivitiesTools.launchersOnActivities = root.launchersOnActivities
         ActivitiesTools.currentActivity = activityInfo.currentActivity;
         ActivitiesTools.plasmoid = Plasmoid;
-
-        //From Plasma 5.10 and frameworks 5.34 jumpLists and
-        //places are supported
-        if (LatteCore.Environment.frameworksVersion >= 336384) {
-            // Cannot have "Connections" as child of PlasmaCoponents.ContextMenu.
-            backend.showAllPlaces.connect(function() {
-                visualParent.showContextMenu({showAllPlaces: true});
-            });
-        }
         //  updateOnAllActivitiesLauncher();
+    }
+
+    //! "More Places" support. A bare backend.showAllPlaces.connect() in
+    //! Component.onCompleted leaves a lambda bound to backend (which outlives
+    //! this menu) referencing this menu's visualParent, so it can fire after
+    //! the menu is destroyed. A Connections held as a property is torn down
+    //! with the menu and is null-guarded here. (Connections cannot be a direct
+    //! child of PlasmaComponents.ContextMenu, hence the property form.)
+    function requestExpandedPlacesMenu() {
+        if (menu.visualParent && menu.visualParent.showContextMenu) {
+            menu.visualParent.showContextMenu({showAllPlaces: true});
+        }
+    }
+
+    readonly property var showAllPlacesConnection: Connections {
+        target: backend
+
+        function onShowAllPlaces() {
+            menu.requestExpandedPlacesMenu();
+        }
     }
 
 

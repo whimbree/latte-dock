@@ -52,12 +52,11 @@ These are ranked; the top two are the ones to act on first.
   empty-area middle-click propagates to the C++ `ContextMenuLayerQuickItem` handler
   (this is what avoids the double-handling the plan feared). Also flips the
   `middleClickAction` default to Close. **Fix and update PORTING_PLAN + REVIEW_NOTES.**
-- **B. Duplicate widget creation from the Widget Explorer** — `1b07df291`.
-  Matches the journal's double-add/double-click-widget symptom. Our C++ path
-  (`view.cpp:1390`, `text/x-plasmoidservicename`) and our QML `onDrop`
-  (`DragDropArea.qml:198` `processMimeData`) both fire for an explorer drop → two
-  applets. Fix = QML `onDrop` returns early for that mime (file/URL drops stay on
-  the QML path).
+- **B. ~~Duplicate widget creation from the Widget Explorer~~ (`1b07df291`) —
+  VERIFIED N/A 2026-07-08.** Does not apply: our `View::event()` Drop case only
+  forwards (no `handlePlasmoidDrop`), so the QML `onDrop`→`processMimeData` is the
+  sole creation path. If a double-add is ever seen, chase the explorer
+  double-click debounce (`c70988a3f`) instead.
 - **C. Shutdown/exit crash on the duplicate-instance path** — `2437a92ad`
   (+ `a9c200fe2` `flushDelete`). Our dup-instance guard calls `qGuiApp->exit()`
   (`main.cpp:193/211/229/247/278`), tearing down Qt globals never fully inited —
@@ -326,7 +325,7 @@ the hotplug surface-recreate. Our port still calls `recreateView`; worth auditin
 | 4348980c0 | 2026-07-03 | fix: disable parabolic animation in edit mode and ignore task drag-move events | CHECK | Two bits: ignore task drag-move (our `DragDropArea.qml:146` already `return`s when `dragInfo.isTask` — HAVE); and disable the parabolic zoom animation while in edit mode (`ParabolicEffect.qml`). Verify our parabolic zoom is quiet in edit mode; adopt the guard if it still animates. |
 | 924a8ac41 | 2026-07-03 | fix: reduce applet sort-drag jitter with hysteresis and higher resistance | ADOPT? | Applet analog of c4e7bcb62 (reorder-jitter cluster). Adds spatial hysteresis (`sortDragMinDistance: 12`, `sortDragLastX/Y`), bumps commit cooldown 90→180ms and center dead-zone 0.18→0.30 in `AppletItem.qml`. Our `AppletItem.qml` has **no** `shouldDelaySortCommit`/sort-drag hysteresis at all. Strong candidate together with c4e7bcb62. |
 | cf6aa1ec0 | 2026-07-03 | fix: further increase sort-drag resistance to reduce jitter | ADOPT? | Same-day follow-up tuning to 924a8ac41 (more resistance). Take with 924a8ac41 as one change if adopting the applet-reorder hysteresis. |
-| 1b07df291 | 2026-07-03 | fix: prevent double widget creation on Widget Explorer drop via mime split | ADOPT? (priority) | **High-value, matches the journal double-add/double-click widget bug.** ng found `text/x-plasmoidservicename` drops handled by BOTH the C++ path (`View::event()`→`handlePlasmoidDrop`) and the QML `onDrop`, creating two applets per drop; fix = QML `onDrop` returns early for that mime, leaving file/URL drops on the QML path. **We have the identical two-path setup:** `view.cpp:1390` handles `text/x-plasmoidservicename` in C++, and `DragDropArea.qml:198` `onDrop` calls `containmentItem.processMimeData()` for every non-launcher drop including plasmoid drops. Very likely we double-create widgets from the explorer. Evaluate the early-return guard. |
+| 1b07df291 | 2026-07-03 | fix: prevent double widget creation on Widget Explorer drop via mime split | N/A (verified 2026-07-08) | ng found `text/x-plasmoidservicename` drops handled by BOTH a C++ `View::event()`→`handlePlasmoidDrop()` AND the QML `onDrop`, double-creating. **Does not apply to us:** our `View::event()` `QEvent::Drop` case (`view.cpp:1557`) only `setContainsDrag(false)` and forwards - we have **no** `handlePlasmoidDrop`, so the sole applet-creation path is the QML `onDrop`→`processMimeData` (`DragDropArea.qml:198`). (My earlier note misread `view.cpp:1390`, which is the `mimeContainsPlasmoid` *check* helper, not a creation path.) If a double-add is ever reproduced, chase the explorer double-click debounce (`c70988a3f`) instead. |
 | ec839b7eb | 2026-07-03 | fix: block mouse interactions on dock during edit mode except drag-to-reorder | N/A~ | Edit-mode input-blocking **overlay cluster** (ec839b7eb, 61a7e40a8, 79b0ecaf5, 1a0fc7dff, b93902dc7, 0de8f4ece — six same-day iterations of a QML MouseArea overlay in `containment/main.qml` that blocks clicks but punches through for task-plasmoid drag). Our port blocks edit-mode input at the C++ layer via a computed input region (`canvasInputRegion()` in `waylandlayershell.cpp`), a different mechanism, so these don't port directly. That ng needed six tries corroborates our C++ approach. Verify our edit-mode input-blocking + drag punch-through behaves; no code to copy. |
 | 61a7e40a8 | 2026-07-03 | fix: add MouseArea overlay to block all non-drag interactions in edit mode | N/A~ | Same overlay cluster (see ec839b7eb). |
 | 79b0ecaf5 | 2026-07-03 | fix: block task clicks and context menu in edit mode while allowing drag | N/A~ | Same overlay cluster (see ec839b7eb). |

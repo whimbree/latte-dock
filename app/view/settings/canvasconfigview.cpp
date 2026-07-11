@@ -43,6 +43,17 @@ CanvasConfigView::CanvasConfigView(Latte::View *view, PrimaryConfigView *parent)
     connect(this, &QQuickView::widthChanged, this, &CanvasConfigView::updateInputRegion);
     connect(this, &QQuickView::heightChanged, this, &CanvasConfigView::updateInputRegion);
 
+    //! the interactive chrome rect lives in the canvas QML
+    //! (CanvasConfiguration.rearrangeToggleRect) and moves with layout and
+    //! parabolic metrics, so the input region must follow it
+    connect(this, &QQuickView::statusChanged, this, [this](QQuickView::Status status) {
+        if (status == QQuickView::Ready && rootObject()) {
+            connect(rootObject(), SIGNAL(rearrangeToggleRectChanged()),
+                    this, SLOT(updateInputRegion()), Qt::UniqueConnection);
+            updateInputRegion();
+        }
+    });
+
     setParentView(view);
     init();
 }
@@ -133,11 +144,23 @@ void CanvasConfigView::updateInputRegion()
     const bool configuring = m_corona && m_corona->universalSettings()
             && m_corona->universalSettings()->inConfigureAppletsMode();
 
-    //! STUB: Phase 5 - in configure-applets mode the whole canvas goes
-    //! click-through so pointer events reach the widgets beneath; the
-    //! rearrange-toggle chrome rect should stay interactive, but the QML
-    //! side that publishes that rect only lands with the QML migration
-    setMask(Latte::WindowSystem::LayerShell::canvasInputRegion(configuring, size(), QRect()));
+    //! In configure-applets mode the canvas goes click-through so pointer
+    //! events reach the widgets beneath, EXCEPT the rearrange toggle's rect
+    //! (published by CanvasConfiguration.qml in window coordinates). Without
+    //! it the toggle cannot be unpressed: the click falls through to the
+    //! dock, the settings window loses focus and the whole edit mode closes
+    //! instead of just leaving the rearrange sub-mode.
+    QRect chrome;
+
+    if (configuring && rootObject()) {
+        const QRectF published = rootObject()->property("rearrangeToggleRect").toRectF();
+
+        if (!published.isEmpty()) {
+            chrome = published.toAlignedRect();
+        }
+    }
+
+    setMask(Latte::WindowSystem::LayerShell::canvasInputRegion(configuring, size(), chrome));
 }
 
 bool CanvasConfigView::event(QEvent *e)

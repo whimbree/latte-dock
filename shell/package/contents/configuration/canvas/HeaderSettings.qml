@@ -56,10 +56,12 @@ Item {
             return width/2 - height/2;
         }
 
+        //! horizontal docks: right below (bottom dock) / above (top dock) the
+        //! ruler, which sits flush with the canvas' inner edge
         if (plasmoid.location === PlasmaCore.Types.BottomEdge) {
-            return headMargin;
+            return ruler.thickness + headMargin;
         } else if (plasmoid.location === PlasmaCore.Types.TopEdge) {
-            return parent.height - rearrangeBtn.height - headMargin;
+            return parent.height - rearrangeBtn.height - ruler.thickness - headMargin;
         }
     }
 
@@ -105,7 +107,12 @@ Item {
 
     SettingsControls.Button{
         id: rearrangeBtn
-        anchors.horizontalCenter: parent.horizontalCenter
+        //! horizontal docks: at the left end, out of the way of the ruler
+        //! label and the widgets being configured at the center; vertical
+        //! docks keep it centered between the two stick buttons
+        anchors.horizontalCenter: root.isVertical ? parent.horizontalCenter : undefined
+        anchors.left: root.isVertical ? undefined : parent.left
+        anchors.leftMargin: root.isVertical ? 0 : headerSettings.headMargin
         anchors.top: parent.top
 
         text: i18n("Rearrange and configure your widgets")

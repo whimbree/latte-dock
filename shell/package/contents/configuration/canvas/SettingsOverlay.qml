@@ -66,7 +66,11 @@ Item{
 
     MaximumLength.Ruler {
         id: ruler
-        thicknessMargin: headerSettings.thickness + 3 * spacing
+        //! Horizontal docks: flush with the canvas' inner edge, so the ruler
+        //! marks exactly where the blueprint area begins (both the canvas and
+        //! the blueprint span editThickness from the screen edge). Vertical
+        //! docks keep the stacking margin, their header shares the same band.
+        thicknessMargin: root.isHorizontal ? 0 : headerSettings.thickness + 3 * spacing
         thickMargin: 3
     }
 }

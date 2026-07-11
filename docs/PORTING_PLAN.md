@@ -927,6 +927,24 @@ wallpaper stacking across the dock and CanvasConfigView surfaces).
 
 ### Phase 8: Layout/config persistence, session shutdown, multi-screen
 
+PHASE OPENED 2026-07-11 (user go), starting from live crashes on a
+multi-view, multi-monitor setup.
+
+- [x] Render-thread crash whenever an overflowing dock relayouts (enter
+      edit mode, add a widget, right-click an applet in edit mode - all
+      one backtrace: buildRenderLists SEGV during QSGRhiLayer::grab).
+      The tasks scroll-fade MultiEffect was the vector: mask sampled
+      from inside the grabbed subtree, and layer.enabled churning with
+      contentsExceed. Deterministic gdb reproduction, fixed and
+      verified with a 15-toggle gauntlet
+      Commits: df747ebf (fix), ee745859 (fakepointer rightclick used to
+      reproduce headlessly)
+- [ ] Verify duplicated/cloned docks actually establish applet config
+      sync after the initial 'org.kde.sync ... was not established'
+      storm (the 1s retry in ContainmentInterface should log 'delayed
+      applet configuration was successful' per applet id; confirm none
+      stay unestablished, since clone mirroring silently degrades)
+      Commits:
 - [ ] Dock visibility across screen lock/unlock (observed live
       2026-07-10, not yet root-caused): a dock that lives through a
       kscreenlocker cycle can stay invisible after unlock even though

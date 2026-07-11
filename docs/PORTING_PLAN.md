@@ -958,7 +958,17 @@ multi-view, multi-monitor setup.
       CompactApplet.qml keeps parent/anchors/size bindings on the old
       item and never detaches it; also audit its Qt5-style popupWindow
       fullRepresentation reparenting against Plasma 6 AppletQuickItem
-      ownership (plasmashell moved applet popups to AppletPopup)
+      ownership (plasmashell moved applet popups to AppletPopup).
+      REGRESSION-TESTED 2026-07-11 evening: re-adding the Comic Strip
+      applet after the provider fixes still crashed the killer recipe
+      (one 'Texture t1' then the buildRenderLists SEGV), so at least
+      one invalid-provider path survives on the churn route. CAVEAT:
+      that crash coincided with a 'CLEARED SCREEN :: DP-3' output
+      removal (the portrait monitor flaps, second time a crash lands
+      exactly on that event), so screen-removal teardown is a co-equal
+      suspect and possibly contaminates earlier verdicts too. Next
+      session: reproduce with the monitor flap eliminated (disable its
+      sleep) to separate the two variables
       Commits:
 - [ ] Expose plasma applets' PRIVATE QML modules to the dock (user hit
       it live: 'module org.kde.private.desktopcontainment.folder is not

@@ -1038,7 +1038,7 @@ multi-view, multi-monitor setup.
       actually true, and nothing re-triggers the sync once both sides
       finish otherwise
       Commits:
-- [ ] Edit-mode windows must re-derive geometry from the edited view's
+- [x] Edit-mode windows must re-derive geometry from the edited view's
       CURRENT screen after output hotplug (found live 2026-07-11 when a
       second monitor was added: the settings window kept the exact
       position/size computed for the old single-screen layout, landing
@@ -1048,6 +1048,21 @@ multi-view, multi-monitor setup.
       passed screenGeometry and only land right when the surface is on
       that output). See "Multi-monitor" section in
       docs/session-handoff.md for the measured evidence
+      Commits: d670c97a (canvas, settings window and widget explorer are
+      pinned to the edited view's output; user-verified on the
+      portrait+landscape setup. The secondary advanced-mode window still
+      relies on compositor placement)
+- [ ] Settings window screen selector is broken on multi-monitor: the
+      'On Primary Screen' combobox neither opens other screens nor
+      applies a change (user-reported while trying to move a dock to
+      the other monitor's bottom edge). Investigate three layers: the
+      QQmlListProperty screens model actually reaching the delegate,
+      the old-style Connections handlers (onScreensCountChanged /
+      onShowSignal) which Qt6 may never fire, and ComboBox POPUPS
+      inside a layer-shell window on wayland (own transient-window
+      pitfalls). User also reports 'other things broken in the
+      settings' - do a full settings-window control audit as part of
+      this item
       Commits:
 - [ ] Fix multi-screen palette divergence: pin
       `Kirigami.Theme.inherit: false` with an explicit `colorSet`, and

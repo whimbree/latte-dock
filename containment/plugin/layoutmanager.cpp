@@ -573,13 +573,19 @@ void LayoutManager::save()
                     continue;
                 }
 
-                QObject *applet = appletVariant.value<QObject *>();
+                //! Plasma 6: AppletItem.qml's "applet" is the graphic item
+                //! (PlasmoidItem), which has no "id" property - reading it
+                //! yielded 0 for every child, so save() serialized an empty
+                //! order and deleted the stored appletOrder key on every
+                //! startup (rearrangements never persisted, duplicates came
+                //! out orderless). The id lives on the Plasma::Applet.
+                PlasmaQuick::AppletQuickItem *appletitem = appletVariant.value<PlasmaQuick::AppletQuickItem *>();
 
-                if (!applet) {
+                if (!appletitem || !appletitem->applet()) {
                     continue;
                 }
 
-                uint id = applet->property("id").toUInt();
+                uint id = appletitem->applet()->id();
 
                 if (id>0) {
                     childCount++;
@@ -896,13 +902,15 @@ QQuickItem *LayoutManager::appletItemInLayout(QQuickItem *layout, const int &id)
                 continue;
             }
 
-            QObject *applet = appletVariant.value<QObject *>();
+            //! same Plasma 6 id chain as save()'s collector: the "applet"
+            //! property holds the graphic item, the id lives on its Applet
+            PlasmaQuick::AppletQuickItem *appletitem = appletVariant.value<PlasmaQuick::AppletQuickItem *>();
 
-            if (!applet) {
+            if (!appletitem || !appletitem->applet()) {
                 continue;
             }
 
-            int tempid = applet->property("id").toInt();
+            int tempid = appletitem->applet()->id();
 
             if (id == tempid) {
                 return item;

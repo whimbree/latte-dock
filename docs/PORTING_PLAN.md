@@ -1092,7 +1092,9 @@ multi-view, multi-monitor setup.
       verified end to end with pointer injection: dock moved
       DP-2 -> DP-3 -> bottom edge from the settings UI alone
       Commits: 0474e20c (ComboBox pressed writes -> down),
-      793faad2 (View::moveToScreen hide/retarget/show remap)
+      793faad2 (View::moveToScreen hide/retarget/show remap).
+      USER-VERIFIED 2026-07-12: dock moved to the portrait monitor and
+      back to the main one on the real desk setup
 - [ ] Full settings-window control audit against Qt5 semantics (split
       from the screen-selector item; user reports more controls broken,
       with the user at the desk driving both tabs). PROGRESS

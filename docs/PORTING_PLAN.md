@@ -1060,19 +1060,48 @@ multi-view, multi-monitor setup.
       docs/session-handoff.md for the measured evidence
       Commits: d670c97a (canvas, settings window and widget explorer are
       pinned to the edited view's output; user-verified on the
-      portrait+landscape setup. The secondary advanced-mode window still
-      relies on compositor placement)
-- [ ] Settings window screen selector is broken on multi-monitor: the
+      portrait+landscape setup), 7ac419d1 (secondary advanced-mode
+      window, the last compositor-placed surface: applyFixedGeometry on
+      the edited view's screen, verified sitting above the canvas band
+      at the dock's start)
+- [x] Settings window screen selector is broken on multi-monitor: the
       'On Primary Screen' combobox neither opens other screens nor
       applies a change (user-reported while trying to move a dock to
-      the other monitor's bottom edge). Investigate three layers: the
-      QQmlListProperty screens model actually reaching the delegate,
-      the old-style Connections handlers (onScreensCountChanged /
-      onShowSignal) which Qt6 may never fire, and ComboBox POPUPS
-      inside a layer-shell window on wayland (own transient-window
-      pitfalls). User also reports 'other things broken in the
-      settings' - do a full settings-window control audit as part of
-      this item
+      the other monitor's bottom edge). RESOLVED 2026-07-11: of the
+      three suspected layers, none was the cause. Qt6 made
+      QQC2 ComboBox.pressed read-only; the write in onGenericPressed
+      threw a TypeError that aborted the handler BEFORE the
+      popup.visible toggle, so no LatteComponents ComboBox popup could
+      open anywhere in the settings (the screens model, the old-style
+      Connections handlers and the layer-shell popup all work). Apply
+      then exposed a second, independent defect: a mapped wlr-layer
+      surface cannot change outputs (no protocol request exists), so
+      QWindow::setScreen in setScreenToFollow left the relocated dock
+      on the old output with the new screen's size. Both fixed and
+      verified end to end with pointer injection: dock moved
+      DP-2 -> DP-3 -> bottom edge from the settings UI alone
+      Commits: 0474e20c (ComboBox pressed writes -> down),
+      793faad2 (View::moveToScreen hide/retarget/show remap)
+- [ ] Full settings-window control audit against Qt5 semantics (split
+      from the screen-selector item; user reports more controls broken,
+      with the user at the desk driving both tabs). Known already: the
+      whole TasksConfig page floods 'Cannot read property ... of
+      undefined' TypeErrors on load (leftClickAction, hoverAction,
+      taskScrollAction, modifier*, hideAllTasks, showInfoBadge, ...),
+      pointing at the Plasma 6 config-access pattern change the ng fork
+      hit (eabf7c89a wiring, see the Phase 5/6 notes); default
+      indicator config.qml has the same class of errors
+      (minimizedTaskColoredDifferently etc. of undefined)
+      Commits:
+- [ ] Edit-mode canvas can stay on the previous output after a
+      screen-only relocation with edit mode open (observed ONCE live:
+      top dock DP-2 -> DP-3 left the canvas band at DP-2's top with
+      the old 2560x146 size; the settings window followed correctly.
+      The reverse DP-3 -> DP-2 move and a later fresh edit-mode cycle
+      placed the canvas correctly, so the failure needs a first-move
+      or stale-parentview condition pinned down before fixing.
+      Suspect the setParentView/showAfter path racing positioner's
+      canvasGeometry recompute)
       Commits:
 - [ ] Fix multi-screen palette divergence: pin
       `Kirigami.Theme.inherit: false` with an explicit `colorSet`, and

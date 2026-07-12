@@ -155,6 +155,15 @@ Item {
             iconSize = -1;
         }
 
+        if (root.maxLength <= 0) {
+            //! the view window has no geometry yet (early startup on wayland:
+            //! the first call arrives from visibilityChanged before the window
+            //! is sized), so every shrink limit would be negative and any
+            //! computed size garbage; onMaxLengthChanged re-runs this as soon
+            //! as a real length exists
+            return;
+        }
+
         if ( !doubleCallAutomaticUpdateIconSize.running && !visibility.inRelocationHiding /*block too many calls and dont apply during relocatinon hiding*/
                 && (visibility.inNormalState && sizer.isActive) /*in normal and auto size active state*/
                 && (metrics.iconSize===metrics.maxIconSize || metrics.iconSize === sizer.iconSize) /*not during animations*/) {
@@ -191,12 +200,17 @@ Item {
                 // console.log("step3");
                 var nextIconSize = metrics.maxIconSize;
 
+                //! bounds are inequalities on purpose: stepping by automaticStep
+                //! from a size that is not a multiple of it skips exact values,
+                //! and the equality forms (!== 16, !== maxIconSize) spun forever
+                //! (inherited from upstream 747d4870; surfaced on wayland where
+                //! the first call can arrive with iconSize=78)
                 do {
-                    nextIconSize = nextIconSize - automaticStep;
+                    nextIconSize = Math.max(16, nextIconSize - automaticStep);
                     var factor = nextIconSize / metrics.iconSize;
                     var nextLength = factor * layoutLength;
 
-                } while ( (nextLength>toShrinkLimit) && (nextIconSize !== 16));
+                } while ( (nextLength>toShrinkLimit) && (nextIconSize > 16));
 
                 var intLength = Math.round(layoutLength);
                 var intNextLength = Math.round(nextLength);
@@ -213,14 +227,14 @@ Item {
                 var foundGoodSize = -1;
 
                 do {
-                    nextIconSize2 = nextIconSize2 + automaticStep;
+                    nextIconSize2 = Math.min(metrics.maxIconSize, nextIconSize2 + automaticStep);
                     var factor2 = nextIconSize2 / iconSize;
                     var nextLength2 = factor2 * layoutLength;
 
                     if (nextLength2 < toGrowLimit) {
                         foundGoodSize = nextIconSize2;
                     }
-                } while ( (nextLength2<toGrowLimit) && (nextIconSize2 !== metrics.maxIconSize ));
+                } while ( (nextLength2<toGrowLimit) && (nextIconSize2 < metrics.maxIconSize ));
 
                 var intLength2 = Math.round(layoutLength);
                 var intNextLength2 = Math.round(nextLength2);

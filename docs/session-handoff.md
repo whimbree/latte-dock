@@ -1,9 +1,39 @@
 # Session handoff
 
 Rolling handoff for the next session to pick up without re-deriving context.
-Last updated 2026-07-12 (midday). PHASE 8 IS OPEN - read its section in
+Last updated 2026-07-12 (evening). PHASE 8 IS OPEN - read its section in
 docs/PORTING_PLAN.md first; every item is current there, several sections
 below are now RESOLVED and kept only as archaeology.
+
+## 2026-07-12 evening: skill library authored, tested, committed
+
+- .claude/skills/ now holds seven skills (latte-architecture, latte-build-env,
+  latte-conventions, latte-debugging, latte-fork-sync, latte-live-verification,
+  latte-plasma6-defect-families). They are the distilled operating knowledge of
+  this port; new sessions should lean on them instead of re-deriving.
+- Tested before committing, four ways: (1) three independent accuracy audits
+  covering roughly 240 objective claims (every cited path, symbol, line number,
+  commit hash and quoted metric checked against the repo; zero wrong or stale
+  claims, a handful of imprecisions found and fixed); (2) executable checks
+  (qml-compile-gate 0 of 128 failures, all four cmake targets confirmed, the
+  plasma-desktop curl diff and both fork range commands run verbatim);
+  (3) a live smoke test of the whole latte-live-verification recipe (restart
+  under the gdb wrapper, three docks mapped at layer=3 in dumpwins, D-Bus
+  surface introspected, edit mode opened on first invoke, spectacle capture,
+  clean stop; machine left dock-free as found); (4) six Sonnet-class usability
+  probes run against realistic scenarios with only the skills as guidance -
+  five clean passes, one wrong "stale binary" diagnosis that led to a new
+  staleness-check paragraph in latte-build-env (plugin sources link into their
+  own .so, never mtime-compare against build/bin/latte-dock; trust the no-op
+  build's "no work to do").
+- Environment change: fakepointer now lives at ~/.local/bin/fakepointer
+  (was a transient prior-session scratch path); fakepointer.desktop Exec
+  updated, sycoca rebuilt, injection verified working.
+- Fork-sync pass is DUE: latte-dock-ng has ~10 unreviewed commits past
+  59e04b8b7 (including real fixes: middle-click restore 613ddcc3b, duplicate
+  parabolic zoom removal f0f65f4e3) and latte-dock-qt6 has 54 past 9003f33a
+  (large test/refactor push). CLAUDE.md's "less active" note on qt6 is stale.
+  Run the latte-fork-sync skill end to end next session.
 
 ## 2026-07-12 sweep (all committed, ad9b823f..1aa97b47)
 
@@ -373,10 +403,10 @@ Do NOT claim a UI change works without driving it and reading pixels. Yesterday'
 3. Dock invisible after a screen lock/unlock cycle, and a dock started under a
    locked screen stalls for minutes before "Adding View". Filed in PORTING_PLAN
    Phase 8. Not root-caused.
-4. System widgets (system monitor, battery, bluetooth, networkmanagement,
-   kdeconnect, dictionary) fail "module not installed": their private QML
-   modules are not on the launcher's QML2_IMPORT_PATH. WARNING: a broad append
-   of the system Qt6 QML tree fixed them once but shadowed org.kde.taskmanager
-   and replaced the dock context menu with the stock one. Allow-list leaf
-   modules (symlink specific dirs into a private root), never the shared root.
+4. RESOLVED by 4c9f3bc7 (see the 2026-07-12 sweep): owning packages joined the
+   flake's pinned LATTE_QML_MODULE_PATH; nine failing modules went to zero with
+   the context menu intact. Kept for the warning's sake: a broad append of the
+   system Qt6 QML tree fixed them once but shadowed org.kde.taskmanager and
+   replaced the dock context menu with the stock one. Same-pin package roots
+   only, never a foreign shared root.
 5. plasma_applet_dict also needs QtWebEngine; recheck after 4.

@@ -19,6 +19,15 @@ ColumnLayout {
     id: root
     Layout.fillWidth: true
 
+    //! "indicator" is the config API's context property, but QQC2 controls
+    //! carry their own "indicator" property (the check glyph), which shadows
+    //! the context name inside any binding or handler whose scope object is
+    //! such a control (Qt5's QQC1 controls had no property with that name, so
+    //! upstream could use the bare name everywhere). Capture it here at the
+    //! root, whose scope has no competing name, and use this alias inside
+    //! every QQC2 control scope.
+    readonly property QtObject latteIndicator: indicator
+
     TextMetrics {
         id: defaultFontMetrics
         text: "M"
@@ -347,10 +356,10 @@ ColumnLayout {
             LatteComponents.CheckBox {
                 Layout.maximumWidth: dialog.optionsWidth
                 text: i18n("Different color for minimized windows")
-                value: indicator.configuration.minimizedTaskColoredDifferently
+                value: latteIndicator.configuration.minimizedTaskColoredDifferently
 
                 onClicked: {
-                    indicator.configuration.minimizedTaskColoredDifferently = !indicator.configuration.minimizedTaskColoredDifferently;
+                    latteIndicator.configuration.minimizedTaskColoredDifferently = !latteIndicator.configuration.minimizedTaskColoredDifferently;
                 }
             }
 
@@ -358,11 +367,11 @@ ColumnLayout {
                 Layout.maximumWidth: dialog.optionsWidth
                 text: i18n("Show an extra dot for grouped windows when active")
                 tooltip: i18n("Grouped windows show both a line and a dot when one of them is active and the Line Active Indicator is enabled")
-                enabled: indicator.configuration.activeStyle === 0 /*Line*/
-                value: indicator.configuration.extraDotOnActive
+                enabled: latteIndicator.configuration.activeStyle === 0 /*Line*/
+                value: latteIndicator.configuration.extraDotOnActive
 
                 onClicked: {
-                    indicator.configuration.extraDotOnActive = !indicator.configuration.extraDotOnActive;
+                    latteIndicator.configuration.extraDotOnActive = !latteIndicator.configuration.extraDotOnActive;
                 }
             }
         }
@@ -377,20 +386,20 @@ ColumnLayout {
         Layout.maximumWidth: dialog.optionsWidth
         text: i18n("Show indicators for applets")
         tooltip: i18n("Indicators are shown for applets")
-        value: indicator.configuration.enabledForApplets
+        value: latteIndicator.configuration.enabledForApplets
 
         onClicked: {
-            indicator.configuration.enabledForApplets = !indicator.configuration.enabledForApplets;
+            latteIndicator.configuration.enabledForApplets = !latteIndicator.configuration.enabledForApplets;
         }
     }
 
     LatteComponents.CheckBox {
         Layout.maximumWidth: dialog.optionsWidth
         text: i18n("Reverse indicator style")
-        value: indicator.configuration.reversed
+        value: latteIndicator.configuration.reversed
 
         onClicked: {
-            indicator.configuration.reversed = !indicator.configuration.reversed;
+            latteIndicator.configuration.reversed = !latteIndicator.configuration.reversed;
         }
     }
 }

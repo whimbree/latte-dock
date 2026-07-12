@@ -17,6 +17,11 @@ ColumnLayout {
     id: root
     Layout.fillWidth: true
 
+    //! same shadowing hazard as the default indicator's config: QQC2 controls
+    //! have their own "indicator" property, which wins over the config API's
+    //! context property inside control-scoped bindings and handlers
+    readonly property QtObject latteIndicator: indicator
+
     TextMetrics {
         id: defaultFontMetrics
         text: "M"
@@ -111,20 +116,20 @@ ColumnLayout {
        /* LatteComponents.CheckBox {
             Layout.maximumWidth: dialog.optionsWidth
             text: i18n("Reverse indicator style")
-            value: indicator.configuration.reversed
+            value: latteIndicator.configuration.reversed
 
             onClicked: {
-                indicator.configuration.reversed = !indicator.configuration.reversed;
+                latteIndicator.configuration.reversed = !latteIndicator.configuration.reversed;
             }
         }*/
 
         LatteComponents.CheckBox {
             Layout.maximumWidth: dialog.optionsWidth
             text: i18n("Growing circle animation when clicked")
-            value: indicator.configuration.clickedAnimationEnabled
+            value: latteIndicator.configuration.clickedAnimationEnabled
 
             onClicked: {
-                indicator.configuration.clickedAnimationEnabled = !indicator.configuration.clickedAnimationEnabled;
+                latteIndicator.configuration.clickedAnimationEnabled = !latteIndicator.configuration.clickedAnimationEnabled;
             }
         }
 
@@ -132,10 +137,10 @@ ColumnLayout {
             Layout.maximumWidth: dialog.optionsWidth
             text: i18n("Show indicators for applets")
             tooltip: i18n("Indicators are shown for applets")
-            value: indicator.configuration.enabledForApplets
+            value: latteIndicator.configuration.enabledForApplets
 
             onClicked: {
-                indicator.configuration.enabledForApplets = !indicator.configuration.enabledForApplets;
+                latteIndicator.configuration.enabledForApplets = !latteIndicator.configuration.enabledForApplets;
             }
         }*/
     }

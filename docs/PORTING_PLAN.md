@@ -994,15 +994,21 @@ multi-view, multi-monitor setup.
       Verified with the throwaway layout at 78 and the user's real
       layout, which starts again
       Commits: ad9b823f
-- [ ] Expose plasma applets' PRIVATE QML modules to the dock (user hit
+- [x] Expose plasma applets' PRIVATE QML modules to the dock (user hit
       it live: 'module org.kde.private.desktopcontainment.folder is not
       installed'; ALL third-party applets error in the staged run while
       working under plasmashell). Likely the reason broken applets like
-      Comic Strip churn representations at all. Approach per the earlier
-      regression note: allow-list leaf modules (or staged-first ordered
-      path), never append the shared system QML root, which shadowed
-      the pinned org.kde.taskmanager and killed the context menu
-      Commits:
+      Comic Strip churn representations at all. RESOLVED 2026-07-12 the
+      NixOS-native way: instead of allow-listing leaves out of the
+      foreign system tree, the owning packages joined the flake's own
+      pinned LATTE_QML_MODULE_PATH (plasma-desktop, bluedevil, bluez-qt,
+      plasma-nm, kdeconnect-kde, kdeplasma-addons, qtwebengine,
+      powerdevil, print-manager) - same-pin whole-package roots cannot
+      shadow with a foreign build, and staged Latte modules still win
+      last. Verified on the user's full layout: nine distinct failing
+      modules -> zero errors, and the right-click menu is still Latte's
+      (the shadowing regression check)
+      Commits: 4c9f3bc7
 - [ ] Duplicated docks: applets come out in a DIFFERENT ORDER than the
       original (user-observed live) - matches the ng-documented
       applet-order sync defect class. Note: live config mirroring

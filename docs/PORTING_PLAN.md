@@ -1150,16 +1150,25 @@ multi-view, multi-monitor setup.
       clicks - and ConfigInteraction.qml cfg_hoverAction hardcoded to
       NoneAction in ng before their fix)
       Commits: 32df5b47 (Tasks page config access)
-- [ ] Edit-mode canvas can stay on the previous output after a
+- [x] Edit-mode canvas can stay on the previous output after a
       screen-only relocation with edit mode open (observed ONCE live:
       top dock DP-2 -> DP-3 left the canvas band at DP-2's top with
-      the old 2560x146 size; the settings window followed correctly.
-      The reverse DP-3 -> DP-2 move and a later fresh edit-mode cycle
-      placed the canvas correctly, so the failure needs a first-move
-      or stale-parentview condition pinned down before fixing.
-      Suspect the setParentView/showAfter path racing positioner's
-      canvasGeometry recompute)
-      Commits:
+      the old 2560x146 size; the settings window followed correctly).
+      RESOLVED 2026-07-12, two stacked defects found by making the
+      reproduction deterministic (first move after a fresh start with
+      chrome open): (a) a mapped layer surface cannot change outputs,
+      so applyCanvasPlacement's setScreen was a no-op for the visible
+      canvas while new margins/size still applied - fixed with a
+      shared retargetScreen hide/retarget/show remap in the LS
+      helpers, covering canvas, secondary chooser and widget explorer
+      alike; (b) the positioner keys available-area on
+      containment()->screen(), which lands asynchronously after the
+      move - when all syncs ran before it landed, the canvas kept the
+      previous screen's LENGTH (1264 on the 2560 portrait). Fixed by
+      connecting Containment::screenChanged -> Positioner::syncGeometry.
+      Verified: two consecutive fresh-start first-move relocations
+      carry the full chrome ensemble to the target output
+      Commits: 1607d022 (surface remap), c5bdc239 (screen-id resync)
 - [ ] Fix multi-screen palette divergence: pin
       `Kirigami.Theme.inherit: false` with an explicit `colorSet`, and
       set `KDE_COLOR_SCHEME_PATH` explicitly and early (in the `View`

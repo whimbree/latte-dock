@@ -1034,10 +1034,43 @@ multi-view, multi-monitor setup.
       the indicator API surface.
       Commits:
 - [ ] Right-click context menu on an applet offers no 'Applet Settings'
-      entry (user-reported 2026-07-12; user recalls it was ALREADY
-      missing before the evening session, so pre-existing, not a churn
-      regression). Compare against Qt5 Latte's applet context menu
-      composition in the contextmenu containmentactions plugin.
+      entry (user-reported 2026-07-12; pre-existing, not a churn
+      regression). ARCHITECTURE MAPPED 2026-07-12 night, this needs its
+      own session: the port removed Qt5's ViewPart::ContextMenu
+      (d3538eee), the class that composed applet-aware menus for the
+      dock window's own right-clicks. Its intended replacement, the
+      canvas window's ContextMenuLayer (contextmenulayerquickitem.cpp),
+      HAS the applet composition (addAppletActions with the correct
+      Plasma 6 internalAction chain) but its applet-under-cursor
+      resolution is dead: updateAppletContainsMethod searches only the
+      view contentItem's DIRECT children for appletContainsPos and
+      Plasma 6 inserted ContainmentItem wrapper layers, so it never
+      finds the (already Plasma 6-correct) QML method; the fallback
+      maps coordinates cross-window and derefs the quick item BEFORE
+      its null check (latent crash, contextmenulayerquickitem.cpp:229).
+      Meanwhile dock-window right-clicks go to the containmentactions
+      plugin (containmentactions/contextmenu/menu.cpp), which composes
+      containment-level entries only, and since 3d714d63 the dock strip
+      receives those clicks directly. Decision needed: recursive method
+      lookup + dock-side composition, or revive a ViewPart context menu
+      the Qt5 shape. User decision on record: the applet configure
+      entry should be available ALWAYS, not only in edit mode - which
+      matches Qt5/plasmashell behavior.
+      Commits:
+- [ ] Edit mode first-open latency (user-reported: first open slow,
+      subsequent opens fast). Suspect: cold QML compilation of the
+      chrome packages (settings pages, canvas) on first
+      instantiation; the staged tree carries no qmlcachegen output and
+      QML disk cache is invalidated by restaging. Options to evaluate
+      in Phase 10: qmlcachegen for installed packages, chrome
+      pre-instantiation at startup, measuring with QSG_INFO/QML_PROFILE.
+      Commits:
+- [ ] Startup latency (user-reported: 'takes way longer than it
+      should'). Measure BOTH dev and production-shaped starts before
+      optimizing: dev runs pay for cmake --install restaging, the gdb
+      wrapper and -d logging before the first frame; a clean timing
+      needs a bare run-staged.sh without wrapper. Then profile the real
+      offenders (layout load, QML compilation, screen wait).
       Commits:
 - [x] Edit-mode chrome lifecycle trilogy (user-reported 2026-07-12
       evening: blueprint flashes at open then vanishes, rearrange mode

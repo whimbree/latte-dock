@@ -1275,7 +1275,19 @@ multi-view, multi-monitor setup.
       Also explained: latte-dock windows 4 and 5 appearing ~18.5s
       after startup in BOTH runs are lazily created auxiliary popups
       (ToolTipDialog, KlipperPopup timing matches), benign.
-      Commits: (measurement pass; levers not yet implemented)
+      LEVER (a) LANDED 2026-07-13 (70fe5390): initContainments hands
+      pending Latte containments to a queued one-per-turn chain.
+      Measured honestly: first dock exec+3.7s (was 4.5s), all three
+      6.3s (was 5.3s) - the estimate of '~2s earlier' was wrong
+      because ~2.4s of the first-dock time is corona init BEFORE any
+      view can start, so the stagger only removes the wait behind the
+      other two views' construction. The total grows because
+      interleaved turns frontload mapping/painting of earlier views.
+      OWNER CALL if the trade feels wrong live: revert is one commit.
+      Remaining startup levers: corona init ~2.4s (theme mask parsing,
+      screens, layout templates - unprofiled), the launcher cache
+      (landed, 37acf9ca) and the upstream synchronous-load floor.
+      Commits: 37acf9ca (launcher cache), 70fe5390 (staggered views)
 - [x] Edit-mode chrome lifecycle trilogy (user-reported 2026-07-12
       evening: blueprint flashes at open then vanishes, rearrange mode
       dies moments after enabling with no blue frames and no dragging,

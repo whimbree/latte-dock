@@ -92,6 +92,16 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- Round thirteen, staggered startup (70fe5390): initContainments now
+  queues one view creation per event loop pass. First dock visible at
+  exec+3.7s (was 4.5s), all three at 6.3s (was 5.3s) - the promised
+  ~2s did not materialize because ~2.4s of corona init precedes any
+  view creation; the stagger only removes waiting behind sibling
+  views. Verified: geometries identical, previews/menu/edit-chrome
+  all work, ctest green (appstreamtest failure pre-existing without
+  the change). If the slower last-dock feels worse live, the revert
+  is exactly one commit. NEXT startup lever if wanted: profile the
+  ~2.4s corona init (theme mask parsing was one visible chunk).
 - Round twelve-c, ghosts finished (c7c46226): the per-side rect fix
   was not enough - the user re-reproduced on the clock. The sibling
   shadow pattern (ShadowedItem Loader sampling a still-visible

@@ -51,6 +51,29 @@ below are now RESOLVED and kept only as archaeology.
   y=-552). The settings pin (sticker) button is the way to keep chrome
   alive during headless driving; fakepointer clicks never hold real
   focus.
+- Round five, into the small hours of 2026-07-13 (36160c46, afefa442,
+  04d8000c and their docs commits): rearrange drag drift fixed (int
+  lastX/lastY truncating wayland's fractional pointer coords - the
+  int-vs-fractional audit hint is in the plan; fakepointer drag learned
+  multi-waypoint zigzags to prove it). Edit Dock wrong-view targeting
+  fixed (stale per-view pointer to the chrome singleton; show path now
+  requires parentView()==this and the recreation catch-up releases the
+  previous owner). Vertical-dock rearrange fixed via the canvas content
+  reload on retarget (cross-view binding stranding class, mechanism
+  demonstrated on the header's frozen y). Applet context menus restored
+  with the Configure entry available ALWAYS (owner decision): the root
+  was Panel.qml's viewLayout discovery missing that Plasma 6
+  containment roots ARE ContainmentItems, plus three layered defects
+  above it - see the plan item for the full chain. Default indicator
+  dead binding fixed. QSGTexture warning sources identified by config
+  bisection (applet-shadow first frames + TaskIcon's three unlayered
+  MultiEffects, which accrue during idle runtime - fix shape filed).
+  STILL OPEN, in priority order: TaskIcon/CompactApplet effect-source
+  layering (73da8400 completion), hover-modal inconsistency and
+  mispositioning (#recipe in plan), edit-mode first-open latency,
+  startup latency (measure without the gdb wrapper first), containment
+  menu corner-placement watch item, left canvas geometry flip-flop
+  watch item.
 - Round four, decisions and mapping (e70bccf7, e85e18d8, 98b7419e):
   parabolic zoom disabled for ALL of edit mode by owner decision
   (deliberate Qt5 deviation, comment at the site). The missing 'Applet

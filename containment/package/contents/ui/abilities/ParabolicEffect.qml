@@ -13,7 +13,13 @@ import org.kde.latte.core 0.2 as LatteCore
 import "./privates" as Ability
 
 Ability.ParabolicEffectPrivate {
-    isEnabled: factor.zoom>1 && !root.inConfigureAppletsMode
+    //! DEVIATION from Qt5 (which only disabled zoom in configure-applets
+    //! mode): zoom is disabled for ALL of edit mode, by owner decision
+    //! 2026-07-12. Zooming while the settings chrome describes the dock is
+    //! jarring, and the item motion feeds the popup mispositioning during
+    //! fast pointer movement. Revert to !root.inConfigureAppletsMode to
+    //! restore Qt5 behavior.
+    isEnabled: factor.zoom>1 && !root.editMode
     factor.zoom: {
         var storedZoom = LatteCore.WindowSystem.compositingActive && animations.active ? ( 1 + (Plasmoid.configuration.zoomLevel / 20) ) : 1;
         var maxSize = storedZoom * metrics.iconSize;

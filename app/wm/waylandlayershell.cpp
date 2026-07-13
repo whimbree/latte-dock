@@ -343,11 +343,18 @@ void applyFixedGeometry(QWindow *window, QScreen *screen, const QRect &geometry,
 }
 
 QRegion canvasInputRegion(bool inConfigureAppletsMode, const QSize &canvasSize,
-                          const QRect &interactiveChrome)
+                          const QRect &interactiveChrome, const QRect &dockStrip)
 {
     if (!inConfigureAppletsMode) {
-        //! plain edit mode: the canvas owns its whole surface
-        return QRegion(QRect(QPoint(0, 0), canvasSize));
+        //! Plain edit mode: the canvas owns its surface EXCEPT the dock's own
+        //! strip. Qt5/X11 got this by stacking: the canvas was raised above
+        //! surrounding docks and then the edited dock was raised above the
+        //! canvas, so applet hover, right-click and wheel over the dock hit
+        //! the dock, while the blueprint margin around it kept the canvas's
+        //! wheel-opacity and context-menu areas. Wayland layer surfaces in
+        //! the same layer cannot be restacked, so the same contract is
+        //! expressed through the input region instead.
+        return QRegion(QRect(QPoint(0, 0), canvasSize)) - QRegion(dockStrip);
     }
 
     if (interactiveChrome.isValid()) {

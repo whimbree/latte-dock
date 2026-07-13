@@ -100,6 +100,11 @@ void CanvasConfigView::initParentView(Latte::View *view)
 {
     SubConfigView::initParentView(view);
 
+    //! the dock strip is excluded from the canvas input region; re-carve
+    //! whenever the dock's rect moves or breathes so the exclusion tracks it
+    viewconnections << connect(m_latteView, &Latte::View::absoluteGeometryChanged,
+                               this, &CanvasConfigView::updateInputRegion);
+
     rootContext()->setContextProperty(QStringLiteral("primaryConfigView"), m_parent);
 
     updateEnabledBorders();
@@ -176,7 +181,13 @@ void CanvasConfigView::updateInputRegion()
         }
     }
 
-    setMask(Latte::WindowSystem::LayerShell::canvasInputRegion(configuring, size(), chrome));
+    //! the dock's own strip in canvas-local coordinates: input there must
+    //! always fall through to the dock (see canvasInputRegion's contract).
+    //! m_geometryWhenVisible is the authoritative canvas placement; window
+    //! position() lies on wayland layer-shell.
+    const QRect dockStrip = m_latteView->absoluteGeometry().translated(-m_geometryWhenVisible.topLeft());
+
+    setMask(Latte::WindowSystem::LayerShell::canvasInputRegion(configuring, size(), chrome, dockStrip));
 }
 
 bool CanvasConfigView::event(QEvent *e)

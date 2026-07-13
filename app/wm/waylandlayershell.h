@@ -130,13 +130,17 @@ void applyFixedGeometry(QWindow *window, QScreen *screen, const QRect &geometry,
 
 //! The input region (window-local, for QWindow::setMask) the edit-mode
 //! canvas should catch pointer events in. The canvas overlays the dock and
-//! sits above it, so whatever it grabs never reaches the widgets beneath.
-//! In configure-applets mode only @p interactiveChrome keeps grabbing (an
-//! invalid rect makes the whole canvas click-through); in plain edit mode
-//! the canvas owns its whole surface (wheel -> background opacity, ruler,
-//! context menu).
+//! sits above it (Wayland same-layer surfaces stack by mapping order and
+//! cannot be raised), so whatever it grabs never reaches the widgets
+//! beneath. In configure-applets mode only @p interactiveChrome keeps
+//! grabbing (an invalid rect makes the whole canvas click-through); in
+//! plain edit mode the canvas owns its surface MINUS @p dockStrip (the
+//! dock's own rect in canvas-local coords), reproducing Qt5/X11's
+//! dock-above-canvas stacking: widgets stay hoverable and right-clickable
+//! in edit mode, the blueprint margin keeps wheel-opacity and the context
+//! menu.
 QRegion canvasInputRegion(bool inConfigureAppletsMode, const QSize &canvasSize,
-                          const QRect &interactiveChrome);
+                          const QRect &interactiveChrome, const QRect &dockStrip);
 
 }
 }

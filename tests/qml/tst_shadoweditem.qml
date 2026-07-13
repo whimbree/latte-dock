@@ -49,12 +49,17 @@ TestCase {
                "autoPadding re-dirties the effect every frame; padding must be static");
 
         //! and the static rect must actually cover what the shadow paints:
-        //! blur extent plus offsets on every side
+        //! blur extent plus offsets on every side. paddingRect components
+        //! are PER SIDE (x/y/width/height = left/top/right/bottom extra,
+        //! per Qt's updateSourcePadding()); asymmetric values draw the
+        //! source scaled and offset inside itself (user-reported ghost
+        //! copies of every applet), so all four sides must be equal
         shadowed.shadowSizePx = 20;
         verify(shadowed.paddingRect.x >= 20 + Math.abs(shadowed.shadowVerticalOffset),
                "padding must cover blur radius plus offset");
-        compare(shadowed.paddingRect.width, 2 * shadowed.paddingRect.x);
-        compare(shadowed.paddingRect.height, 2 * shadowed.paddingRect.y);
+        compare(shadowed.paddingRect.width, shadowed.paddingRect.x);
+        compare(shadowed.paddingRect.height, shadowed.paddingRect.y);
+        compare(shadowed.paddingRect.y, shadowed.paddingRect.x);
         shadowed.shadowSizePx = 0;
     }
 

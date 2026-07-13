@@ -23,15 +23,21 @@ MultiEffect {
     // window carrying an applet shadow re-rendered EMPTY frames forever
     // (measured: 18.2% idle CPU on the main thread, ~19,500 failing statx/s
     // from per-frame theme lookups, both flat even with the docks hidden;
-    // 0.1% with static padding, bisected across three probe builds). The
-    // rect below grows the output by the blur extent plus the offsets on
-    // every side, which is everything a drop shadow can paint, so the
-    // rendered result is identical to what autoPadding produced.
+    // 0.1% with static padding, bisected across three probe builds).
+    // autoPadding also pads by blurMax*(1+blurMultiplier) = 256px PER SIDE
+    // around every applet regardless of the actual shadow size; the static
+    // rect pads by what the shadow can actually paint instead.
+    //
+    // paddingRect semantics per Qt's updateSourcePadding() (qtdeclarative
+    // qquickmultieffect.cpp): x/y/width/height are the EXTRA pixels on the
+    // left/top/right/bottom respectively - per side values, NOT totals.
+    // Getting that wrong draws the source scaled and offset inside itself
+    // (user-reported: a smaller ghost copy of every applet).
     readonly property int shadowPaddingPx: Math.ceil(shadowSizePx
                                                      + Math.max(Math.abs(shadowHorizontalOffset), Math.abs(shadowVerticalOffset))
                                                      + 2)
     autoPaddingEnabled: false
-    paddingRect: Qt.rect(shadowPaddingPx, shadowPaddingPx, 2*shadowPaddingPx, 2*shadowPaddingPx)
+    paddingRect: Qt.rect(shadowPaddingPx, shadowPaddingPx, shadowPaddingPx, shadowPaddingPx)
 
     shadowEnabled: true
     shadowOpacity: 1.0

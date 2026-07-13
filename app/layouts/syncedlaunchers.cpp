@@ -55,11 +55,14 @@ void SyncedLaunchers::removeAbilityClient(QQuickItem *client)
 
 void SyncedLaunchers::removeClientObject(QObject *obj)
 {
-    QQuickItem *item = qobject_cast<QQuickItem *>(obj);
-
-    if (item) {
-        removeAbilityClient(item);
-    }
+    //! destroyed() is emitted from ~QObject, where the object's QQuickItem
+    //! part has ALREADY been destructed: qobject_cast<QQuickItem*> returns
+    //! null here, so the old code silently skipped the removal and kept a
+    //! dangling pointer registered forever. Dropping a launcher afterwards
+    //! crashed in clients() calling property() on the freed object
+    //! (SIGSEGV through a null vtable slot, observed live 2026-07-13).
+    //! Remove by pointer identity; no dereference happens.
+    m_clients.removeAll(static_cast<QQuickItem *>(obj));
 }
 
 QQuickItem *SyncedLaunchers::client(const int &id)

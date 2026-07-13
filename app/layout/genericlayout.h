@@ -186,6 +186,8 @@ private:
     bool blockAutomaticLatteViewCreation() const;
     void setBlockAutomaticLatteViewCreation(bool block);
 
+    void addNextStartupView(QList<QPointer<Plasma::Containment>> pending);
+
     bool explicitDockOccupyEdge(int screen, Plasma::Types::Location location) const;
     bool primaryDockOccupyEdge(Plasma::Types::Location location) const;
 

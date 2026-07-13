@@ -1023,6 +1023,19 @@ bool GenericLayout::initContainments()
 
     qDebug() << "Layout ::::: " << name() << " added containments ::: " << m_containments.size();
 
+    //! Views are created one per event loop pass instead of inside this
+    //! loop. Every Latte::View::init() blocks the main thread for the
+    //! containment's full synchronous applet QML load (upstream PlasmaQuick
+    //! design, ~1-1.5s per dock measured), so creating all views back to
+    //! back kept the FIRST dock unmapped until the LAST one finished
+    //! compiling - ~4.5s to the first painted dock on a three-dock layout.
+    //! Staggered, each view maps and paints while the next one constructs.
+    //! Trickling views is not a novel state: runtime view addition
+    //! (duplicateView, moveViewToLayout, screen changes) already lands one
+    //! view at a time through the same guarded addView() path.
+    const bool wasblocked = m_blockAutomaticLatteViewCreation;
+    m_blockAutomaticLatteViewCreation = true;
+
     for(int pass=1; pass<=2; ++pass) {
         for (const auto containment : m_corona->containments()) {
             //! in first pass we load subcontainments
@@ -1045,9 +1058,45 @@ bool GenericLayout::initContainments()
             }
         }
     }
+
+    m_blockAutomaticLatteViewCreation = wasblocked;
+
+    QList<QPointer<Plasma::Containment>> pending;
+
+    for (const auto containment : m_containments) {
+        if (Layouts::Storage::self()->isLatteContainment(containment) && !hasLatteView(containment)) {
+            pending << containment;
+        }
+    }
+
+    addNextStartupView(pending);
+
     m_hasInitializedContainments = true;
     Q_EMIT viewsCountChanged();
     return true;
+}
+
+void GenericLayout::addNextStartupView(QList<QPointer<Plasma::Containment>> pending)
+{
+    if (pending.isEmpty()) {
+        return;
+    }
+
+    auto containment = pending.takeFirst();
+
+    //! the QPointer nulls if the containment died between event loop turns;
+    //! hasLatteView() covers a view that appeared meanwhile through another
+    //! path (e.g. a screen-change sync) - addView() also rechecks both
+    if (containment && !blockAutomaticLatteViewCreation() && !hasLatteView(containment)) {
+        addView(containment);
+    }
+
+    if (!pending.isEmpty()) {
+        //! queued on this layout: destruction of the layout cancels the chain
+        QMetaObject::invokeMethod(this, [this, pending]() {
+            addNextStartupView(pending);
+        }, Qt::QueuedConnection);
+    }
 }
 
 void GenericLayout::updateLastUsedActivity()

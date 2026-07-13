@@ -92,6 +92,16 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- Round fifteen, corona init profiled (docs only): the 2.4s corona
+  estimate was wrong - it is ~1.0s; the real pre-paint cost is the
+  first view's 2.6s create-to-map pipeline (QQmlTypeLoader floor plus
+  one-time inits gdb-sampled inside applet instantiation: ICU
+  calendar data, notification-service DBus registrations). Tried an
+  off-thread ICU pre-warm (QLocale::toString) - measured a no-op
+  (identical stall pattern; Qt uses its own CLDR tables, the applet's
+  ICU entry is elsewhere) and REMOVED it instead of shipping it.
+  Startup verdict: 3.7-4.5s to first painted dock, remainder owned by
+  upstream synchronous applet loading - local work here is done.
 - Round fourteen, chrome warmup (fd8cbc45): first Edit Dock 7.3s ->
   1.5s. The corona builds the settings/canvas ensemble hidden 8s
   after synchronizer init. TWO traps documented for posterity:

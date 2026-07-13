@@ -1308,6 +1308,25 @@ multi-view, multi-monitor setup.
       Remaining startup levers: corona init ~2.4s (theme mask parsing,
       screens, layout templates - unprofiled), the launcher cache
       (landed, 37acf9ca) and the upstream synchronous-load floor.
+      CORONA INIT PROFILED 2026-07-13: the ~2.4s estimate was wrong -
+      corona init is only ~1.0s (one 0.35s gap at layout init). The
+      real pre-first-paint chunk is the FIRST VIEW's create-to-map
+      pipeline, ~2.6s, with three stalls (0.57/0.62/0.39s) that
+      gdb-sample to (a) the QQmlTypeLoader floor and (b) one-time
+      process inits buried in applet instantiation: ICU
+      calendar/locale data (icu::Calendar::makeInstance under
+      LikelySubtags::load, entered from deep applet code) and the
+      notification/JobViewServer DBus registrations from the systray
+      load. An off-thread ICU pre-warm via QLocale::toString was
+      implemented, measured to change NOTHING (identical gap pattern
+      - Qt formats dates from its own CLDR tables; the applet's ICU
+      entry point is elsewhere), and REMOVED rather than shipped as
+      cargo cult. Startup now stands at: launcher 0.6s + libs 0.4s +
+      corona 1.0s + view1 2.6s = 3.7-4.5s to first painted dock
+      (run-to-run noise +-0.4s), with the remainder owned by upstream
+      PlasmaQuick's synchronous applet loading. Further local work
+      here has poor cost/benefit; revisit only if upstream grows
+      async applet loading.
       Commits: 37acf9ca (launcher cache), 70fe5390 (staggered views)
 - [x] Edit-mode chrome lifecycle trilogy (user-reported 2026-07-12
       evening: blueprint flashes at open then vanishes, rearrange mode

@@ -72,19 +72,24 @@ int main(int argc, char **argv)
 
     QQuickWindow::setDefaultAlphaBuffer(true);
 
-    //! Default to the single-threaded scenegraph render loop. Qt 6.11's
-    //! threaded loop races layer/ShaderEffect teardown across Latte's many
-    //! windows: reproducible SIGSEGV in QSGBatchRenderer::buildRenderLists
-    //! during QSGRhiLayer::grab whenever effect sources churn (edit-mode
-    //! toggles on an overflowing dock, context-menu open/dismiss while
-    //! window previews churn, widget adds). Two invalid-provider effects
-    //! were fixed outright, but the race also fires through valid layered
-    //! effects; with the basic loop the whole class is gone (verified with
-    //! previously 100%-reproducible recipes). Plasmashell itself shipped on
-    //! the basic loop for years, and dock surfaces are small, so the cost
-    //! is acceptable. Respect an explicit user override.
+    //! Default to the THREADED scenegraph render loop, like plasmashell on
+    //! the same systems. The port ran on the basic loop while the effect
+    //! audit was open: Qt 6.11's threaded loop raced layer/ShaderEffect
+    //! teardown when effect sources churned, and basic made those
+    //! corruptions deterministic enough to root-cause. That audit is done -
+    //! every effect source is a stable texture provider, shadows are
+    //! layer.effect with static padding, transient effects exist only while
+    //! visible - and the historical crash recipes (edit-mode toggles,
+    //! context menus over churning previews, hover sweeps) run clean on
+    //! threaded. The basic loop is not neutral: it serializes every
+    //! window's polish/sync/render on the gui thread, measured as
+    //! 400-600ms frame hitches while opening the clock's calendar popup
+    //! (threaded: p99 6ms, max 41ms on the same interaction). KNOWN
+    //! EXCEPTION tracked in the plan: WebEngine-backed applets (comic)
+    //! free-run under threaded (~20% cpu per instance); until that is
+    //! understood, QSG_RENDER_LOOP=basic remains available as an override.
     if (!qEnvironmentVariableIsSet("QSG_RENDER_LOOP")) {
-        qputenv("QSG_RENDER_LOOP", "basic");
+        qputenv("QSG_RENDER_LOOP", "threaded");
     }
 
     qputenv("QT_WAYLAND_DISABLE_FIXED_POSITIONS", {});

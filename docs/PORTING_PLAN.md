@@ -1122,7 +1122,7 @@ multi-view, multi-monitor setup.
       parked on the top then the left dock: Edit Dock on the bottom
       dock opened the bottom chrome both times (dumpwins).
       Commits: 66114774
-- [ ] Edit mode first-open latency (user-reported: first open slow,
+- [x] Edit mode first-open latency (user-reported: first open slow,
       subsequent opens fast). Suspect: cold QML compilation of the
       chrome packages (settings pages, canvas) on first
       instantiation; the staged tree carries no qmlcachegen output and
@@ -1160,7 +1160,28 @@ multi-view, multi-monitor setup.
       edit-trilogy minefield; needs a supervised session;
       (b) share the corona's QML engine with the config views so the
       startup type-graph warm-up carries over - architectural change.
-      Commits: (measurement pass)
+      OPTION (a) LANDED 2026-07-13 (fd8cbc45): corona warms the
+      ensemble 8s after synchronizer initializationFinished, via a
+      showOnCreation=false PrimaryConfigView constructor (wires the
+      parent through initParentView() only - no configuring session,
+      no userConfiguring flash, no mapped window). Two live-found
+      holes closed on the way: the constructor's setParentView()
+      unconditionally showed AND started a configuring session (the
+      first warmup attempt flash-showed and was closed by the focus
+      machinery), and View::showConfigurationInterface relied on
+      setParentView()'s show side effect, which early-returns on an
+      unchanged parent - the first Edit Dock on the warmed view was a
+      silent no-op until the factory path learned to show explicitly
+      (gated to parentView()==this so retargets stay on the deferred
+      slide-out swap). MEASURED: first open 7.3s -> 1.5s, warm reopen
+      unchanged, warmup silent (window count stays 3, 0.1% idle).
+      Residual 1.5s = deferred show intervals + mapping; good enough,
+      option (b) not needed. Watch item: first open on a NON-warmed
+      view goes through the standard retarget (deferred slide-out) -
+      untouched code, but the never-shown-ensemble variant was not
+      driven headlessly (dodge kept hiding the top dock); user will
+      hit it naturally.
+      Commits: fd8cbc45
 - [x] TOP PRIORITY: idle render-loop + filesystem-stat storm in the
       applet-shadow path (discovered 2026-07-13 while measuring the
       edit-open latency).

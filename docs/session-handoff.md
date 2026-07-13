@@ -92,6 +92,22 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- Round fourteen, chrome warmup (fd8cbc45): first Edit Dock 7.3s ->
+  1.5s. The corona builds the settings/canvas ensemble hidden 8s
+  after synchronizer init. TWO traps documented for posterity:
+  PrimaryConfigView's constructor showed AND started a configuring
+  session via setParentView() (warmup attempt one flash-showed and
+  self-closed through the focus machinery - constructor gained
+  showOnCreation=false); and setParentView() early-returns on an
+  unchanged parent, so the factory path in
+  View::showConfigurationInterface never showed the warmed-hidden
+  ensemble - first click was a SILENT no-op (explicit
+  showConfigWindow() there now, gated parentView()==this). Also
+  learned: qDebug through a redirected stdout FILE is block-buffered
+  - a 'silent' log during idle means unflushed buffer, not a hung
+  process; check D-Bus responsiveness before assuming deadlock.
+  Watch item: first open on a non-warmed view (retarget from
+  never-shown state) was not driven headlessly.
 - Round thirteen, staggered startup (70fe5390): initContainments now
   queues one view creation per event loop pass. First dock visible at
   exec+3.7s (was 4.5s), all three at 6.3s (was 5.3s) - the promised

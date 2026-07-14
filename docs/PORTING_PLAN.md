@@ -1348,6 +1348,25 @@ multi-view, multi-monitor setup.
       Verified: switch, round trips, cold start with plasma
       persisted, frames render.
       Commits: 841c2ca4
+- [x] Staged launcher child-env leak (dock-launched apps inherited the
+      dock's whole environment: KIO systemd runner copies it verbatim
+      into the transient unit's Environment=, no per-job hook - read at
+      kio v6.27.0). QT_PLUGIN_PATH fixed: run-staged.sh unsets it and
+      hands the staged plugin tree + kwindowsystem leaf over as
+      LATTE_EXTRA_PLUGIN_PATHS, which main.cpp feeds into process-local
+      QCoreApplication::addLibraryPath() (both consumers -
+      containmentactions lookup and the kwindowsystem backend - search
+      libraryPaths()). Verified: right-click menu intact, zero
+      KWindowShadow failures, dock-spawned konsole env clean of staging
+      dirs. RESIDUAL, accepted for the dev harness (no clean seam),
+      re-evaluate at Phase 11 packaging: QML2_IMPORT_PATH still leaks
+      (read per-QQmlEngine from env; engines created in many places;
+      qt.conf Qml2Imports takes a single dir) - bounded because child
+      wrappers prepend their own paths; stage-first XDG_DATA_DIRS leaks
+      (latte-only content, benign); QT_QPA_PLATFORMTHEME= (empty)
+      leaks, so Qt apps launched from the DEV dock lose platform
+      theming (production installs never set any of these).
+      Commits: 00a6766c
 - [ ] Colorizer's shadow site (colorizer/Applet.qml) likely draws an
       UNCOLORIZED copy of the wrapper over the colorized applet while
       colorizing mode is active: it keeps the sibling ShadowedItem

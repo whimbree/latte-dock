@@ -110,6 +110,24 @@ below are now RESOLVED and kept only as archaeology.
   type stayed latte - which both kept the repro armed across runs
   and hid the cold-start arm of the same race until tested
   deliberately.
+- Round twenty (2026-07-14): the child-env leak fixed for its worst
+  arm (00a6766c). KIO source reading (v6.27.0) settled the mechanism:
+  systemd >= 250 means every dock-launched app is a transient service
+  whose Environment= is a verbatim copy of the dock's env - no KIO
+  hook to scrub. QT_PLUGIN_PATH now never enters the dock's env:
+  run-staged hands the two dirs over as LATTE_EXTRA_PLUGIN_PATHS and
+  main.cpp addLibraryPath()s them (process-local, inert var for
+  children; the codebase already had this hygiene pattern for
+  QT_QPA_PLATFORM). Canaries all green: right-click menu, zero
+  KWindowShadow failures, and a konsole spawned via the task menu
+  verified clean by reading its transient unit's /proc environ.
+  Residuals (QML2_IMPORT_PATH per-engine env reads, stage-first
+  XDG_DATA_DIRS, empty QT_QPA_PLATFORMTHEME degrading dev-child
+  theming) documented in the plan item as accepted with reasons.
+  FIELD NOTE: dock task icons ACTIVATE existing windows - to test a
+  real spawn use the context menu's Start New Instance and find the
+  child via systemctl --user list-units 'app-*' (process names are
+  nix-wrapped, pgrep -x misses them).
 - SESSION CLOSE STATE (2026-07-13 night): everything committed and
   pushed through 1a49f118; working tree clean; the dock runs the
   latest build with --user-config (the user's REAL ~/.config, single

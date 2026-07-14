@@ -1390,6 +1390,18 @@ multi-view, multi-monitor setup.
       and the shadow as the colorizer's layer.effect (the sibling
       arrangement ghost-double-struck text, c7c46226 class).
       Commits: 1f835402
+- [ ] Settings window (edit chrome) reported overflowing the screen
+      top - carried over from a 2026-07-14 morning session that was
+      cleared before filing it (its task list entry and scratchpad
+      screenshots survive, but no repro recipe). Every chrome open
+      during the 2026-07-14 evening session fit the screen (right
+      monitor, advanced mode, appliedHeight=maxHeight), so the trigger
+      is probably the other monitor or a specific mode; needs the
+      user's recipe. Suspect surface if it reproduces:
+      LatteDockConfiguration.qml maxHeight from
+      viewConfig.availableScreenGeometry, which relates to the Phase 8
+      stale/wrong-screen edit-window geometry item.
+      Commits:
 - [ ] LatteComponents.ComboBox popup renders its dropdown rows
       collapsed (~13px tall) with item text invisible - found while
       driving the Appearance page Palette / From Window dropdowns

@@ -167,6 +167,19 @@ below are now RESOLVED and kept only as archaeology.
   MAIN-thread for ~60-90s after start (render threads quiet) -
   layout/applet settling, not a render loop; noted in the item, no
   new plan entry.
+- SESSION CLOSE STATE (2026-07-14 night): everything committed and
+  pushed; working tree clean; the user's dock runs the latest build
+  under the gdb wrapper with --user-config, config fully restored
+  (Latte indicator, no colorizing keys, shadows on). The 2026-07-13
+  queue is CLEARED: indicator switch crash fixed (841c2ca4), child
+  QT_PLUGIN_PATH leak fixed with residuals filed (00a6766c),
+  colorizer restored end-to-end (1f835402), comic/WebEngine free-run
+  verified gone (docs only). The throwaway 3-dock layout has its
+  comic applet back (with-comic.bak made active again). OPEN, in
+  rough priority: the settings-window-overflows-screen-top report
+  (needs the user's repro - which monitor/mode; plan item filed),
+  the LatteComponents.ComboBox collapsed-popup defect (plan item
+  with symptoms), startup latency phase 2, and the Phase 8 backlog.
 - SESSION CLOSE STATE (2026-07-13 night): everything committed and
   pushed through 1a49f118; working tree clean; the dock runs the
   latest build with --user-config (the user's REAL ~/.config, single

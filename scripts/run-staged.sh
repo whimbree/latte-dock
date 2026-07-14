@@ -42,16 +42,16 @@ export QT_QPA_PLATFORM=wayland
 # process segfaults in QCoreApplication::init. The nix-built Qt finds its
 # own plugins through baked-in paths, so drop the session's list and skip
 # the platform theme integration entirely.
-#
-# But Latte's OWN C++ plugins are staged, not system-installed - most
+unset QT_PLUGIN_PATH
+
+# Latte's OWN C++ plugins are staged, not system-installed - most
 # importantly plasma/containmentactions/org.kde.latte.contextmenu, which
 # builds the dock's right-click menu. With no system Latte install (the ng
-# package removed) and QT_PLUGIN_PATH empty, findPluginById() cannot locate
-# it and right-click falls through to the stock task menu. Point the path at
-# the staged plugin tree ONLY - it holds just Latte's plugins (containment
-# actions, indicator loader), no platform/theme plugin, so no segfault risk.
-export QT_PLUGIN_PATH="$stage/lib/plugins"
-
+# package removed) and no plugin path, findPluginById() cannot locate it
+# and right-click falls through to the stock task menu. Hand the staged
+# plugin tree over - it holds just Latte's plugins (containment actions,
+# indicator loader), no platform/theme plugin, so no segfault risk.
+#
 # ... plus ONE allow-listed leaf: the kwindowsystem runtime plugin dir of
 # the exact package the binary links (per the regression rule: specific
 # leaves, never shared roots). Without it KWindowSystem has no wayland
@@ -60,9 +60,18 @@ export QT_PLUGIN_PATH="$stage/lib/plugins"
 # KWindowEffects::slideWindow() is a silent no-op - applet popups never
 # got the compositor slide-in. The dir ships only kwindowsystem's own
 # platform plugins, nothing that can shadow modules we stage ourselves.
+#
+# Handed over as LATTE_EXTRA_PLUGIN_PATHS (main.cpp feeds it into the
+# process-local QCoreApplication library paths), NOT as QT_PLUGIN_PATH:
+# the dock's whole environment is forwarded verbatim to every app it
+# launches (KIO's systemd runner copies it into the transient unit's
+# Environment= property), and a child of a different Qt build dlopening
+# our pinned kwindowsystem plugin is an ABI mismatch waiting to happen.
+# A LATTE_-namespaced variable is inert for children.
+export LATTE_EXTRA_PLUGIN_PATHS="$stage/lib/plugins"
 kwspath=$(ldd "$build/bin/latte-dock" | perl -ne 'print "$1\n" if m{=> (/nix/store/[^/]+-kwindowsystem-[^/]+)/}' | head -1)
 if [[ -n "$kwspath" && -d "$kwspath/lib/qt-6/plugins" ]]; then
-    export QT_PLUGIN_PATH="$QT_PLUGIN_PATH:$kwspath/lib/qt-6/plugins"
+    export LATTE_EXTRA_PLUGIN_PATHS="$LATTE_EXTRA_PLUGIN_PATHS:$kwspath/lib/qt-6/plugins"
 else
     echo "WARNING: kwindowsystem plugin dir not found; dialog shadows and popup slide will be missing" >&2
 fi

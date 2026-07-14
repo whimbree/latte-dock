@@ -92,6 +92,22 @@ int main(int argc, char **argv)
         qputenv("QSG_RENDER_LOOP", "threaded");
     }
 
+    //! Extra plugin dirs (the staged Latte plugin tree and allow-listed
+    //! dependency leaves, see scripts/run-staged.sh) arrive through a
+    //! LATTE_-namespaced variable instead of QT_PLUGIN_PATH on purpose:
+    //! everything in this process's environment is forwarded verbatim to
+    //! applications launched from the dock (KIO's systemd runner copies it
+    //! into the transient unit's Environment= property), and a child of a
+    //! different Qt build dlopening our pinned plugins is an ABI crash
+    //! waiting to happen. A LATTE_ variable is inert for children; feed it
+    //! into the process-local library path list instead. addLibraryPath()
+    //! prepends, so iterate in reverse to keep the first entry the highest
+    //! priority, matching QT_PLUGIN_PATH semantics.
+    const QStringList extraPluginPaths = qEnvironmentVariable("LATTE_EXTRA_PLUGIN_PATHS").split(QLatin1Char(':'), Qt::SkipEmptyParts);
+    for (auto it = extraPluginPaths.crbegin(); it != extraPluginPaths.crend(); ++it) {
+        QCoreApplication::addLibraryPath(*it);
+    }
+
     qputenv("QT_WAYLAND_DISABLE_FIXED_POSITIONS", {});
     const bool qpaVariable = qEnvironmentVariableIsSet("QT_QPA_PLATFORM");
     detectPlatform(argc, argv);

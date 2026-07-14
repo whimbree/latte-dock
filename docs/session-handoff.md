@@ -92,6 +92,24 @@ below are now RESOLVED and kept only as archaeology.
   was running). Next in queue: hover-modal inconsistency in rearrange
   mode, residual ~40px preview offset during zoom dwell (live vs
   resting rect, refine d98bff98), then the latency items.
+- SESSION CLOSE STATE (2026-07-13 night): everything committed and
+  pushed through 1a49f118; working tree clean; the dock runs the
+  latest build with --user-config (the user's REAL ~/.config, single
+  bottom dock - their Jul 10 layout). NOTE: plain restart-staged.sh
+  without --user-config loads the THROWAWAY 3-dock test layout from
+  build/_runconfig (which contains two comic/WebEngine applets that
+  free-run under the threaded loop - see that plan item). Apps
+  launched from the dock inherit its env; --user-config keeps their
+  profiles correct (the spotify lesson), but QT_PLUGIN_PATH /
+  QML2_IMPORT_PATH / stage-first XDG_DATA_DIRS still leak to
+  children - filed as a dev-harness item... actually not yet filed:
+  NEXT SESSION should file or fix it (child-env scrubbing).
+  KWin state restored: fade loaded, SlideInTime default, all probe
+  scripts unloaded. NEXT UP, in order: the Latte->Plasma indicator
+  switch CRASH (plan item with repro recipe, use the gdb harness),
+  colorizer double-draw, comic/WebEngine spin, the corona
+  double-windowAdded curiosity (mixed single/double adds per popup
+  open - benign for the slide but unexplained).
 - Round eighteen, the slide saga SOLVED (1f8770fd, user: 'it slides
   in now!!'): the final layer was PlasmaQuick::Dialog deriving its
   own slide hint from location INSIDE its first-expose handler, which

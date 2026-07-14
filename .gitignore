@@ -42,3 +42,5 @@ build*/
 CMakeLists.txt.user*
 /compile_commands.json
 
+scripts/tools/fake-input-client-protocol.h
+scripts/tools/fake-input-protocol.c

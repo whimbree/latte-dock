@@ -128,6 +128,32 @@ below are now RESOLVED and kept only as archaeology.
   real spawn use the context menu's Start New Instance and find the
   child via systemctl --user list-units 'app-*' (process names are
   nix-wrapped, pgrep -x misses them).
+- Round twenty-one (2026-07-14 evening): the colorizer check became a
+  three-layer excavation (1f835402). The filed double-draw suspicion
+  was real but MASKED: applet colorizing has been a silent no-op since
+  the port because MultiEffect.colorization multiplies the target
+  color by the source's gray level (read multieffect.frag:84 at the
+  pin) - dark text colorized towards a light scheme comes out dark
+  again. Both reference forks shipped that substitute for Qt5's
+  ColorOverlay and lost the feature without noticing. Fix:
+  Qt5Compat.GraphicalEffects ColorOverlay (same-pin package added to
+  flake LATTE_QML_MODULE_PATH + package.nix) with the shadow as
+  layer.effect (the sibling ShadowedItem ghost-double-struck the
+  colorized text, same class as c7c46226). METHOD notes worth keeping:
+  a lime Rectangle proves a subtree paints; a raw ShaderEffectSource
+  proves the texture pipeline; forced garish colors beat subtle real
+  ones for pixel truth; and check WHAT CONFIG the previous probe left
+  behind - my own From Window=Active dropdown click made applyColor
+  follow the active window's #232629 scheme 17s into every run, which
+  cost three probe cycles to un-confuse (that tracking WORKS despite
+  the missing-KWin-script warning, incidentally). NEW plan item filed:
+  LatteComponents.ComboBox popups render collapsed rows with invisible
+  text (found while driving the Appearance dropdowns headlessly).
+  Unexplained leftover: during two mid-session probe runs the dock
+  window mapped but painted nothing for ~2 minutes; not reproduced
+  under the final code (four clean sub-30s starts), so only noted.
+  User config fully restored (no colorizing keys, shadows on) and
+  verified rendering unchanged.
 - SESSION CLOSE STATE (2026-07-13 night): everything committed and
   pushed through 1a49f118; working tree clean; the dock runs the
   latest build with --user-config (the user's REAL ~/.config, single

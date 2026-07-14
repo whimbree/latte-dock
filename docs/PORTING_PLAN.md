@@ -1367,17 +1367,32 @@ multi-view, multi-monitor setup.
       leaks, so Qt apps launched from the DEV dock lose platform
       theming (production installs never set any of these).
       Commits: 00a6766c
-- [ ] Colorizer's shadow site (colorizer/Applet.qml) likely draws an
+- [x] Colorizer's shadow site (colorizer/Applet.qml) likely draws an
       UNCOLORIZED copy of the wrapper over the colorized applet while
-      colorizing mode is active: it keeps the sibling ShadowedItem
-      arrangement (it must sample the wrapper, since the colorizer
-      MultiEffect is not a texture provider), and its comment assumes
-      ShadowedItem draws only the shadow's alpha shape - false,
-      MultiEffect always draws source content plus shadow. Verify in
-      colorizing mode ('colors from active window'), then either hide
-      the original while the colorizer+shadow pair draws, or restack
-      so the colorizer draws last. Low exposure (mode off by
-      default), found by reading during c7c46226.
+      colorizing mode is active. CONFIRMED by reading, but it was the
+      SMALLEST of three stacked defects: the colorizer itself has been
+      a silent no-op since the port because MultiEffect.colorization
+      is a luminance-preserving tint (multieffect.frag:84 multiplies
+      the target color by source gray), not Qt5's ColorOverlay
+      flat-color-through-alpha - both reference forks carry this.
+      Peeled with probe builds (lime rect proved the subtree paints,
+      forced red+brightness proved the sampler, a raw
+      ShaderEffectSource proved the texture pipeline, and QML probes
+      proved mustBeShown/applyColor were correct all along). Fixed
+      with Qt5Compat ColorOverlay (same pin, added to flake+package)
+      and the shadow as the colorizer's layer.effect (the sibling
+      arrangement ghost-double-struck text, c7c46226 class).
+      Commits: 1f835402
+- [ ] LatteComponents.ComboBox popup renders its dropdown rows
+      collapsed (~13px tall) with item text invisible - found while
+      driving the Appearance page Palette / From Window dropdowns
+      headlessly (screenshots in the 2026-07-14 session): only the
+      highlighted current row is legible, the rest are blank slivers,
+      so selecting an entry needs pixel archaeology. Qt5 rendered
+      proper full-height rows. Suspect family: the component's
+      delegate height bindings under Plasma 6 (check
+      declarativeimports/components/ComboBox.qml against Qt5 and
+      against qqc2-desktop-style's ComboBox popup metrics).
       Commits:
 - [ ] Startup latency (user-reported: 'takes way longer than it
       should'). Measure BOTH dev and production-shaped starts before

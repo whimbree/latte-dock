@@ -517,6 +517,35 @@ live session (each fix's commit body says exactly what to look at).
   click on widget removal remains for hand verification (chrome
   fighting made it unreliable headlessly). Session state: real dock
   back on --user-config, palette default, tree clean and pushed.
+- Round thirty-one (2026-07-15 ~03:30, autonomous): WAVE 1 of the
+  defect-class initiative is MERGED (300e9477 mechanical breaks,
+  74586980 loops/degenerate values, 17ed3bc9 effect sources - each
+  agent's own docs record its full findings above/below this entry).
+  Net: 17 fix commits, 6 test commits across the three branches; the
+  contract suite went 1 -> 14 tests; new ctest entries
+  windowinfowraptest, destroyedtypedemotiontest,
+  indicatorfactoryremovaltest, qmleffectrules; both new
+  bug-reproducing tests were verified to catch their original bugs
+  with the fixes reverted. HEADLINE MECHANISM CORRECTION from the
+  effect agent, now pinned in contracts: Qt 6.11 MultiEffect DOES
+  auto-wrap plain sources; the real traps are the source proxy never
+  repolishing when layer.enabled flips, and opacity-0 effect nodes
+  still preprocessing - update the family-7 mental model. The t1
+  warning root cause: null-variant source from libplasma's inline
+  representation switch feeding the clicked flash (gated now).
+  WAVE 2 RUNNING at write time: lifecycle/representation regression
+  and contract tests (A+C) and wayland/multiscreen prep including
+  the wrong-screen dialog and stuck-chrome-popup items (E+F).
+  CONSOLIDATED LIVE-VERIFICATION LIST for the desk (in rough order):
+  removal Undo click restores the slot; dodge-maximized engages with
+  a maximized touching window; the four default-indicator
+  style/glow config buttons apply; dock removal slides out on its
+  own edge; t1 warning gone on the click+hover-churn recipe;
+  task/badge/ghost shadow visuals unchanged; forced-monochromatic
+  task icons render; duplicated-dock flip drive-through (e412889d
+  regression check). The dock was STOPPED for the merged build-check
+  at write time - if this handoff is read cold, check the dock is
+  running before anything else.
 - SESSION CLOSE STATE (2026-07-14 night): everything committed and
   pushed; working tree clean; my dock runs the latest build
   under the gdb wrapper with --user-config, config fully restored

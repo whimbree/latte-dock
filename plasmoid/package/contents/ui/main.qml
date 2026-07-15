@@ -67,6 +67,7 @@ PlasmoidItem {
     property bool taskInAnimation: noTasksInAnimation > 0 ? true : false
     property bool transparentPanel: Plasmoid.configuration.transparentPanel
     property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical ? true : false
+
     property bool isHorizontal: Plasmoid.formFactor === PlasmaCore.Types.Horizontal ? true : false
 
     property bool hasTaskDemandingAttention: false
@@ -857,6 +858,31 @@ PlasmoidItem {
             height: root.vertical ? icList.height : maxThickness
 
             target: icList
+
+            //! A live formFactor flip (moving a dock to a perpendicular edge)
+            //! leaves the width/height bindings above dead: root.vertical and
+            //! icList update but the size stays frozen at the old
+            //! orientation's numbers (probed live: vertical=false,
+            //! icList=592x88, mouseHandler stuck at 88x592). The stale size
+            //! cascades into vertical-shaped Layout.preferred* hints and the
+            //! scrambled, overlapping row reported on duplicated docks moved
+            //! across screens. What destroys the bindings is not identified -
+            //! suspected anchors-system size takeover during the transient
+            //! state where the old and new conditional anchors overlap -
+            //! so reassert the same bindings on every orientation change,
+            //! the reload-on-retarget remedy this tree already uses for the
+            //! stranded-binding class.
+            Connections {
+                target: root
+                function onVerticalChanged() {
+                    mouseHandler.width = Qt.binding(function() {
+                        return root.vertical ? mouseHandler.maxThickness : icList.width;
+                    });
+                    mouseHandler.height = Qt.binding(function() {
+                        return root.vertical ? icList.height : mouseHandler.maxThickness;
+                    });
+                }
+            }
 
             property int maxThickness: ((appletAbilities.parabolic.isEnabled && appletAbilities.parabolic.isHovered)
                                         || (appletAbilities.parabolic.isEnabled && windowPreviewIsShown)

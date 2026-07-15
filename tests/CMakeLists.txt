@@ -137,6 +137,8 @@ ecm_add_test(contracts/representationswitchtest.cpp ${repswitch_QRC}
     LINK_LIBRARIES Qt6::Test Qt6::Gui Qt6::Qml Qt6::Quick Plasma::Plasma Plasma::PlasmaQuick KF6::CoreAddons
 )
 set_tests_properties(representationswitchtest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # Contract: how Qt Quick parents windows declared inside items (QObject
 # resource child, NO transient parent on Qt 6). qmltest cannot read
 # QObject::parent() of a window, so it runs as a plain Qt test.

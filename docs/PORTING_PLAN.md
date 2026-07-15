@@ -2146,6 +2146,27 @@ multi-view, multi-monitor setup.
       Release now detaches to a null parent without touching
       visibility, upstream-symmetric.
       Commits: 1aa5238c
+- [ ] Duplicated dock renders its applets ON TOP OF EACH OTHER
+      (caught live 2026-07-15 with a screenshot: Duplicate Dock,
+      placed at DP-3 bottom; the clock draws over the task icons,
+      applets overlap in a crowded pile instead of a row). EVIDENCE
+      SO FAR: the layout FILE is consistent - all four containments'
+      appletOrder lists exactly match their actual applet ids, so
+      the duplicate machinery remaps ids correctly on disk and this
+      is a RUNTIME layout-assembly failure on the cloned view, not
+      config corruption. LEADING SUSPECT: the Justify-alignment
+      splitter machinery - if splitterPosition/splitterPosition2 or
+      the splitter items fail to restore on the clone, the
+      start/main/end sub-layouts assemble overlapped at the same
+      origin, which matches the screenshot exactly. Same family as
+      the Phase 8 cloned-view order-sync item and the old
+      duplicate-dock backlog entries; c3d15966 fixed config-sync
+      establishment for clones, this is the next layer. REPRO: on
+      the throwaway, Duplicate Dock onto any edge; instrument
+      LayoutManager::restore() on the new containment (what order
+      it reads, whether splitters exist, which sub-layout each item
+      lands in).
+      Commits:
 - [ ] Applet-created dialogs open on the wrong screen (caught live
       2026-07-15 with a screenshot: the comic's full-size viewer -
       its "bigger" zoom button - opened on the portrait DP-3 while

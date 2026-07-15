@@ -59,6 +59,12 @@ set_tests_properties(qmlinteraction PROPERTIES
     ENVIRONMENT "BUILD=${CMAKE_BINARY_DIR}"
     DEPENDS qmlcompilegate)
 
+# Effect-rule source scan (family 7 in latte-plasma6-defect-families): no
+# autoPaddingEnabled in shipped QML except the literal false. Pure grep, no
+# staging or engine needed - fails on the rule regression e3376405 fixed.
+add_test(NAME qmleffectrules
+    COMMAND ${CMAKE_SOURCE_DIR}/scripts/qml-effect-rules.sh)
+
 # Upstream contract tests (tests/contracts/README.md): pin the libplasma,
 # KSvg and Qt behaviors Latte relies on at the flake-pinned versions, so a
 # pin bump that changes semantics fails HERE instead of misbehaving in the

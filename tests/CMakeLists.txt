@@ -44,6 +44,26 @@ target_include_directories(indicatorfactoryremovaltest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# Removal parking state machine (71b0d75a): compiles the real containment
+# plugin sources (they live in the QML plugin, not lattedock-core) and
+# drives them with real Plasma applets built through itemForApplet plus a
+# QML harness standing in for the containment main.qml. Needs the devShell's
+# LATTE_QML_MODULE_PATH at runtime, like the contract tests.
+qt6_add_resources(parkingharness_QRC parkingharness/parkingharness.qrc)
+ecm_add_test(layoutmanagerparkingtest.cpp
+    ${CMAKE_BINARY_DIR}/containment/plugin/lattetypes.h # AUTOMOC source for Latte::Types::staticMetaObject, like the plugin's own list
+    ${CMAKE_SOURCE_DIR}/containment/plugin/layoutmanager.cpp
+    ${CMAKE_SOURCE_DIR}/containment/plugin/types.cpp
+    ${parkingharness_QRC}
+    TEST_NAME layoutmanagerparkingtest
+    LINK_LIBRARIES Qt6::Test Qt6::Gui Qt6::Qml Qt6::Quick KF6::ConfigCore KF6::ConfigQml KF6::CoreAddons Plasma::Plasma Plasma::PlasmaQuick
+)
+set_tests_properties(layoutmanagerparkingtest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(layoutmanagerparkingtest PRIVATE
+    ${CMAKE_SOURCE_DIR}/containment
+    ${CMAKE_BINARY_DIR}/containment)
+
 # Headless QML checks (Phase 5, docs/TESTING.md): the compile gate stages an
 # install and compiles every package QML file in a real engine; the
 # interaction harness drives real Latte components through qmltestrunner.
@@ -83,4 +103,29 @@ ecm_add_test(contracts/destroyedtypedemotiontest.cpp
     LINK_LIBRARIES Qt6::Test
 )
 set_tests_properties(destroyedtypedemotiontest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# libplasma askDestroy() undo-window signal ordering (71b0d75a): constructs
+# real Plasma::Containment/Applet objects offscreen, so it needs libplasma
+# itself, not Latte code. The DBus session address is neutered inside the
+# test so the "Widget Removed" KNotification can never reach the desktop.
+ecm_add_test(contracts/askdestroysignalorderingtest.cpp
+    TEST_NAME askdestroysignalorderingtest
+    LINK_LIBRARIES Qt6::Test Qt6::Gui Plasma::Plasma KF6::CoreAddons
+)
+set_tests_properties(askdestroysignalorderingtest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# AppletQuickItem representation-switch contract (9ea29eaa/1aa5238c): builds
+# a real applet item through itemForApplet(), with the applet main.qml and
+# the expander probe riding the qrc applet path (no package structure
+# plugins needed). Needs the devShell's LATTE_QML_MODULE_PATH at runtime for
+# the org.kde.plasma.plasmoid import, which ctest has (build-check.sh runs
+# inside nix develop); the test fails loudly if it is missing.
+qt6_add_resources(repswitch_QRC contracts/repswitch/repswitch.qrc)
+ecm_add_test(contracts/representationswitchtest.cpp ${repswitch_QRC}
+    TEST_NAME representationswitchtest
+    LINK_LIBRARIES Qt6::Test Qt6::Gui Qt6::Qml Qt6::Quick Plasma::Plasma Plasma::PlasmaQuick KF6::CoreAddons
+)
+set_tests_properties(representationswitchtest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

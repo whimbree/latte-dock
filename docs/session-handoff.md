@@ -244,8 +244,8 @@ below are now RESOLVED and kept only as archaeology.
   mapped, decisive next step is reading the Qt5 original main.qml
   from this repo's own history - CLAUDE.md names this exact area as a
   fork trap).
-- Round twenty-seven (2026-07-15 small hours, with me watching live and
-  narrating to claude.ai in the browser): both round twenty-six bug
+- Round twenty-seven (2026-07-15 small hours, desk-driven, I was at
+  the machine and confirmed fixes live): both round twenty-six bug
   filings root-caused and fixed the same night. Edit-mode opacity
   (38e60eb9): the blueprint drew OVER the dock background; Qt5's
   composite is wallpaper > grid > background > applets, and my

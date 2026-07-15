@@ -359,6 +359,57 @@ PlasmoidItem {
         property bool signalSent: false
         property Item activeItem: null
 
+        //! burst-debounce state for task switches, see shouldDeferSwitch()
+        property Item pendingSwitchTask: null
+        property double lastSwitchRequestTime: 0
+        //! a switch request this soon after the previous one is a sweep in
+        //! flight; the settle timer's interval must stay BELOW this, or a
+        //! steady sweep whose crossings are slower than the timer would
+        //! degenerate back to one adoption (and one stall) per icon
+        readonly property int switchBurstThreshold: 350
+
+        //! Burst debounce, a DELIBERATE deviation from Qt5's
+        //! adopt-immediately (which was free on X11): adopting a task
+        //! rebuilds the whole delegate tree synchronously on the GUI
+        //! thread, and that rebuild measured 100-400ms per switch (859ms
+        //! cache-cold), dominated by KSvg disk lookups (caught mid-stall
+        //! with the gdb wrapper: SvgItem::componentComplete ->
+        //! ImageSet::filePath -> QStandardPaths::locate). A fast sweep
+        //! paid that per icon crossed - the whole plasmoid chugged,
+        //! parabolic included. This is a TRAILING debounce keyed on
+        //! request cadence: while switch requests keep arriving inside the
+        //! burst threshold nothing is adopted at all, and the settle timer
+        //! adopts the LAST hovered task once the requests stop, so a sweep
+        //! pays for exactly one rebuild where it rests. Deliberate
+        //! stepping (gaps above the threshold) adopts immediately, same
+        //! as always. TaskItem's showPreviewWindow() consults this BEFORE
+        //! preparePreviewWindow(): the delegate re-bind is what schedules
+        //! the expensive rebuild.
+        function shouldDeferSwitch(taskItem) {
+            if (!visible || !activeItem || activeItem === taskItem) {
+                lastSwitchRequestTime = Date.now();
+                return false;
+            }
+
+            var now = Date.now();
+            var inBurst = (now - lastSwitchRequestTime) < switchBurstThreshold;
+            lastSwitchRequestTime = now;
+
+            if (inBurst) {
+                pendingSwitchTask = taskItem;
+                previewSwitchSettleTimer.restart();
+            }
+
+            return inBurst;
+        }
+
+        onVisibleChanged: {
+            if (!visible) {
+                pendingSwitchTask = null;
+                previewSwitchSettleTimer.stop();
+            }
+        }
+
         Component.onCompleted: mainItem.visible = true;
 
         onContainsMouseChanged: {
@@ -407,6 +458,11 @@ PlasmoidItem {
                     root.signalPreviewsShown();
                 }
 
+                //! a directly adopted task supersedes any deferred switch
+                //! still waiting on the settle timer
+                pendingSwitchTask = null;
+                previewSwitchSettleTimer.stop();
+
                 //! A task switch re-anchors the MAPPED window in place. This
                 //! replaced an unmap/remap-deferred-a-tick workaround, which
                 //! predated the dialog's live wayland re-anchoring (77aac4b4:
@@ -431,6 +487,27 @@ PlasmoidItem {
                 }
 
                 visible = true;
+            }
+        }
+    }
+
+    //! adopt the last task a burst of switches settled on; see
+    //! windowsPreviewDlg.shouldDeferSwitch() for why bursts defer. Adopts
+    //! DIRECTLY (prepare + show), never through showPreviewWindow(): the
+    //! settle path re-entering the burst check would count itself as a
+    //! fresh request and re-defer forever. The interval must stay below
+    //! switchBurstThreshold, see its comment.
+    Timer {
+        id: previewSwitchSettleTimer
+        interval: 250
+        onTriggered: {
+            if (windowsPreviewDlg.pendingSwitchTask
+                    && windowsPreviewDlg.pendingSwitchTask.containsMouse
+                    && windowsPreviewDlg.visible) {
+                var task = windowsPreviewDlg.pendingSwitchTask;
+                windowsPreviewDlg.pendingSwitchTask = null;
+                task.preparePreviewWindow(false);
+                windowsPreviewDlg.show(task);
             }
         }
     }

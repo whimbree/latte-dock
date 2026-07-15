@@ -477,6 +477,13 @@ AbilityItem.BasicItem {
         if(windowsPreviewDlg.activeItem !== taskItem){
             if (!taskItem.abilities.myView.isReady
                     || (taskItem.abilities.myView.isReady && taskItem.abilities.myView.isShownFully)) {
+                //! consulted BEFORE preparePreviewWindow(): re-binding the
+                //! delegate is what schedules the expensive rebuild that a
+                //! sweep must not pay per crossed icon
+                if (windowsPreviewDlg.shouldDeferSwitch(taskItem)) {
+                    return;
+                }
+
                 taskItem.preparePreviewWindow(false);
                 windowsPreviewDlg.show(taskItem);
             }

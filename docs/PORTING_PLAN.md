@@ -2143,7 +2143,22 @@ multi-view, multi-monitor setup.
       (Qt5-correct), task icons stay full color; palette restored
       to default afterwards. run-staged.sh now seeds the throwaway
       config with the session kdeglobals (copy, never a link).
-      Commits: 79ca3360
+      FOLLOW-UP, two DELIBERATE deviations landed on explicit
+      request the same night (comments at both sites): (1) inline
+      full representations are exempt from colorizing (a78e6004) -
+      a Plasma 6 state Qt5 never had; the flattening turned the
+      hover-expanded comic into a white rectangle; detected by
+      fullRepresentationItem parent identity. (2) multicolored
+      applet content is exempt automatically (38734328) - pixel
+      truth via the new C++ IconColorfulness type (grabToImage +
+      saturation fraction; QML Canvas cannot load the itemgrabber:
+      provider, instrumented proof in the commit body). Verified
+      live under Dark Colors: comic emoji colorful, line-art icons
+      themed, tasks unaffected; the manual per-applet toggle is
+      unchanged. LIVE-WATCH: hover lag reported after (acceptable
+      per the desk, no action wanted yet); if it grows, profile the
+      colorfulness grabs and the colorizer layer flips first.
+      Commits: 79ca3360, a78e6004, 38734328
 - [x] Comic Strip applet "not rendering" (reported 2026-07-15; two
       symptoms, RESOLVED as three separate causes, none the suspected
       commit regression). (1) The black-disc icon: the applet

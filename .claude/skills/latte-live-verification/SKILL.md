@@ -127,6 +127,15 @@ configure-applets reordering is verified headlessly; note synthetic
 drags are grab-point sensitive, so confirm the grab landed by checking
 appletOrder actually changed rather than assuming.
 
+When hovering DOCK ITEMS, GLIDE - move in small steps (~8px with short
+sleeps) - never jump straight to an icon's rest coordinates. The
+parabolic zoom shifts every icon while any of them is hovered, so a
+jump lands beside the shifted icon and the enter event never fires:
+this produced hours of phantom "hover didn't engage" flakiness and one
+false content-bug lead (2026-07-15) before it was understood. A real
+mouse always glides, which is why desk repros disagree with jumped
+synthetic ones.
+
 Build (inside the devshell, i.e. under `nix develop`):
 
 ```bash

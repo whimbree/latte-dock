@@ -44,7 +44,32 @@ done
 
 export QML2_IMPORT_PATH="$importpath"
 export XDG_CONFIG_HOME="$confighome"
-export XDG_DATA_DIRS="$stage/share:${XDG_DATA_DIRS:-/run/current-system/sw/share:/usr/share}"
+
+# XDG_DATA_DIRS is rebuilt, never inherited wholesale: under `nix develop`
+# the inherited value is the entire BUILD closure (~270 entries with
+# duplicates - cmake, gettext, gstreamer, cups...). QStandardPaths::locate
+# walks every entry per lookup, and KSvg's theme discovery issues them in
+# storms: one preview adoption measured 23,255 stat() calls, 96% ENOENT,
+# 20k of them for the theme 'colors' file alone - 100-400ms GUI stalls per
+# adoption (2026-07-15 strace, full numbers in the PORTING_PLAN item).
+# Allow-list the KDE runtime DATA dirs the dock actually reads
+# (strace-derived), kept in devshell order so the pinned copies keep
+# winning over the system profile exactly as they did before; the system
+# profile and /usr/share back everything else. Per the regression rules
+# this is an allow-list of leaves, not a shared root.
+runtime_data_dirs="$stage/share"
+if [[ -n "${XDG_DATA_DIRS:-}" ]]; then
+    while IFS= read -r d; do
+        case "$d" in
+            #! store paths are single components (hash-name-version), so the
+            #! package name must match as a substring, not a path component
+            *libplasma-*/share|*plasma-workspace-*/share|*plasma-desktop-*/share|*-kwin-*/share|*-breeze-*/share|*kio-extras-*/share|*kcoreaddons-*/share|*kguiaddons-*/share|*-kirigami-*/share)
+                runtime_data_dirs="$runtime_data_dirs:$d" ;;
+        esac
+    done < <(tr ':' '\n' <<<"$XDG_DATA_DIRS" | awk 'NF && !seen[$0]++')
+fi
+export XDG_DATA_DIRS="$runtime_data_dirs:$HOME/.nix-profile/share:/etc/profiles/per-user/$USER/share:/run/current-system/sw/share:/usr/share"
+
 export QT_QPA_PLATFORM=wayland
 
 # The desktop session's QT_PLUGIN_PATH points at the system Plasma's plugins

@@ -12,6 +12,21 @@ import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
 
 Item {
+    //! Leave the scenegraph entirely while fully faded. The wrapper's layer
+    //! (ItemWrapper.qml) tracks this item's opacity and drops at exactly 0,
+    //! but the ColorOverlay's SourceProxy (qt5compat qgfxsourceproxy.cpp,
+    //! same class as MultiEffect's) only repolishes on childrenChanged and
+    //! smooth changes - NEVER when the source's layer.enabled flips. An
+    //! applet whose proxy chose the direct path while the wrapper was
+    //! layered keeps sampling it after the layer is destroyed, and an
+    //! opacity-0 item still preprocesses its ShaderEffect node on every
+    //! scene repaint (measured live for the task effects, 69baabf0), so
+    //! every colorizing disengage armed a dead-provider sampler that warned
+    //! per repaint until colorizing re-engaged. visible: false removes the
+    //! node; on re-engage the wrapper layer and this gate flip back in the
+    //! same frame, ahead of the next render.
+    visible: opacity > 0
+
     //! Qt5-faithful colorizing is ColorOverlay: applyColor painted flat
     //! through the wrapper's alpha, so dark content under a light scheme
     //! becomes light. MultiEffect.colorization is NOT that effect - its

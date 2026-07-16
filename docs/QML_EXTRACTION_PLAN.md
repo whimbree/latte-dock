@@ -2063,6 +2063,18 @@ assessed every file the landed cutovers touched):
   Function-only reads ARE injectable safely (the private's myView
   went that way); each future cutover does what is safely reachable
   and leaves the rest counted here.
+- The EX-04 cutover's residue, same class: containment
+  abilities/AutoSize.qml (24, down from 37) - root and latteView in
+  the isActive BINDING and in Connections targets, visibilityManager
+  as a Connections target, animations inside the
+  onInAutoSizeAnimationChanged handler (a change handler can fire
+  during creation while an injected property is still unassigned, so
+  it gets the binding treatment, not the myView one). The one
+  function-only read, parabolic (updateIconSize only runs from
+  handlers and timers well after creation), WAS injected -
+  main.qml now assigns parabolic: _parabolic like Metrics already
+  did. Everything own-property got qualified through the sizer id
+  and every implicit Connections handler moved to function syntax.
 - What the retroactive pass DID fix in the touched files: implicit
   Connections handlers to function syntax, own-property qualification
   through the component id (safe: ids outrank scope properties, same

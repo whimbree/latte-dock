@@ -6,6 +6,7 @@
 #include "lattecontainmentplugin.h"
 
 // local
+#include "autosizestepper.h"
 #include "iconcolorfulness.h"
 #include "layoutmanager.h"
 #include "types.h"
@@ -19,5 +20,6 @@ void LatteContainmentPlugin::registerTypes(const char *uri)
     qmlRegisterUncreatableType<Latte::Containment::Types>(uri, 0, 1, "Types", "Latte Containment Types uncreatable");
     qmlRegisterType<Latte::Containment::LayoutManager>(uri, 0, 1, "LayoutManager");
     qmlRegisterType<Latte::Containment::IconColorfulness>(uri, 0, 1, "IconColorfulness");
+    qmlRegisterType<Latte::Containment::AutoSizeStepper>(uri, 0, 1, "AutoSizeStepper");
 }
 

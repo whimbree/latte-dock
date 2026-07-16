@@ -4,95 +4,123 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
-//! Pins termination and bounds of the automatic item sizer's shrink/grow
-//! stepping (ad9b823f). The upstream 747d4870 form exited on the equalities
-//! nextIconSize !== 16 / !== maxIconSize, so any size not congruent to the
-//! bound modulo the step (the live case: iconSize=78 written by a killed
-//! edit-mode session) stepped right past it and spun forever, starving the
-//! event loop at startup. The functions under test are the REAL shipped
-//! logic: AutoSize.qml dispatches through code/autosize.js, which is
-//! imported here straight from the containment package. A regression back
-//! to the equality exits hangs these loops and fails the run via the
-//! harness timeout instead of a live dock at 100% CPU.
+//! Shell pin for the automatic item sizer (EX-04). The stepping loops and
+//! branch selection this file used to drive in code/autosize.js live in
+//! the AutoSizeEngine core now (containment/plugin/units/autosizeengine.h;
+//! tests/units/autosizeenginetest.cpp pins the full case tables, including
+//! the ad9b823f termination property over sizes 16..256 - the upstream
+//! 747d4870 equality exits spun forever for sizes not congruent modulo the
+//! step, the live case was iconSize=78 hanging the dock at 100% CPU).
+//! What must stay pinned HERE is the shell: the AutoSizeStepper the
+//! containment ability instantiates resolves from the staged install,
+//! delegates to the core, maps the core's alternatives onto the sizer's
+//! -1 = automatic sentinel at the boundary, and holds the prediction
+//! history across passes.
 
 import QtQuick
 import QtTest
 
-import "../../containment/package/contents/code/autosize.js" as AutoSizeLogic
+import org.kde.latte.private.containment 0.1 as LatteContainment
 
 TestCase {
     id: root
-    name: "AutoSizeStepping"
+    name: "AutoSizeStepperShell"
 
-    readonly property int automaticStep: 8 //! AutoSize.qml's readonly automaticStep
-
-    function test_shrinkTerminatesForEveryIconSize() {
-        //! the ad9b823f trigger: an unsized window makes root.maxLength 0 and
-        //! toShrinkLimit negative, so the length condition can never break the
-        //! loop and only the floor exit can. Every icon size from 16 to 128 -
-        //! multiples of the step and non-multiples like the live 78 alike -
-        //! must land exactly on the 16px floor and return.
-        for (var size = 16; size <= 128; ++size) {
-            var res = AutoSizeLogic.shrinkStep(size, size, 10 * size, -1, automaticStep);
-            compare(res.iconSize, 16,
-                    "maxIconSize " + size + ": an unsatisfiable shrink limit must exit at the floor");
-        }
+    LatteContainment.AutoSizeStepper {
+        id: stepper
     }
 
-    function test_shrinkStaysWithinBounds() {
-        //! a satisfiable limit exits early on the length condition; the result
-        //! must stay inside [16, maxIconSize - step] (floor-clamped) for every
-        //! start size
-        for (var size = 17; size <= 128; ++size) {
-            //! current layout: 8 items at 'size' px; the limit allows roughly half
-            var limit = 4 * size;
-            var res = AutoSizeLogic.shrinkStep(size, size, 8 * size, limit, automaticStep);
-            verify(res.iconSize >= 16,
-                   "maxIconSize " + size + ": result " + res.iconSize + " fell below the floor");
-            verify(res.iconSize <= Math.max(16, size - automaticStep),
-                   "maxIconSize " + size + ": a shrink pass must step down at least once");
-
-            if (res.iconSize > 16) {
-                //! only a floor exit is allowed to leave the limit unsatisfied
-                verify(res.nextLength <= limit,
-                       "maxIconSize " + size + ": projected length " + res.nextLength + " does not fit the limit");
-            }
-        }
+    function init() {
+        //! tests share the stepper instance; none may inherit history
+        stepper.clearHistory();
     }
 
-    function test_shrinkTerminatesForDegenerateInputs() {
-        //! inputs below the floor or nonsensical limits must still return
-        var res = AutoSizeLogic.shrinkStep(8, 8, 100, -1, automaticStep);
-        compare(res.iconSize, 16, "a max size below the floor clamps up to the floor");
-
-        res = AutoSizeLogic.shrinkStep(64, 64, 0, -1, automaticStep);
-        compare(res.iconSize, 16, "zero layout length with a negative limit still exits at the floor");
+    function test_shrinkAppliesSteppedSize() {
+        //! layout 1000 at icon 64 against maxLength 1100 and one zoomed 64px
+        //! item reserved: toShrinkLimit 997.6, candidate 56 projects 875 and
+        //! fits (row from the autosizeenginetest equivalence table)
+        var result = stepper.step(1000, 1100, 64, 64, 64, 1.6, -1);
+        verify(result.found, "an overflowing layout must find a shrunk size");
+        compare(result.nextIconSize, 56);
     }
 
-    function test_growTerminatesForEveryIconSize() {
-        //! an always-satisfied grow limit must climb to the ceiling and stop
-        //! there for every start size, including non-multiples of the step
-        for (var size = 16; size <= 128; ++size) {
-            var res = AutoSizeLogic.growStep(128, size, 10, Number.MAX_VALUE, automaticStep);
-            compare(res.foundGoodSize, 128,
-                    "iconSize " + size + ": an unbounded grow limit must saturate at maxIconSize");
-        }
+    function test_shrinkTerminatesForTheLiveIconSize78() {
+        //! the ad9b823f named case through the shell: a barely positive
+        //! maxLength makes every shrink limit unsatisfiable, so only the
+        //! floor exit can terminate the loop - at the non-step-multiple 78
+        //! the inherited equality exit spun forever
+        var result = stepper.step(780, 1, 78, 78, 78, 1.6, -1);
+        verify(result.found, "the unsatisfiable shrink must still land on the floor");
+        compare(result.nextIconSize, 16);
     }
 
-    function test_growReportsWhenNoStepFits() {
-        //! when even the first candidate exceeds the limit the pass reports -1
-        //! and must not loop
-        for (var size = 16; size <= 128; ++size) {
-            var res = AutoSizeLogic.growStep(128, size, 10 * size, -1, automaticStep);
-            compare(res.foundGoodSize, -1,
-                    "iconSize " + size + ": an unsatisfiable grow limit reports no good size");
-        }
+    function test_growToCeilingRestoresAutomaticSentinel() {
+        //! a grow that reaches maxIconSize maps to the sizer's -1 sentinel
+        //! at this boundary (the core reports a distinct alternative)
+        var result = stepper.step(500, 2000, 64, 32, 64, 1.6, 32);
+        verify(result.found, "a roomy layout grown from its own applied size must apply");
+        compare(result.nextIconSize, -1);
     }
 
-    function test_growStopsAtCeilingEqualToCurrent() {
-        //! growing while already at the ceiling must exit immediately with the
-        //! ceiling (the equality form spun here when current === max)
-        var res = AutoSizeLogic.growStep(78, 78, 10, Number.MAX_VALUE, automaticStep);
-        compare(res.foundGoodSize, 78, "already at a non-multiple ceiling: saturates and returns");
+    function test_growMidRangeAppliesConcreteSize() {
+        //! toGrowLimit 900: candidates 40/48/56 fit, 64 does not
+        var result = stepper.step(500, 1500, 500, 32, 64, 1.0, 32);
+        verify(result.found);
+        compare(result.nextIconSize, 56);
+    }
+
+    function test_automaticSizingNeverGrows() {
+        //! appliedIconSize -1 passes the sizer's untouched sentinel in: the
+        //! search never grows from a size it did not apply itself
+        var result = stepper.step(500, 2000, 64, 32, 64, 1.6, -1);
+        verify(!result.found, "automatic sizing must not grow");
+    }
+
+    function test_robustnessBandKeepsCurrent() {
+        //! layout 890 sits between toGrowLimit 877.12 and toShrinkLimit
+        //! 897.6: the asymmetric limits' margin, neither branch fires
+        var result = stepper.step(890, 1000, 64, 64, 64, 1.6, 64);
+        verify(!result.found, "inside the band the size must stay put");
+    }
+
+    function test_historyPersistsAcrossPassesAndClears() {
+        //! the endless-loop protector needs state across calls: a grow, the
+        //! shrink undoing it, then the identical grow again is rejected;
+        //! clearing the history re-arms it (the sizer's isActive flip)
+        var grow = stepper.step(500, 1500, 500, 32, 64, 1.0, 32);
+        verify(grow.found);
+        compare(grow.nextIconSize, 56);
+
+        var shrink = stepper.step(875, 800, 100, 56, 64, 1.0, 56);
+        verify(shrink.found);
+        compare(shrink.nextIconSize, 40);
+
+        var blocked = stepper.step(500, 1500, 500, 32, 64, 1.0, 32);
+        verify(!blocked.found, "the protector must block the repeating grow");
+
+        stepper.clearHistory();
+        var rearmed = stepper.step(500, 1500, 500, 32, 64, 1.0, 32);
+        verify(rearmed.found, "a cleared history re-arms the grow");
+        compare(rearmed.nextIconSize, 56);
+    }
+
+    function test_invalidMeasurementIsRefused() {
+        //! the shell's maxLength <= 0 contract returns before calling in;
+        //! if a call arrives anyway the stepper refuses loudly (qCritical
+        //! in the log) and reports nothing found instead of searching
+        //! against garbage limits - same for the other measurements no
+        //! valid shell can produce
+        verify(!stepper.step(1000, 0, 64, 64, 64, 1.6, -1).found,
+               "a zero maxLength must be refused");
+        verify(!stepper.step(-5, 1000, 64, 64, 64, 1.6, -1).found,
+               "a negative layout length must be refused");
+        verify(!stepper.step(1000, 1000, -3, 64, 64, 1.6, -1).found,
+               "a negative item length must be refused");
+        verify(!stepper.step(1000, 1000, 64, 0, 64, 1.6, -1).found,
+               "a zero current icon size must be refused");
+        verify(!stepper.step(1000, 1000, 64, 64, 0, 1.6, -1).found,
+               "a zero max icon size must be refused");
+        verify(!stepper.step(1000, 1000, 64, 64, 64, 0.5, -1).found,
+               "a zoom factor below 1 must be refused");
     }
 }

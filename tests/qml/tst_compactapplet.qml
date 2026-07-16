@@ -6,7 +6,7 @@
 
 //! Regression tests for the shell CompactApplet expander, driving the REAL
 //! shipped file (imported straight from the shell package, same pattern as
-//! tst_autosize.qml driving autosize.js).
+//! tst_taskactions.qml driving TaskActions.js).
 //!
 //! Two landed fixes are pinned here:
 //!

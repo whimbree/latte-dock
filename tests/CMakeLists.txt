@@ -228,3 +228,15 @@ set_tests_properties(alternativescreateapplettest PROPERTIES
 target_compile_definitions(alternativescreateapplettest PRIVATE
     PLASMOID_QMLTYPES_PATH="${_plasmoid_qmltypes}"
     REPO_ROOT="${CMAKE_SOURCE_DIR}")
+
+# Contract: KF6 KPluginMetaData's single-string ctor resolves a plugin
+# LIBRARY, not a metadata file - indicator metadata must load through
+# fromJsonFile() or no indicator ever registers and no task dot renders.
+ecm_add_test(contracts/indicatormetadatatest.cpp
+    TEST_NAME indicatormetadatatest
+    LINK_LIBRARIES Qt6::Test KF6::CoreAddons
+)
+set_tests_properties(indicatormetadatatest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_compile_definitions(indicatormetadatatest PRIVATE
+    REPO_ROOT="${CMAKE_SOURCE_DIR}")

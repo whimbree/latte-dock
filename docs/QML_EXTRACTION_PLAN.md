@@ -1678,6 +1678,28 @@ Conventions used by all specs:
 
 ### EX-16 GroupWindowCycler [delegate-safe]
 
+- Commits: 0fed48de (tst_windowcycler.qml pins the shipped SubWindows
+  bodies, 24/24 green pre-cutover, negative-probed; design log
+  docs/agent-logs/EX-16.md), dba16cee (defect found while extracting,
+  fixed at origin: tools.js activateNextPrevTask - the third mirror of
+  this unit's algorithm, behind the wheelEnabled option - walked a
+  taskList id that exists nowhere in the plasmoid's context chain, so
+  every whole-bar wheel cycle threw ReferenceError since Qt5;
+  failing-first tst_taskcycle.qml 11 red -> 13 green, assembly rebuilt
+  from icList's delegates ordered by itemIndex), 80525a85a (core +
+  WindowCyclerTools LatteCore singleton + plugins.qmltypes + all three
+  bodies to thin shells + windowcyclertest sanitized with the wrapper
+  compiled in + qmllint baseline 6540 -> 6536). Recorded deviations:
+  (a) header placed in declarativeimports/core/units/ instead of the
+  line below - the responsibility includes the containment twin, which
+  cannot import org.kde.latte.private.tasks; the EX-02 shared-core
+  placement precedent applies; (b) scope includes tools.js's
+  activateNextPrevTask, the spec's source line missed the third
+  mirrored copy and leaving it live would violate single-copy;
+  (c) next/prev on a childless group parent warns-and-returns instead
+  of Qt5's invalid-index activation request (the test-plan line's
+  empty-list rule; minimize stays silently inert as Qt5 was).
+  Eliminated invalid states named in docs/agent-logs/EX-16.md.
 - Header: `plasmoid/plugin/units/windowcycler.h`
 - Responsibility: target selection for next/previous/minimize over a
   task group's window list (wraparound, last-active fallback), and
@@ -2250,6 +2272,24 @@ assessed every file the landed cutovers touched):
   layoutsManager), i18n/i18nc context functions, and ids/roles read
   across delegate Component boundaries; none resolvable by a
   standalone linter, same family as the indicator context property.
+- The EX-16 cutover's residue, same classes: plasmoid
+  task/SubWindows.qml (43, down from 47) - the delegate/task-model
+  roles (IsLauncher, IsStartup, IsWindow, IsGroupParent, display,
+  WinIdList, index) are the documented dynamically-typed class, and
+  taskItem/tasksModel/root resolve through the context chain in
+  BINDINGS (Connections targets, the DelegateModel's model) as well as
+  in functions, so a same-name property injection would shadow into
+  those bindings and take the evaluation-order risk this section
+  defers to the per-subtree endgame; the two implicit Connections
+  handlers WERE converted to function syntax. containment
+  layouts/loaders/Tasks.qml (10, unchanged - the new shell body added
+  zero): root/latteView context reads in bindings, model/index
+  delegate roles, two id resolutions qmllint cannot see across the
+  Loader sourceComponent boundary, and LatteContainment.Types
+  unresolved-type x2 which clear tree-wide only once
+  org.kde.latte.private.containment gets the plugins.qmltypes
+  treatment EX-17 gave private.tasks (a follow-up artifact, not one
+  unit's).
 - What the retroactive pass DID fix in the touched files: implicit
   Connections handlers to function syntax, own-property qualification
   through the component id (safe: ids outrank scope properties, same

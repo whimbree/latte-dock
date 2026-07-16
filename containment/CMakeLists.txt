@@ -10,6 +10,7 @@ set(containment_SRCS
     plugin/colorizerdecider.cpp
     plugin/backgroundstateresolver.cpp
     plugin/iconcolorfulness.cpp
+    plugin/maskgeometrybridge.cpp
     plugin/layoutmanager.cpp
     plugin/lattecontainmentplugin.cpp
 )

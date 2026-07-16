@@ -12,6 +12,7 @@
 #include "backgroundstateresolver.h"
 #include "iconcolorfulness.h"
 #include "layoutmanager.h"
+#include "maskgeometrybridge.h"
 #include "types.h"
 
 // Qt
@@ -27,5 +28,6 @@ void LatteContainmentPlugin::registerTypes(const char *uri)
     qmlRegisterSingletonType<Latte::FillDistributorTools>(uri, 0, 1, "FillDistributor", &Latte::filldistributortools_qobject_singletontype_provider);
     qmlRegisterType<Latte::Containment::ColorizerDecider>(uri, 0, 1, "ColorizerDecider");
     qmlRegisterType<Latte::Containment::BackgroundStateResolver>(uri, 0, 1, "BackgroundStateResolver");
+    qmlRegisterType<Latte::Containment::MaskGeometryBridge>(uri, 0, 1, "MaskGeometryBridge");
 }
 

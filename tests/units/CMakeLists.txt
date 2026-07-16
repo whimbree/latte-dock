@@ -61,6 +61,14 @@ latte_add_unit_test(backgroundstatetest
     ${CMAKE_SOURCE_DIR}/containment/plugin/backgroundstateresolver.cpp)
 target_include_directories(backgroundstatetest PRIVATE
     ${CMAKE_BINARY_DIR}/containment) # plugin/lattetypes.h is generated there
+# EX-10 MaskInputGeometry: header-only pure rect math plus its QML-facing
+# wrapper compiled IN per the sanitized-core rule (the wrapper's boundary
+# refusals and sentinel-rect mapping run instrumented); Plasma::Plasma for
+# the location enum.
+latte_add_unit_test(maskgeometrytest
+    ${CMAKE_SOURCE_DIR}/containment/plugin/maskgeometrybridge.cpp)
+target_link_libraries(maskgeometrytest
+    Plasma::Plasma)
 
 # EX-01 PreviewSwitchEngine: header-only pure core, injected clock.
 latte_add_unit_test(previewswitchenginetest)

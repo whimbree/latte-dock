@@ -3,6 +3,7 @@
 # line (kept sorted for diffability). Regenerate the list with:
 #   ctest --test-dir build -N | sed -n 's/^ *Test *#[0-9]*: //p' | sort
 41
+32
 activitysetalgebratest
 appletwindowparentingtest
 appstreamtest
@@ -20,6 +21,7 @@ importerregressiontest
 indicatorfactoryremovaltest
 layershellmappingtest
 layoutmanagerparkingtest
+maskgeometrytest
 panelbackgroundscantest
 parabolicmathtest
 parabolicroutertest

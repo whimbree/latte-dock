@@ -35,7 +35,7 @@ Inventory (section A):
 Ranking (section B): [x] done.
 
 Per-unit specs (section C), in rank order:
-- [x] EX-01 PreviewSwitchEngine - preview adoption/debounce/LRU decision core
+- [x] EX-01 PreviewSwitchEngine - preview adoption/debounce/LRU decision core - LANDED 03cf0289+2f23f9bd
 - [x] EX-02 ParabolicRouter - neighbor scale-stack propagation chains
 - [x] EX-03 ParabolicMathCore - the zoom curve math
 - [x] EX-04 AutoSizeEngine - iconSize shrink/grow feedback loop
@@ -510,6 +510,27 @@ Conventions used by all specs:
 
 ### EX-01 PreviewSwitchEngine [strong-model-only]
 
+- Commits: 03cf0289 (core + 19 test slots, tests first), 2f23f9bd
+  (bridge + QML cutover + gate rules 1-4 migrated, rewritten rules
+  negative-tested x3). Landed 2026-07-15. Live recipe run in full:
+  glide matrix at three rates (defers coalesce to one settle-adopt at
+  rest; warm-cache sweeps all revive, zero rebuilds), no mid-scrub
+  hide, 7/7 group thumbnails revived on the konsole round trip,
+  preview centered within 5px twice, zero attach(nil) in 176 attaches
+  across a stepped sweep. DEFECT FIXED at origin during extraction:
+  the delegate cache keyed parking off activeItem, which
+  forcePreviewsHiding nulls first, so hide/re-hover of the same task
+  paid a full rebuild and leaked a null-keyed parked entry; the
+  engine's cache slot is independent of the shown task
+  (lru_activeSlotSurvivesDialogHide pins it; live-confirmed
+  changed=false KeepActive on re-hover after hide).
+- WATCH item (found during extraction, deliberately NOT fixed blind):
+  a task dying while it IS the active cached delegate leaves that
+  delegate's bindings dead until the next materialize parks it and
+  depth eviction destroys it - drop() faithfully scans parked only,
+  in both QML predecessor and engine. Needs a live repro (close a
+  window from its own preview) before deciding the right arm; fix
+  belongs in the engine's drop path if real.
 - Header: `plasmoid/plugin/units/previewswitchengine.h`
 - Responsibility: the window-previews dialog's decision core - switch
   vs defer vs settle-adopt, hide-countdown arming/cancelling, and the

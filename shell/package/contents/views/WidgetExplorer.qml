@@ -135,7 +135,7 @@ PC3.Page {
         }
 
         if (applet.plasmoid !== undefined && applet.plasmoid && applet.plasmoid !== applet) {
-            var plasmoidName = pluginNameForApplet(aplet.plasmoid);
+            var plasmoidName = pluginNameForApplet(applet.plasmoid);
             if (plasmoidName !== "") {
                 return plasmoidName;
             }

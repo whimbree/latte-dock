@@ -16,7 +16,6 @@
 3	lib/qml/org/kde/latte/abilities/client/Containment.qml
 3	lib/qml/org/kde/latte/abilities/client/Debug.qml
 3	lib/qml/org/kde/latte/abilities/client/Environment.qml
-24	lib/qml/org/kde/latte/abilities/client/Indexer.qml
 57	lib/qml/org/kde/latte/abilities/client/indicators/LatteIndicator.qml
 3	lib/qml/org/kde/latte/abilities/client/Indicators.qml
 8	lib/qml/org/kde/latte/abilities/client/Metrics.qml
@@ -30,7 +29,7 @@
 31	lib/qml/org/kde/latte/abilities/items/basicitem/IndicatorLevel.qml
 79	lib/qml/org/kde/latte/abilities/items/basicitem/ParabolicEventsArea.qml
 105	lib/qml/org/kde/latte/abilities/items/basicitem/ParabolicItem.qml
-20	lib/qml/org/kde/latte/abilities/items/BasicItem.qml
+1	lib/qml/org/kde/latte/abilities/items/BasicItem.qml
 2	lib/qml/org/kde/latte/abilities/items/basicitem/RestoreAnimation.qml
 36	lib/qml/org/kde/latte/abilities/items/basicitem/SeparatorItem.qml
 24	lib/qml/org/kde/latte/abilities/items/basicitem/ShortcutBadge.qml

@@ -2102,8 +2102,12 @@ assessed every file the landed cutovers touched):
   IndexerPrivate.qml (1: the root.appletIsDragged read inside the
   clientsTrackingWindowsCount Binding when-clause - same
   injection-into-Bindings hazard; the other 24 were own-property
-  qualifications the EX-06 cutover fixed). These files resolve
-  enclosing-scope ids (appletItem,
+  qualifications the EX-06 cutover fixed). Delegate model context:
+  BasicItem.qml (1 after the EX-06 cutover: the `itemIndex: index`
+  read - `index` is the injected delegate-model position, the same
+  dynamically-typed task-model surface named in the full-strict
+  rejection; every other read now goes through the itemIndex own
+  property). These files resolve enclosing-scope ids (appletItem,
   root, metrics, animations, wrapper, parabolicItem, ...) through the
   QML context chain BY ARCHITECTURE - the ability/item pattern the
   whole tree is built on. Zeroing them means explicit property

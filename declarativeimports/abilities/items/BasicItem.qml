@@ -117,8 +117,8 @@ Item{
         return PlasmaCore.Types.BottomEdge;
     }
 
-    readonly property bool isFirstItemInContainer: abilityItem.abilities.containment.isFirstAppletInContainment && (index === abilityItem.abilities.indexer.firstVisibleItemIndex)
-    readonly property bool isLastItemInContainer: abilityItem.abilities.containment.isLastAppletInContainment && (index === abilityItem.abilities.indexer.lastVisibleItemIndex)
+    readonly property bool isFirstItemInContainer: abilityItem.abilities.containment.isFirstAppletInContainment && (abilityItem.itemIndex === abilityItem.abilities.indexer.firstVisibleItemIndex)
+    readonly property bool isLastItemInContainer: abilityItem.abilities.containment.isLastAppletInContainment && (abilityItem.itemIndex === abilityItem.abilities.indexer.lastVisibleItemIndex)
 
     readonly property int itemIndex: index
     readonly property int animationTime: (abilityItem.abilities.animations.active ? abilityItem.abilities.animations.speedFactor.current : 2) * (1.2 * abilityItem.abilities.animations.duration.small)
@@ -174,89 +174,66 @@ Item{
         }
     }
 
-    //! separators flags
+    //! separators flags: the walk verdicts live in the C++ core
+    //! (org.kde.latte.core VisibleIndex, EX-06) - neighborIsSeparator is
+    //! the rule where a settings-hidden separator still counts,
+    //! neighborIsVisibleSeparator the rule where it does not; only the
+    //! row-edge fallback to the containment's applet-level walk stays
+    //! here (a live read through the ability chain)
     readonly property bool tailItemIsSeparator: {
-        if (isSeparator || index < 0 ) {
+        if (abilityItem.isSeparator || abilityItem.itemIndex < 0 ) {
             return false;
         }
 
-        var tail = index - 1;
+        var verdict = LatteCore.VisibleIndex.neighborIsSeparator(abilityItem.abilities.indexer.rowEntries, abilityItem.itemIndex, LatteCore.VisibleIndex.Tail);
 
-        while(tail>=0
-              && abilityItem.abilities.indexer.hidden.indexOf(tail)>=0 /*ignore hidden items but not hidden separators*/
-              && abilityItem.abilities.indexer.separators.indexOf(tail)<0) {
-            tail = tail - 1;
-        }
-
-        var hasTailItemSeparator = abilityItem.abilities.indexer.separators.indexOf(tail)>=0;
-
-        if (!hasTailItemSeparator && itemIndex === abilityItem.abilities.indexer.firstVisibleItemIndex){
+        if (!verdict && abilityItem.itemIndex === abilityItem.abilities.indexer.firstVisibleItemIndex){
             return abilityItem.abilities.indexer.tailAppletIsSeparator;
         }
 
-        return hasTailItemSeparator;
+        return verdict;
     }
 
     readonly property bool tailItemIsVisibleSeparator: {
-        if (isSeparator || index < 0 || !tailItemIsSeparator ) {
+        if (abilityItem.isSeparator || abilityItem.itemIndex < 0 || !abilityItem.tailItemIsSeparator ) {
             return false;
         }
 
-        var tail = index - 1;
+        var verdict = LatteCore.VisibleIndex.neighborIsVisibleSeparator(abilityItem.abilities.indexer.rowEntries, abilityItem.itemIndex, LatteCore.VisibleIndex.Tail);
 
-        while(tail>=0 && abilityItem.abilities.indexer.hidden.indexOf(tail)>=0) {
-            tail = tail - 1;
-        }
-
-        var hasTailItemSeparator = abilityItem.abilities.indexer.separators.indexOf(tail)>=0 && abilityItem.abilities.indexer.hidden.indexOf(tail)<0;
-
-        if (!hasTailItemSeparator && itemIndex === abilityItem.abilities.indexer.firstVisibleItemIndex){
+        if (!verdict && abilityItem.itemIndex === abilityItem.abilities.indexer.firstVisibleItemIndex){
             return abilityItem.abilities.indexer.tailAppletIsSeparator;
         }
 
-        return hasTailItemSeparator;
+        return verdict;
     }
 
     readonly property bool headItemIsSeparator: {
-        if (isSeparator || index < 0 ) {
+        if (abilityItem.isSeparator || abilityItem.itemIndex < 0 ) {
             return false;
         }
 
-        var head = index + 1;
+        var verdict = LatteCore.VisibleIndex.neighborIsSeparator(abilityItem.abilities.indexer.rowEntries, abilityItem.itemIndex, LatteCore.VisibleIndex.Head);
 
-        while(head>=0
-              && abilityItem.abilities.indexer.hidden.indexOf(head)>=0 /*ignore hidden items but not hidden separators*/
-              && abilityItem.abilities.indexer.separators.indexOf(head)<0) {
-            head = head + 1;
-        }
-
-        var hasHeadItemSeparator = abilityItem.abilities.indexer.separators.indexOf(head)>=0;
-
-        if (!hasHeadItemSeparator && itemIndex === abilityItem.abilities.indexer.lastVisibleItemIndex){
+        if (!verdict && abilityItem.itemIndex === abilityItem.abilities.indexer.lastVisibleItemIndex){
             return abilityItem.abilities.indexer.headAppletIsSeparator;
         }
 
-        return hasHeadItemSeparator;
+        return verdict;
     }
 
     readonly property bool headItemIsVisibleSeparator: {
-        if (isSeparator || index < 0 || !headItemIsSeparator) {
+        if (abilityItem.isSeparator || abilityItem.itemIndex < 0 || !abilityItem.headItemIsSeparator) {
             return false;
         }
 
-        var head = index + 1;
+        var verdict = LatteCore.VisibleIndex.neighborIsVisibleSeparator(abilityItem.abilities.indexer.rowEntries, abilityItem.itemIndex, LatteCore.VisibleIndex.Head);
 
-        while(head>=0 && abilityItem.abilities.indexer.hidden.indexOf(head)>=0) {
-            head = head + 1;
-        }
-
-        var hasHeadItemSeparator = abilityItem.abilities.indexer.separators.indexOf(head)>=0 && abilityItem.abilities.indexer.hidden.indexOf(head)<0;
-
-        if (!hasHeadItemSeparator && itemIndex === abilityItem.abilities.indexer.lastVisibleItemIndex){
+        if (!verdict && abilityItem.itemIndex === abilityItem.abilities.indexer.lastVisibleItemIndex){
             return abilityItem.abilities.indexer.headAppletIsSeparator;
         }
 
-        return hasHeadItemSeparator;
+        return verdict;
     }
 
 
@@ -396,7 +373,7 @@ Item{
     states: [
         State {
             name: "grid"
-            when: abilityItem.parent && abilities.isLayoutGridContainer
+            when: abilityItem.parent && abilityItem.abilities.isLayoutGridContainer
 
             AnchorChanges {
                 target: abilityItem
@@ -405,7 +382,7 @@ Item{
         },
         State {
             name: "left"
-            when: abilityItem.parent && !abilities.isLayoutGridContainer && (abilities.location === PlasmaCore.Types.LeftEdge)
+            when: abilityItem.parent && !abilityItem.abilities.isLayoutGridContainer && (abilityItem.abilities.location === PlasmaCore.Types.LeftEdge)
 
             AnchorChanges {
                 target: abilityItem
@@ -414,7 +391,7 @@ Item{
         },
         State {
             name: "right"
-            when: abilityItem.parent && !abilities.isLayoutGridContainer && (abilities.location === PlasmaCore.Types.RightEdge)
+            when: abilityItem.parent && !abilityItem.abilities.isLayoutGridContainer && (abilityItem.abilities.location === PlasmaCore.Types.RightEdge)
 
             AnchorChanges {
                 target: abilityItem
@@ -423,7 +400,7 @@ Item{
         },
         State {
             name: "bottom"
-            when: abilityItem.parent && !abilities.isLayoutGridContainer && (abilities.location === PlasmaCore.Types.BottomEdge)
+            when: abilityItem.parent && !abilityItem.abilities.isLayoutGridContainer && (abilityItem.abilities.location === PlasmaCore.Types.BottomEdge)
 
             AnchorChanges {
                 target: abilityItem
@@ -432,7 +409,7 @@ Item{
         },
         State {
             name: "top"
-            when: abilityItem.parent && !abilities.isLayoutGridContainer && (abilities.location === PlasmaCore.Types.TopEdge)
+            when: abilityItem.parent && !abilityItem.abilities.isLayoutGridContainer && (abilityItem.abilities.location === PlasmaCore.Types.TopEdge)
 
             AnchorChanges {
                 target: abilityItem

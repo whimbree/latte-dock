@@ -52,25 +52,49 @@ function activateTask(index, model, modifiers, task) {
 }
 
 
-function activateNextPrevTask(next) {
-    // FIXME TODO: Unnecessarily convoluted and costly; optimize.
+//! The bar's task delegates in MODEL order. icList's contentItem holds them
+//! in CREATION order plus view chrome (the same collection main.qml's
+//! taskExists() and icList's childAtPos() walk, with the same
+//! objectName === "TaskItem" discriminator), so order by itemIndex; a dying
+//! delegate reports itemIndex -1 and drops out.
+function tasksInBarOrder() {
+    var children = icList.contentItem.children;
+    var byIndex = [];
 
+    for (var i = 0; i < children.length; ++i) {
+        var child = children[i];
+        if (child.objectName !== "TaskItem" || child.itemIndex < 0) {
+            continue;
+        }
+        byIndex[child.itemIndex] = child;
+    }
+
+    var ordered = [];
+    for (var i = 0; i < byIndex.length; ++i) {
+        if (byIndex[i] !== undefined) {
+            ordered.push(byIndex[i]);
+        }
+    }
+
+    return ordered;
+}
+
+function activateNextPrevTask(next) {
     var taskIndexList = [];
     var activeTaskIndex = tasksModel.activeTask;
 
-    for (var i = 0; i < taskList.children.length - 1; ++i) {
-        var task = taskList.children[i];
-        var modelIndex = task.modelIndex(i);
+    var tasks = tasksInBarOrder();
 
-        if (task !== undefined){
-            if (task.IsLauncher !== true && task.IsStartup !== true) {
-                if (task.m.IsGroupParent === true) {
-                    for (var j = 0; j < tasksModel.rowCount(modelIndex); ++j) {
-                        taskIndexList.push(tasksModel.makeModelIndex(i, j));
-                    }
-                } else {
-                    taskIndexList.push(modelIndex);
+    for (var i = 0; i < tasks.length; ++i) {
+        var task = tasks[i];
+
+        if (task.isLauncher !== true && task.isStartup !== true) {
+            if (task.isGroupParent === true) {
+                for (var j = 0; j < tasksModel.rowCount(task.modelIndex()); ++j) {
+                    taskIndexList.push(tasksModel.makeModelIndex(task.itemIndex, j));
                 }
+            } else {
+                taskIndexList.push(task.modelIndex());
             }
         }
     }

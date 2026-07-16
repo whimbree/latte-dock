@@ -176,7 +176,12 @@ Per-unit specs (section C), in rank order:
 - [x] EX-15 WheelAccumulator - wheel delta accumulation/threshold semantics
   - [ ] executed
 - [x] EX-16 GroupWindowCycler - next/previous/minimize target selection
-  - [ ] executed
+  - [x] executed: LANDED 80525a85 lineage (rebased; see the spec Commits
+    line). Merge evidence: the 24-case shipped-QML pinning suite and the
+    13-case whole-bar cycle suite are green on both sides of the cutover
+    (the wheel-cycle path was DEAD since Qt5, fixed at origin with a
+    failing-first suite); 38/38 ctest green post-rebase. The wheel-over-
+    group and wheelEnabled live recipes stay on the live desk list.
 - [x] EX-17 TooltipTextComposer - preview title/subtext string transforms
   - [x] executed: LANDED 6190e01c + 53f7ba21. Live at merge: hovered the
     4-window VS Code group on the real dock; titles carry the app-name

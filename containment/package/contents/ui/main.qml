@@ -1092,6 +1092,7 @@ ContainmentItem {
         animations: _animations
         debug: _debug
         layouts: layoutsContainer
+        myView: _myView
         view: latteView
         settings: universalSettings
     }

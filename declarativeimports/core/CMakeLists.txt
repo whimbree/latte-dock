@@ -38,4 +38,10 @@ target_link_libraries(lattecoreplugin
 
 install(TARGETS lattecoreplugin DESTINATION ${KDE_INSTALL_QMLDIR}/org/kde/latte/core)
 
-install(FILES qmldir DESTINATION ${KDE_INSTALL_QMLDIR}/org/kde/latte/core)
+# plugins.qmltypes feeds qmllint/tooling type resolution (the step-2.5
+# qmllint ratchet); regenerate after registering new types in
+# lattecoreplugin.cpp:
+#   qmlplugindump -nonrelocatable org.kde.latte.core 0.2
+# (offscreen, with QML2_IMPORT_PATH at the staged tree - the gate fails
+# on new unresolved-type warnings if this file goes stale)
+install(FILES qmldir plugins.qmltypes DESTINATION ${KDE_INSTALL_QMLDIR}/org/kde/latte/core)

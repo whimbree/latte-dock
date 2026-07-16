@@ -44,7 +44,7 @@ AbilityDefinition.ParabolicEffect {
 
     Item {
         id: ref
-        readonly property Item parabolic: bridge ? bridge.parabolic.host : local
+        readonly property Item parabolic: parabolic.bridge ? parabolic.bridge.parabolic.host : parabolic.local
     }
 
     onIsActiveChanged: {
@@ -67,8 +67,8 @@ AbilityDefinition.ParabolicEffect {
 
     Connections {
         target: parabolic
-        onRestoreZoomIsBlockedChanged: {
-            if (!(bridge || bridge.host)) {
+        function onRestoreZoomIsBlockedChanged() {
+            if (!(parabolic.bridge || parabolic.bridge.host)) {
                 if (!parabolic.restoreZoomIsBlocked) {
                     parabolic.startRestoreZoomTimer();
                 } else {
@@ -77,7 +77,7 @@ AbilityDefinition.ParabolicEffect {
             }
         }
 
-        onCurrentParabolicItemChanged: {
+        function onCurrentParabolicItemChanged() {
             if (!parabolic.bridge || !parabolic.bridge.host) {
                 if (!parabolic.currentParabolicItem) {
                     parabolic.startRestoreZoomTimer();
@@ -249,7 +249,7 @@ AbilityDefinition.ParabolicEffect {
                 console.log("Plasmoid, restoreZoomTimer was called, even though it shouldn't...");
             }
 
-            setDirectRenderingEnabled(false);
+            parabolic.setDirectRenderingEnabled(false);
             parabolic.invkClearZoom();
         }
     }

@@ -32,6 +32,13 @@ line; DONE means the full spec is written to the section-C template.
   files / 7098 curated warnings initial, negative-tested x3), Method
   + section D amendments binding all not-yet-landed units, TESTING.md
   rule, CLAUDE.md pointer. Wave 2-4 units are UNGATED from here.
+  RETROACTIVE PASS (same night, at Bree's direction): the law applied
+  to the four already-landed units too - type discipline on all four
+  cores (eliminated states named in each unit's entry above),
+  plugins.qmltypes for org.kde.latte.core, implicit-handler/
+  qualification fixes in the cutover-touched QML (bridge and client
+  parabolic abilities at ZERO), baseline 164 files / 6614, context-
+  chain residues named as structural exceptions in section D.
 
 Inventory (section A):
 - [x] containment/ - 62 QML files classified
@@ -1920,10 +1927,42 @@ the per-unit law):
   newline, so the next Warning: lands mid-line and a ^-anchored grep
   silently undercounts; the gate now counts category ids from
   --json via jq - the machine interface, immune to text-format
-  quirks.) Strict-on-touch (Method amendment, criterion d) starts
-  with the first cutover AFTER this landed; the EX-02 cutovers
-  predate the rule and their files carry baseline entries like the
-  rest of the inherited tree.
+  quirks.) The retroactive strictness pass (2026-07-15, same night)
+  brought the baseline to 164 files / 6614: plugins.qmltypes for
+  org.kde.latte.core cleared the unresolved-type class tree-wide,
+  the bridge and client parabolic abilities reached ZERO, the
+  containment parabolic ability/private dropped to 3+3.
+  Strict-on-touch (Method amendment, criterion d) binds every
+  cutover from here on; the EX-01/02/03/22 cutovers predate the rule
+  and were covered by the retroactive pass instead.
+
+NAMED STRUCTURAL EXCEPTIONS (the baseline file is regenerated
+wholesale, so the durable record is here; the retroactive pass
+assessed every file the landed cutovers touched):
+
+- Context-chain name resolution: ParabolicArea.qml (85),
+  ParabolicEventsArea.qml (79), AppletItem.qml (164), plasmoid
+  main.qml (94), ParabolicEdgeSpacer.qml (7), and the last 3+3 in the
+  containment parabolic ability/private (root/metrics reads inside
+  BINDINGS). These files resolve enclosing-scope ids (appletItem,
+  root, metrics, animations, wrapper, parabolicItem, ...) through the
+  QML context chain BY ARCHITECTURE - the ability/item pattern the
+  whole tree is built on. Zeroing them means explicit property
+  injection through every instantiation level; injection into
+  BINDINGS additionally risks startup evaluation-order null reads the
+  context chain never had (a Binding can evaluate before the injected
+  property is assigned). That is the extraction's endgame refactor,
+  to be done deliberately per subtree - not a per-unit retrofit.
+  Function-only reads ARE injectable safely (the private's myView
+  went that way); each future cutover does what is safely reachable
+  and leaves the rest counted here.
+- What the retroactive pass DID fix in the touched files: implicit
+  Connections handlers to function syntax, own-property qualification
+  through the component id (safe: ids outrank scope properties, same
+  object), the myView function-only injection, and plugins.qmltypes
+  so LatteCore singleton/enum uses resolve (this also surfaced a few
+  previously-invisible findings in untouched files - deeper analysis,
+  recorded in the same regeneration, net -484).
 
 ## E. Sequencing into waves
 

@@ -36,8 +36,8 @@ BridgeItem {
     }*/
 
     Connections {
-        target: host ? host : null
-        onSglClearZoom: {
+        target: parabolicBridge.host ? parabolicBridge.host : null
+        function onSglClearZoom() {
             if (parabolicBridge.client) {
                 parabolicBridge.client.sglClearZoom();
             }

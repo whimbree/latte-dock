@@ -18,6 +18,7 @@ AbilityHost.ParabolicEffect {
     property Item animations: null
     property Item debug: null
     property Item layouts: null
+    property Item myView: null
     property QtObject view: null
     property QtObject settings: null
 
@@ -28,7 +29,7 @@ AbilityHost.ParabolicEffect {
 
     Connections {
         target: parabolic
-        onRestoreZoomIsBlockedChanged: {
+        function onRestoreZoomIsBlockedChanged() {
             if (!parabolic.restoreZoomIsBlocked) {
                 parabolic.startRestoreZoomTimer();
             } else {
@@ -37,8 +38,8 @@ AbilityHost.ParabolicEffect {
 
         }
 
-        onCurrentParabolicItemChanged: {
-            if (!currentParabolicItem) {
+        function onCurrentParabolicItemChanged() {
+            if (!parabolic.currentParabolicItem) {
                 parabolic.startRestoreZoomTimer();
             } else {
                 parabolic.stopRestoreZoomTimer();
@@ -49,7 +50,7 @@ AbilityHost.ParabolicEffect {
     Connections{
         target: parabolic.view && parabolic.view.visibility ? parabolic.view.visibility : root
         ignoreUnknownSignals : true
-        onContainsMouseChanged: {
+        function onContainsMouseChanged() {
             if (!parabolic.view.visibility.containsMouse && !restoreZoomTimer.running) {
                 parabolic.startRestoreZoomTimer()
             }
@@ -58,7 +59,7 @@ AbilityHost.ParabolicEffect {
 
     Connections {
         target: parabolic.layouts
-        onContextMenuIsShownChanged: {
+        function onContextMenuIsShownChanged() {
             if (!parabolic.layouts.contextMenuIsShown && !restoreZoomTimer.running) {
                 parabolic.startRestoreZoomTimer();
             }
@@ -71,18 +72,18 @@ AbilityHost.ParabolicEffect {
     Binding{
         target: parabolic
         property: "restoreZoomIsBlockedFromApplet"
-        when: isBindingUpdateEnabled
+        when: parabolic.isBindingUpdateEnabled
         restoreMode: Binding.RestoreNone
         value: {
             var grid;
 
             for (var l=0; l<=2; ++l) {
                 if (l===0) {
-                    grid = layouts.startLayout;
+                    grid = parabolic.layouts.startLayout;
                 } else if (l===1) {
-                    grid = layouts.mainLayout;
+                    grid = parabolic.layouts.mainLayout;
                 } else if (l===2) {
-                    grid = layouts.endLayout;
+                    grid = parabolic.layouts.endLayout;
                 }
 
                 for (var i=0; i<grid.children.length; ++i){
@@ -131,8 +132,8 @@ AbilityHost.ParabolicEffect {
             return;
         }
 
-        var absorbing = root.myView.alignment === LatteCore.Types.Center
-                || root.myView.alignment === LatteCore.Types.Justify;
+        var absorbing = parabolic.myView.alignment === LatteCore.Types.Center
+                || parabolic.myView.alignment === LatteCore.Types.Justify;
         var plan = LatteCore.ParabolicRouter.route(info.kinds,
                                                    entryIndex - info.rowBase,
                                                    islower ? -1 : 1,
@@ -286,7 +287,7 @@ AbilityHost.ParabolicEffect {
         interval: 50
 
         onTriggered: {
-            if (parabolic.restoreZoomIsBlocked || currentParabolicItem) {
+            if (parabolic.restoreZoomIsBlocked || parabolic.currentParabolicItem) {
                 return;
             }
 
@@ -294,7 +295,7 @@ AbilityHost.ParabolicEffect {
             parabolic.setDirectRenderingEnabled(false);
             parabolic.sglClearZoom();
 
-            if (debug.timersEnabled) {
+            if (parabolic.debug.timersEnabled) {
                 console.log("containment timer: RestoreZoomTimer called...");
             }
         }

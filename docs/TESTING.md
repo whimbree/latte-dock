@@ -52,7 +52,8 @@ five curated warning categories against `tests/qmllint-baseline`
 (exact match; the baseline only shrinks), and every QML file a cutover
 commit touches leaves at zero curated warnings. Full-strict QML is the
 asymptotic state the extraction converges to, not a mandate on
-inherited files; structural exceptions are named in the baseline. The
+inherited files; structural exceptions are named in the extraction
+plan's section D (the baseline file is regenerated wholesale). The
 fences: this law binds the new cores and their tests only - the live
 dock and packaged runtime are never sanitized, and no repo-wide
 modernization of inherited code rides on it.

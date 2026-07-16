@@ -93,6 +93,10 @@ phases, one commit-traceable checklist item per task. The coarse picture:
       built yet
 - [ ] Distro packaging beyond NixOS (no PPA/COPR/AUR yet; the classic
       CMake install works everywhere the dependencies exist)
+- [ ] Accessibility and automation: keyboard navigation for every
+      interactive surface, full AT-SPI support (screen-reader pass with
+      Orca as the acceptance test), and a D-Bus surface rich enough to
+      drive and inspect anything a test needs deterministically
 - [ ] Companion applets as sibling repos consumed by flake input: the
       Latte separator applet, then a full Qt 6 port of
       [applet-window-appmenu](https://github.com/psifidotos/applet-window-appmenu)

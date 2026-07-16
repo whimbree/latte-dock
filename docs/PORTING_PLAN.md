@@ -83,6 +83,12 @@ the full context; this list is the map, not the territory):
 9. Phase 10: the e2e GUI harness (microvm CI with compositor-level
    pointer driving) - the local gates are CI-portable by design, the
    hosted pipeline is not stood up.
+9a. Phase 10: the accessibility/automation quartet (added 2026-07-16,
+    see the Phase 10 requirements subsection): keyboard navigation
+    for everything, D-Bus exposure for e2e testability, converting
+    nondeterministic e2e checks to deterministic ones (live cursor
+    only where pointer delivery IS the thing under test), and full
+    AT-SPI support with an Orca acceptance pass.
 10. Phase 10: the extraction ledger's live-verification tail (each
     executed note names its still-owed recipes), the known-bug-list
     sweep, WindowId newtype hardening, and the two stuck-overlay /
@@ -2012,6 +2018,55 @@ multi-view, multi-monitor setup.
       Commits:
 
 ### Phase 10: Stabilization / verification
+
+#### Accessibility, keyboard and automation requirements (added 2026-07-16)
+
+These four are first-class requirements, not polish. They were added
+after the extraction initiative completed, when live verification
+showed how much of the dock can only be driven by a pointer today.
+
+- [ ] Robust keyboard navigation for EVERYTHING: every interactive
+      surface (dock items and their context menus, group previews,
+      edit mode including the ruler and the applet handles, all
+      settings windows and their pages, applet popups) must be
+      reachable and operable from the keyboard alone. Audit
+      surface-by-surface against a written shortcut map (extend the
+      existing global-shortcuts family: Meta+number already works);
+      the map lands in end-user docs and each surface's keys are
+      pinned by an offscreen qmltest where feasible. Focus order and
+      visible focus indicators are part of the requirement, not
+      separate.
+      Commits:
+- [ ] D-Bus exposure for e2e testability: anything a test needs to
+      drive or inspect gets a D-Bus surface - view geometry and
+      visibility state queries, applet/task enumeration with ids and
+      positions, badge state readback, action triggers (activate task
+      N, open settings for view X, enter/exit edit mode for view X).
+      The existing org.kde.lattedock interface is the seed
+      (updateDockItemBadge, showSettingsWindow, duplicateView already
+      exist); design the additions as one reviewed interface, not
+      accreted one-offs. Rule: if a live check in this plan needed
+      pixel-peeping or pointer acrobatics to observe STATE (not to
+      exercise input), that state gets a D-Bus readback.
+      Commits:
+- [ ] Convert nondeterministic e2e tests to deterministic ones: every
+      screenshot-compare or sleep-and-hope check that is really about
+      STATE moves to a deterministic D-Bus-driven or offscreen-qmltest
+      assertion. A test keeps a live cursor ONLY when the thing under
+      test IS pointer delivery (input masks, hover chains, drags) -
+      those keep using fakepointer as today, with the glide rules from
+      the live-verification skill.
+      Commits:
+- [ ] Full AT-SPI support: the dock must be a first-class citizen for
+      assistive technology. Wire Qt's accessibility bridge end to end:
+      Accessible.role/name/description on every interactive QML item
+      (tasks announce their app name and window count, badges announce
+      their value, edit-mode controls announce their function), correct
+      focus events, and a real screen-reader pass with Orca as the
+      acceptance test. This also multiplies the keyboard-navigation and
+      D-Bus items: AT-SPI exposes an introspectable tree that
+      deterministic e2e tests can assert against.
+      Commits:
 
 - [ ] WindowId newtype hardening (filed 2026-07-16 from the EX-23
       design review). 8e8cdf31 replaced upstream's WindowId = QVariant

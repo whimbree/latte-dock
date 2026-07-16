@@ -166,7 +166,13 @@ Per-unit specs (section C), in rank order:
     on the live desk list for the throwaway session - it is the largest
     outstanding live surface of the initiative.
 - [x] EX-11 LauncherListOps - launcher order algebra, registries, stored-list parsing
-  - [ ] executed
+  - [x] executed: LANDED 91bc91d8 lineage (rebased; see the spec Commits
+    line). Merge evidence: 44/44 ctest green post-rebase incl. the 16-case
+    shipped-QML twin suite kept green across every cutover and the 29
+    sanitized slots; a rebase-time qmlplugindump against a stale stage
+    dropped ScrollOverflowMath from plugins.qmltypes - caught by the name
+    check and re-dumped against the refreshed stage before merge. The six
+    launcher live recipes stay on the live desk list.
 - [x] EX-12 ColorizerDecisionCore - applyTheme/scheme selection tree
   - [x] executed: LANDED 8ff0862d lineage (rebased; see the spec Commits
     line). Merge evidence: 36/36 ctest green post-rebase incl. the 10
@@ -182,7 +188,12 @@ Per-unit specs (section C), in rank order:
     probe proved the tables bite. The Dock/Panel flip, background-state
     matrix and effects-area recipes stay on the live desk list.
 - [x] EX-14 DropEventClassifier - drag mime classification + insert index
-  - [ ] executed
+  - [x] executed: LANDED 7ff96532 lineage (rebased; see the spec Commits
+    line). Merge evidence: 45/45 ctest green post-rebase incl. the
+    16-slot truth-table suite with both consumers' accept sets side by
+    side; core plugins.qmltypes re-dumped for the union. The six
+    drag/drop live recipes stay on the live desk list (file-url drops
+    may genuinely need a real mouse).
 - [x] EX-15 WheelAccumulator - wheel delta accumulation/threshold semantics
   - [x] executed: LANDED 8b23ea47 lineage (rebased; see the spec Commits
     line). Merge evidence: 41/41 ctest green post-rebase incl. the 22

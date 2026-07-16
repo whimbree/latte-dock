@@ -69,10 +69,11 @@ phases, one commit-traceable checklist item per task. The coarse picture:
 - [ ] Layout/config persistence, session shutdown, multi-screen edge cases
       (the open phase; live-driven fixes land here continuously)
 - [ ] Theming and colorization polish audit
-- [ ] Stabilization: the QML logic extraction initiative
-      ([docs/QML_EXTRACTION_PLAN.md](docs/QML_EXTRACTION_PLAN.md)) is
-      moving feel-critical QML logic into tested, sanitized C++ cores -
-      4 of 25 units executed so far
+- [x] Stabilization: the QML logic extraction initiative
+      ([docs/QML_EXTRACTION_PLAN.md](docs/QML_EXTRACTION_PLAN.md)) moved
+      feel-critical QML logic into tested, sanitized C++ cores - all 25
+      units executed; a tail of live verification recipes is tracked in
+      the plan's executed notes
 - [ ] CI/CD: the local gates (build-check, QML compile gate, qmllint
       ratchet, coverage ratchet) are pure shell over cmake/ctest and
       CI-portable by design; the hosted pipeline itself is not stood up yet

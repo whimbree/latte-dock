@@ -106,13 +106,30 @@ void StorageIdRemapApplicationTest::remapApplication_rewritesIdsOrderListsAndClo
     QCOMPARE(containments.group(cloneId).readEntry("isClonedFrom", Latte::Data::View::ISCLONEDNULL),
              originalId.toInt());
 
-    //! the applet order references the remapped applet ids
-    QCOMPARE(containments.group(carrierId).group(QStringLiteral("General")).readEntry("appletOrder", QString()),
-             QStringLiteral("40;41"));
-
-    QStringList appletGroups = containments.group(carrierId).group(QStringLiteral("Applets")).groupList();
+    const KConfigGroup applets = containments.group(carrierId).group(QStringLiteral("Applets"));
+    QStringList appletGroups = applets.groupList();
     appletGroups.sort();
     QCOMPARE(appletGroups, QStringList({QStringLiteral("40"), QStringLiteral("41")}));
+
+    //! which of 40/41 each applet received follows groupList() order, which
+    //! rides QHash's per-process seed - locate them by their plugin markers
+    //! instead of assuming the mapping (an exact-string "40;41" compare here
+    //! flaked to "41;40" between runs)
+    QString kickoffId, clockId;
+    for (const auto &aId : appletGroups) {
+        const QString plugin = applets.group(aId).readEntry("plugin", QString());
+        if (plugin == QLatin1String("org.kde.plasma.kickoff")) {
+            kickoffId = aId;
+        } else if (plugin == QLatin1String("org.kde.plasma.digitalclock")) {
+            clockId = aId;
+        }
+    }
+    QVERIFY(!kickoffId.isEmpty() && !clockId.isEmpty());
+
+    //! the applet order references the remapped applet ids AND preserves the
+    //! origin sequence: kickoff was 30 (first), digitalclock 31 (second)
+    QCOMPARE(containments.group(carrierId).group(QStringLiteral("General")).readEntry("appletOrder", QString()),
+             QStringLiteral("%1;%2").arg(kickoffId, clockId));
 }
 
 void StorageIdRemapApplicationTest::remapApplication_orphansCloneWithoutItsOriginal()

@@ -1,5 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2019 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -29,7 +31,7 @@ LatteComponents.IndicatorItem{
 
     readonly property int thicknessMargin: screenEdgeMargin + thickLocalMargin + (glowEnabled ? 1 : 0)
 
-    property real textColorBrightness: colorBrightness(indicator.colorPalette.textColor)
+    property real textColorBrightness: LatteCore.Tools.colorBrightness(indicator.colorPalette.textColor)
 
     //! buttonFocusColor is a Plasma color-group name; a Kirigami.Theme fallback palette
     //! (used when no colorization is active) lacks it and would read undefined -> black.
@@ -68,16 +70,6 @@ LatteComponents.IndicatorItem{
         color: "transparent"
     }*/
 
-    function colorBrightness(color) {
-        return colorBrightnessFromRGB(color.r * 255, color.g * 255, color.b * 255);
-    }
-
-    // formula for brightness according to:
-    // https://www.w3.org/TR/AERT/#color-contrast
-    function colorBrightnessFromRGB(r, g, b) {
-        return (r * 299 + g * 587 + b * 114) / 1000
-    }
-
     Grid{
         id: grid
         columns: Plasmoid.formFactor === PlasmaCore.Types.Vertical ? 1 : 0
@@ -90,40 +82,40 @@ LatteComponents.IndicatorItem{
             width: stateWidth
             height: stateHeight
             opacity: {
-                if (indicator.isEmptySpace) {
+                if (root.indicator.isEmptySpace) {
                     return 0;
                 }
 
-                if (indicator.isTask) {
-                    return indicator.isLauncher || (indicator.inRemoving && !isAnimating) ? 0 : 1
+                if (root.indicator.isTask) {
+                    return root.indicator.isLauncher || (root.indicator.inRemoving && !isAnimating) ? 0 : 1
                 }
 
-                if (indicator.isApplet) {
-                    return (indicator.isActive || isAnimating) ? 1 : 0
+                if (root.indicator.isApplet) {
+                    return (root.indicator.isActive || isAnimating) ? 1 : 0
                 }
 
-                //! not yet classified (the indicator level initializes before
+                //! not yet classified (the root.indicator level initializes before
                 //! the host sets isTask/isApplet); falling through returned
                 //! undefined, which cannot assign to a double
                 return 0;
             }
 
-            basicColor: indicator.isActive || (indicator.isGroup && indicator.hasShown) ? root.isActiveColor : root.notActiveColor
+            basicColor: root.indicator.isActive || (root.indicator.isGroup && root.indicator.hasShown) ? root.isActiveColor : root.notActiveColor
 
             size: root.size
             glow3D: glow3D
-            animation: Math.max(1.65*3*LatteCore.Environment.longDuration,indicator.durationTime*3*LatteCore.Environment.longDuration)
+            animation: Math.max(1.65*3*LatteCore.Environment.longDuration,root.indicator.durationTime*3*LatteCore.Environment.longDuration)
             location: Plasmoid.location
             glowOpacity: root.glowOpacity
-            contrastColor: indicator.shadowColor
-            attentionColor: indicator.colorPalette.negativeTextColor
+            contrastColor: root.indicator.shadowColor
+            attentionColor: root.indicator.colorPalette.negativeTextColor
 
             roundCorners: true
-            showAttention: indicator.inAttention
+            showAttention: root.indicator.inAttention
             showGlow: {
-                if (glowEnabled && (glowApplyTo === 2 /*All*/ || showAttention ))
+                if (root.glowEnabled && (root.glowApplyTo === 2 /*All*/ || showAttention ))
                     return true;
-                else if (glowEnabled && glowApplyTo === 1 /*OnActive*/ && indicator.hasActive)
+                else if (root.glowEnabled && root.glowApplyTo === 1 /*OnActive*/ && root.indicator.hasActive)
                     return true;
                 else
                     return false;
@@ -131,28 +123,28 @@ LatteComponents.IndicatorItem{
             showBorder: glow3D
 
             property int stateWidth: {
-                if (!vertical && isActive && activeStyle === 0 /*Line*/) {
-                    return (indicator.isGroup ? root.width - secondPoint.width : root.width - spacer.width) - glowMargins;
+                if (!vertical && isActive && root.activeStyle === 0 /*Line*/) {
+                    return (root.indicator.isGroup ? root.width - secondPoint.width : root.width - spacer.width) - root.glowMargins;
                 }
 
                 return root.size;
             }
 
             property int stateHeight: {
-                if (vertical && isActive && activeStyle === 0 /*Line*/) {
-                    return (indicator.isGroup ? root.height - secondPoint.height : root.height - spacer.height) - glowMargins;
+                if (vertical && isActive && root.activeStyle === 0 /*Line*/) {
+                    return (root.indicator.isGroup ? root.height - secondPoint.height : root.height - spacer.height) - root.glowMargins;
                 }
 
                 return root.size;
             }
 
-            property int animationTime: indicator.durationTime* (0.75*LatteCore.Environment.longDuration)
+            property int animationTime: root.indicator.durationTime* (0.75*LatteCore.Environment.longDuration)
 
-            property bool isActive: indicator.hasActive || indicator.isActive
+            property bool isActive: root.indicator.hasActive || root.indicator.isActive
 
             property bool vertical: Plasmoid.formFactor === PlasmaCore.Types.Vertical
 
-            property real scaleFactor: indicator.scaleFactor
+            property real scaleFactor: root.indicator.scaleFactor
 
             readonly property bool isAnimating: inGrowAnimation || inShrinkAnimation
             property bool inGrowAnimation: false
@@ -160,7 +152,7 @@ LatteComponents.IndicatorItem{
 
             property bool isBindingBlocked: isAnimating
 
-            readonly property bool isActiveStateForAnimation: indicator.isActive && root.activeStyle === 0 /*Line*/
+            readonly property bool isActiveStateForAnimation: root.indicator.isActive && root.activeStyle === 0 /*Line*/
 
             onIsActiveStateForAnimationChanged: {
                 if (root.activeStyle === 0 /*Line*/) {
@@ -227,31 +219,31 @@ LatteComponents.IndicatorItem{
 
             size: root.size
             glow3D: glow3D
-            animation: Math.max(1.65*3*LatteCore.Environment.longDuration,indicator.durationTime*3*LatteCore.Environment.longDuration)
+            animation: Math.max(1.65*3*LatteCore.Environment.longDuration,root.indicator.durationTime*3*LatteCore.Environment.longDuration)
             location: Plasmoid.location
             glowOpacity: root.glowOpacity
-            contrastColor: indicator.shadowColor
+            contrastColor: root.indicator.shadowColor
             showBorder: glow3D
 
             basicColor: state2Color
             roundCorners: true
-            showGlow: glowEnabled  && glowApplyTo === 2 /*All*/
-            visible:  ( indicator.isGroup && ((extraDotOnActive && activeStyle === 0) /*Line*/
-                                              || activeStyle === 1 /*Dot*/
-                                              || !indicator.hasActive) ) ? true: false
+            showGlow: root.glowEnabled  && root.glowApplyTo === 2 /*All*/
+            visible:  ( root.indicator.isGroup && ((root.extraDotOnActive && root.activeStyle === 0) /*Line*/
+                                              || root.activeStyle === 1 /*Dot*/
+                                              || !root.indicator.hasActive) ) ? true: false
 
             //when there is no active window
-            property color state1Color: indicator.hasShown ? root.isActiveColor : root.minimizedColor
+            property color state1Color: root.indicator.hasShown ? root.isActiveColor : root.minimizedColor
             //when there is active window
-            property color state2Color: indicator.hasMinimized ? root.minimizedColor : root.isActiveColor
+            property color state2Color: root.indicator.hasMinimized ? root.minimizedColor : root.isActiveColor
         }
     }
 
     states: [
         State {
             name: "left"
-            when: ((Plasmoid.location === PlasmaCore.Types.LeftEdge && !reversedEnabled) ||
-                   (Plasmoid.location === PlasmaCore.Types.RightEdge && reversedEnabled))
+            when: ((Plasmoid.location === PlasmaCore.Types.LeftEdge && !root.reversedEnabled) ||
+                   (Plasmoid.location === PlasmaCore.Types.RightEdge && root.reversedEnabled))
 
             AnchorChanges {
                 target: grid
@@ -267,8 +259,8 @@ LatteComponents.IndicatorItem{
         State {
             name: "bottom"
             when: (Plasmoid.location === PlasmaCore.Types.Floating ||
-                   (Plasmoid.location === PlasmaCore.Types.BottomEdge && !reversedEnabled) ||
-                   (Plasmoid.location === PlasmaCore.Types.TopEdge && reversedEnabled))
+                   (Plasmoid.location === PlasmaCore.Types.BottomEdge && !root.reversedEnabled) ||
+                   (Plasmoid.location === PlasmaCore.Types.TopEdge && root.reversedEnabled))
 
             AnchorChanges {
                 target: grid
@@ -283,8 +275,8 @@ LatteComponents.IndicatorItem{
         },
         State {
             name: "top"
-            when: ((Plasmoid.location === PlasmaCore.Types.TopEdge && !reversedEnabled) ||
-                   (Plasmoid.location === PlasmaCore.Types.BottomEdge && reversedEnabled))
+            when: ((Plasmoid.location === PlasmaCore.Types.TopEdge && !root.reversedEnabled) ||
+                   (Plasmoid.location === PlasmaCore.Types.BottomEdge && root.reversedEnabled))
 
             AnchorChanges {
                 target: grid
@@ -299,8 +291,8 @@ LatteComponents.IndicatorItem{
         },
         State {
             name: "right"
-            when: ((Plasmoid.location === PlasmaCore.Types.RightEdge && !reversedEnabled) ||
-                   (Plasmoid.location === PlasmaCore.Types.LeftEdge && reversedEnabled))
+            when: ((Plasmoid.location === PlasmaCore.Types.RightEdge && !root.reversedEnabled) ||
+                   (Plasmoid.location === PlasmaCore.Types.LeftEdge && root.reversedEnabled))
 
             AnchorChanges {
                 target: grid
@@ -314,5 +306,5 @@ LatteComponents.IndicatorItem{
             }
         }
     ]
-}// number of windows indicator
+}// number of windows root.indicator
 

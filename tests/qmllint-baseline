@@ -49,7 +49,6 @@
 11	lib/qml/org/kde/latte/components/Slider.qml
 11	lib/qml/org/kde/latte/components/TextField.qml
 73	share/latte/indicators/default/package/config/config.qml
-48	share/latte/indicators/default/package/ui/main.qml
 16	share/latte/indicators/org.kde.latte.plasma/package/config/config.qml
 2	share/latte/indicators/org.kde.latte.plasma/package/ui/AppletBackLayer.qml
 15	share/latte/indicators/org.kde.latte.plasma/package/ui/FrontLayer.qml

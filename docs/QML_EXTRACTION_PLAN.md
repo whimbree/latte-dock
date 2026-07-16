@@ -178,7 +178,14 @@ Per-unit specs (section C), in rank order:
 - [x] EX-14 DropEventClassifier - drag mime classification + insert index
   - [ ] executed
 - [x] EX-15 WheelAccumulator - wheel delta accumulation/threshold semantics
-  - [ ] executed
+  - [x] executed: LANDED 8b23ea47 lineage (rebased; see the spec Commits
+    line). Merge evidence: 41/41 ctest green post-rebase incl. the 22
+    sanitized slots and the staged-import tst_wheelstepper e2e; the
+    rebase-time plugins.qmltypes brace corruption was caught by the
+    qmllint gate (159 -> 169 files) and fixed by regenerating with the
+    file's own recipe before merge. The four wheel live recipes (audio
+    badge, desktops, task cycle, ruler detent) stay on the live desk
+    list.
 - [x] EX-16 GroupWindowCycler - next/previous/minimize target selection
   - [x] executed: LANDED 80525a85 lineage (rebased; see the spec Commits
     line). Merge evidence: the 24-case shipped-QML pinning suite and the

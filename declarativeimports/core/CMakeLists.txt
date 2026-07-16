@@ -11,6 +11,7 @@ set(lattecoreplugin_SRCS
     tools.cpp
     types.h
     visibleindextools.cpp
+    windowcyclertools.cpp
     windowresizehandler.cpp
 )
 

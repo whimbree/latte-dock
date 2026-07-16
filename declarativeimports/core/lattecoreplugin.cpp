@@ -16,6 +16,7 @@
 #include "quickwindowsystem.h"
 #include "tools.h"
 #include "visibleindextools.h"
+#include "windowcyclertools.h"
 
 #include <types.h>
 
@@ -35,4 +36,5 @@ void LatteCorePlugin::registerTypes(const char *uri)
     qmlRegisterSingletonType<Latte::ParabolicRouterTools>(uri, 0, 2, "ParabolicRouter", &Latte::parabolicroutertools_qobject_singletontype_provider);
     qmlRegisterSingletonType<Latte::VisibleIndexTools>(uri, 0, 2, "VisibleIndex", &Latte::visibleindextools_qobject_singletontype_provider);
     qmlRegisterSingletonType<Latte::QuickWindowSystem>(uri, 0, 2, "WindowSystem", &Latte::windowsystem_qobject_singletontype_provider);
+    qmlRegisterSingletonType<Latte::WindowCyclerTools>(uri, 0, 2, "WindowCycler", &Latte::windowcyclertools_qobject_singletontype_provider);
 }

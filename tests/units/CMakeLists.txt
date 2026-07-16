@@ -107,6 +107,16 @@ target_link_libraries(iconsourceclassifiertest
 latte_add_unit_test(colorizerdecisiontest)
 target_include_directories(colorizerdecisiontest PRIVATE
     ${CMAKE_SOURCE_DIR}/containment/plugin)
+# EX-16 GroupWindowCycler: header-only pure selection math plus its
+# QML-facing wrapper compiled IN per the sanitized-core rule (the wrapper's
+# boundary refusals and -1 mapping run instrumented); Qt6::Qml for the
+# singleton provider's QQmlEngine signature.
+latte_add_unit_test(windowcyclertest
+    ${CMAKE_SOURCE_DIR}/declarativeimports/core/windowcyclertools.cpp)
+target_include_directories(windowcyclertest PRIVATE
+    ${CMAKE_SOURCE_DIR}/declarativeimports/core)
+target_link_libraries(windowcyclertest
+    Qt6::Qml)
 
 # EX-17 TooltipTextComposer: header-only pure core plus its QML-facing
 # wrapper compiled IN per the sanitized-core rule (the wrapper's boundary

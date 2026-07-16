@@ -7,6 +7,8 @@
 import QtQuick 2.0
 import QtQml.Models 2.2
 
+import org.kde.latte.core 0.2 as LatteCore
+
 //trying to do a very simple thing to count how many windows does
 //a task instance has...
 //Workaround the mess with launchers, startups, windows etc.
@@ -72,12 +74,16 @@ Item{
 
     Connections{
         target: taskItem
-        onItemIndexChanged: windowsContainer.updateStates();
+        function onItemIndexChanged() {
+            windowsContainer.updateStates();
+        }
     }
 
     Connections{
         target: root
-        onInDraggingPhaseChanged: windowsContainer.updateStates();
+        function onInDraggingPhaseChanged() {
+            windowsContainer.updateStates();
+        }
     }
 
     //! try to give the time to the model to update its states in order to
@@ -160,8 +166,30 @@ Item{
         return result;
     }
 
-    //! function which is used to cycle activation into
-    //! a group of windows
+    //! One snapshot shape for all three cycle functions; the selection
+    //! logic lives in LatteCore.WindowCycler (units/windowcycler.h). The
+    //! WinIdList-undefined guard is the Qt5 activateNextTask body's - its
+    //! prev/minimize mirrors read [0] unguarded and could throw on a role
+    //! the model had not filled yet; unified on the guarded copy.
+    function _snapshotGroupWindows() {
+        var snapshot = [];
+        var childs = windowsLocalModel.items;
+
+        for (var i = 0; i < childs.count; ++i) {
+            var kid = childs.get(i);
+            var winIdList = (root.plasma515 ? kid.model.WinIdList : kid.model.LegacyWinIdList);
+
+            snapshot.push({
+                winId: (winIdList !== undefined ? winIdList[0] : 0),
+                isActive: kid.model.IsActive === true,
+                isMinimized: kid.model.IsMinimized === true
+            });
+        }
+
+        return snapshot;
+    }
+
+    //! cycle activation forward through the group's windows
     function activateNextTask() {
         windowsLocalModel.rootIndex = taskItem.modelIndex();
 
@@ -169,43 +197,20 @@ Item{
             return;
         }
 
-        var childs = windowsLocalModel.items;
-        var nextAvailableWindow = -1;
+        var target = LatteCore.WindowCycler.selectNext(windowsContainer._snapshotGroupWindows(),
+                                                       windowsContainer.lastActiveWinInGroup);
 
-        for(var i=0; i<childs.count; ++i){
-            var kid = childs.get(i);
-            if (kid.model.IsActive === true) {
-                nextAvailableWindow = i + 1;
-                break;
-            }
+        if (target < 0) {
+            //! Qt5 fired an invalid-index activation request here; a group
+            //! parent with no window rows is a model state worth hearing about
+            console.warn("SubWindows.activateNextTask: group parent with no windows to cycle");
+            return;
         }
 
-        //the active window is the last one
-        if (nextAvailableWindow >= childs.count) {
-            nextAvailableWindow = 0;
-        }
-
-        if (nextAvailableWindow === -1 && lastActiveWinInGroup !==-1){
-            for(var i=0; i<childs.count; ++i){
-                var kid = childs.get(i);
-                var winIdList = (root.plasma515 ? kid.model.WinIdList : kid.model.LegacyWinIdList);
-                var kidId = (winIdList !== undefined ? winIdList[0] : 0);
-
-                if (kidId === lastActiveWinInGroup) {
-                    nextAvailableWindow = i;
-                    break;
-                }
-            }
-        }
-
-        if (nextAvailableWindow === -1)
-            nextAvailableWindow = 0;
-
-        tasksModel.requestActivate(tasksModel.makeModelIndex(index,nextAvailableWindow));
+        tasksModel.requestActivate(tasksModel.makeModelIndex(index, target));
     }
 
-    //! function which is used to cycle activation into
-    //! a group of windows backwise
+    //! cycle activation backward through the group's windows
     function activatePreviousTask() {
         windowsLocalModel.rootIndex = taskItem.modelIndex();
 
@@ -213,44 +218,18 @@ Item{
             return;
         }
 
-        var childs = windowsLocalModel.items;
+        var target = LatteCore.WindowCycler.selectPrevious(windowsContainer._snapshotGroupWindows(),
+                                                           windowsContainer.lastActiveWinInGroup);
 
-        //indicates than nothing was found
-        var prevAvailableWindow = -2;
-
-        for(var i=childs.count-1; i>=0; --i){
-            var kid = childs.get(i);
-            if (kid.model.IsActive === true) {
-                prevAvailableWindow = i - 1;
-                break;
-            }
+        if (target < 0) {
+            console.warn("SubWindows.activatePreviousTask: group parent with no windows to cycle");
+            return;
         }
 
-        //the active window is 0
-        if (prevAvailableWindow == -1) {
-            prevAvailableWindow = childs.count-1;
-        }
-
-        if (prevAvailableWindow === -2 && lastActiveWinInGroup !==-1){
-            for(var i=childs.count-1; i>=0; --i){
-                var kid = childs.get(i);
-                var firstTask = (root.plasma515 ? kid.model.WinIdList[0] : kid.model.LegacyWinIdList[0]);
-                if ( firstTask === lastActiveWinInGroup) {
-                    prevAvailableWindow = i;
-                    break;
-                }
-            }
-        }
-
-        //no window was found
-        if (prevAvailableWindow === -2)
-            prevAvailableWindow = 0;
-
-        tasksModel.requestActivate(tasksModel.makeModelIndex(index,prevAvailableWindow));
+        tasksModel.requestActivate(tasksModel.makeModelIndex(index, target));
     }
 
-    //! function which is used to cycle activation into
-    //! a group of windows backwise
+    //! toggle the minimized state of the group's front window
     function minimizeTask() {
         windowsLocalModel.rootIndex = taskItem.modelIndex();
 
@@ -258,45 +237,13 @@ Item{
             return;
         }
 
-        var childs = windowsLocalModel.items;
+        var target = LatteCore.WindowCycler.selectMinimizeTarget(windowsContainer._snapshotGroupWindows(),
+                                                                 windowsContainer.lastActiveWinInGroup);
 
-        //indicates than nothing was found
-        var availableWindow = -1;
-
-        for(var i=childs.count-1; i>=0; --i){
-            var kid = childs.get(i);
-            if (kid.model.IsActive === true) {
-                availableWindow = i;
-                break;
-            }
-        }
-
-        if (availableWindow === -1 && lastActiveWinInGroup !==-1){
-            for(var i=childs.count-1; i>=0; --i){
-                var kid = childs.get(i);
-                var firstTask = (root.plasma515 ? kid.model.WinIdList[0] : kid.model.LegacyWinIdList[0]);
-                var isMinimized = kid.model.IsMinimized === true;
-
-                if (firstTask === lastActiveWinInGroup && !isMinimized) {
-                    availableWindow = i;
-                    break;
-                }
-            }
-        }
-
-        //no window was found
-        if (availableWindow === -1) {
-            for(var i=childs.count-1; i>=0; --i){
-                var kid = childs.get(i);
-                if (kid.model.IsMinimized !== true) {
-                    availableWindow = i;
-                    break;
-                }
-            }
-        }
-
-        if (availableWindow !== -1) {
-            tasksModel.requestToggleMinimized(tasksModel.makeModelIndex(index,availableWindow));
+        //! every window minimized is a normal state: nothing to toggle (Qt5
+        //! behavior, no warning)
+        if (target >= 0) {
+            tasksModel.requestToggleMinimized(tasksModel.makeModelIndex(index, target));
         }
     }
 

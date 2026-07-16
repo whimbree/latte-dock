@@ -1,8 +1,11 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016-2018 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
+
+.import org.kde.latte.core 0.2 as LatteCore
 
 function wheelActivateNextPrevTask(wheelDelta, eventDelta) {
     // magic number 120 for common "one click"
@@ -79,50 +82,57 @@ function tasksInBarOrder() {
     return ordered;
 }
 
+//! Thin shell over LatteCore.WindowCycler (units/windowcycler.h; the
+//! containment loaders/Tasks.qml activateNextPrevTask is its twin): the
+//! core owns the launcher/startup filtering, group expansion and
+//! wraparound choice; the live parts kept here are the bar-order delegate
+//! walk above, the model-index construction and the activeTask identity
+//! match.
 function activateNextPrevTask(next) {
-    var taskIndexList = [];
-    var activeTaskIndex = tasksModel.activeTask;
-
     var tasks = tasksInBarOrder();
+    var entries = [];
 
     for (var i = 0; i < tasks.length; ++i) {
-        var task = tasks[i];
+        entries.push({
+            isLauncher: tasks[i].isLauncher === true,
+            isStartup: tasks[i].isStartup === true,
+            isGroupParent: tasks[i].isGroupParent === true,
+            childCount: tasks[i].isGroupParent === true ? tasksModel.rowCount(tasks[i].modelIndex()) : 0
+        });
+    }
 
-        if (task.isLauncher !== true && task.isStartup !== true) {
-            if (task.isGroupParent === true) {
-                for (var j = 0; j < tasksModel.rowCount(task.modelIndex()); ++j) {
-                    taskIndexList.push(tasksModel.makeModelIndex(task.itemIndex, j));
-                }
-            } else {
-                taskIndexList.push(task.modelIndex());
-            }
+    var positions = LatteCore.WindowCycler.flattenTasksForCycling(entries);
+    var activeTaskIndex = tasksModel.activeTask;
+    var taskIndexList = [];
+    var activeAt = -1;
+
+    for (var p = 0; p < positions.length; ++p) {
+        var task = tasks[positions[p].row];
+        var modelIndex = (positions[p].childRow >= 0
+                ? tasksModel.makeModelIndex(task.itemIndex, positions[p].childRow)
+                : task.modelIndex());
+
+        if (modelIndex === activeTaskIndex) {
+            activeAt = p;
         }
+
+        taskIndexList.push(modelIndex);
     }
 
     if (!taskIndexList.length) {
+        // a bar of launchers only: nothing to cycle (Qt5 behavior)
         return;
     }
 
-    var target = taskIndexList[0];
+    var target = LatteCore.WindowCycler.selectAdjacentTask(taskIndexList.length, activeAt, next);
 
-    for (var i = 0; i < taskIndexList.length; ++i) {
-        if (taskIndexList[i] === activeTaskIndex)
-        {
-            if (next && i < (taskIndexList.length - 1)) {
-                target = taskIndexList[i + 1];
-            } else if (!next) {
-                if (i) {
-                    target = taskIndexList[i - 1];
-                } else {
-                    target = taskIndexList[taskIndexList.length - 1];
-                }
-            }
-
-            break;
-        }
+    if (target < 0) {
+        // only reachable through the wrapper's malformed-input refusal,
+        // which already reported the bug loudly
+        return;
     }
 
-    tasksModel.requestActivate(target);
+    tasksModel.requestActivate(taskIndexList[target]);
 }
 
 function insertIndexAt(above, x, y) {

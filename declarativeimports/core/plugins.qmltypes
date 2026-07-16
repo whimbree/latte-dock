@@ -95,6 +95,44 @@ Module {
         }
     }
     Component {
+        name: "Latte::WindowCyclerTools"
+        prototype: "QObject"
+        exports: ["org.kde.latte.core/WindowCycler 0.2"]
+        isCreatable: false
+        isSingleton: true
+        exportMetaObjectRevisions: [0]
+        Method {
+            name: "selectNext"
+            type: "int"
+            Parameter { name: "windows"; type: "QVariantList" }
+            Parameter { name: "lastActiveWinId"; type: "QVariant" }
+        }
+        Method {
+            name: "selectPrevious"
+            type: "int"
+            Parameter { name: "windows"; type: "QVariantList" }
+            Parameter { name: "lastActiveWinId"; type: "QVariant" }
+        }
+        Method {
+            name: "selectMinimizeTarget"
+            type: "int"
+            Parameter { name: "windows"; type: "QVariantList" }
+            Parameter { name: "lastActiveWinId"; type: "QVariant" }
+        }
+        Method {
+            name: "flattenTasksForCycling"
+            type: "QVariantList"
+            Parameter { name: "entries"; type: "QVariantList" }
+        }
+        Method {
+            name: "selectAdjacentTask"
+            type: "int"
+            Parameter { name: "count"; type: "int" }
+            Parameter { name: "activeIndex"; type: "int" }
+            Parameter { name: "next"; type: "bool" }
+        }
+    }
+    Component {
         name: "Latte::Quick::Dialog"
         defaultProperty: "mainItem"
         prototype: "PlasmaQuick::Dialog"

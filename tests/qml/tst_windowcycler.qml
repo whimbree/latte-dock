@@ -362,6 +362,32 @@ Item {
             compare(tasksModel.minimizeToggleRequests, []);
         }
 
+        // --- empty group (EX-16's recorded deviation from Qt5) ----------
+        //! Qt5 fired an invalid-index activation request at a childless
+        //! group parent; the cutover warns and does nothing instead
+
+        function test_nextOnChildlessGroupWarnsInsteadOfFiring() {
+            var sub = setWindows([]);
+            ignoreWarning(new RegExp(".*no windows to cycle.*"));
+            sub.activateNextTask();
+            compare(tasksModel.activateRequests, []);
+        }
+
+        function test_previousOnChildlessGroupWarnsInsteadOfFiring() {
+            var sub = setWindows([]);
+            ignoreWarning(new RegExp(".*no windows to cycle.*"));
+            sub.activatePreviousTask();
+            compare(tasksModel.activateRequests, []);
+        }
+
+        function test_minimizeOnChildlessGroupStaysSilent() {
+            //! nothing-to-toggle is a normal state, not a warning (Qt5
+            //! already did nothing here)
+            var sub = setWindows([]);
+            sub.minimizeTask();
+            compare(tasksModel.minimizeToggleRequests, []);
+        }
+
         // --- last-active tracking through the shipped delegate ----------
 
         function test_delegateActivationRecordsLastActiveWinId() {

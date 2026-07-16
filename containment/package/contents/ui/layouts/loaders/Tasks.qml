@@ -54,49 +54,59 @@ Loader {
             }
         }
 
+        //! Thin shell over LatteCore.WindowCycler (units/windowcycler.h;
+        //! plasmoid tools.js activateNextPrevTask is its twin): the core
+        //! owns the launcher/startup filtering, group expansion and
+        //! wraparound choice; the live parts kept here are the model-row
+        //! mirror walk (taskList's Repeater tracks tasksModel in model
+        //! order, its last child is the Repeater itself - hence length - 1),
+        //! the model-index construction and the activeTask identity match.
         function activateNextPrevTask(next) {
-            var taskIndexList = [];
-            var activeTaskIndex = tasksModel.activeTask;
+            var entries = [];
 
             for (var i = 0; i < taskList.children.length - 1; ++i) {
                 var task = taskList.children[i];
-                var modelIndex = task.modelIndex(i);
+                var isGroupParent = task.m.IsGroupParent === true;
 
-                if (task.m.IsLauncher !== true && task.m.IsStartup !== true) {
-                    if (task.m.IsGroupParent === true) {
-                        for (var j = 0; j < tasksModel.rowCount(modelIndex); ++j) {
-                            taskIndexList.push(tasksModel.makeModelIndex(i, j));
-                        }
-                    } else {
-                        taskIndexList.push(modelIndex);
-                    }
+                entries.push({
+                    isLauncher: task.m.IsLauncher === true,
+                    isStartup: task.m.IsStartup === true,
+                    isGroupParent: isGroupParent,
+                    childCount: isGroupParent ? tasksModel.rowCount(task.modelIndex()) : 0
+                });
+            }
+
+            var positions = LatteCore.WindowCycler.flattenTasksForCycling(entries);
+            var activeTaskIndex = tasksModel.activeTask;
+            var taskIndexList = [];
+            var activeAt = -1;
+
+            for (var p = 0; p < positions.length; ++p) {
+                var modelIndex = (positions[p].childRow >= 0
+                        ? tasksModel.makeModelIndex(positions[p].row, positions[p].childRow)
+                        : tasksModel.makeModelIndex(positions[p].row));
+
+                if (modelIndex === activeTaskIndex) {
+                    activeAt = p;
                 }
+
+                taskIndexList.push(modelIndex);
             }
 
             if (!taskIndexList.length) {
+                //! a bar of launchers only: nothing to cycle (Qt5 behavior)
                 return;
             }
 
-            var target = taskIndexList[0];
+            var target = LatteCore.WindowCycler.selectAdjacentTask(taskIndexList.length, activeAt, next);
 
-            for (var i = 0; i < taskIndexList.length; ++i) {
-                if (taskIndexList[i] === activeTaskIndex)
-                {
-                    if (next && i < (taskIndexList.length - 1)) {
-                        target = taskIndexList[i + 1];
-                    } else if (!next) {
-                        if (i) {
-                            target = taskIndexList[i - 1];
-                        } else {
-                            target = taskIndexList[taskIndexList.length - 1];
-                        }
-                    }
-
-                    break;
-                }
+            if (target < 0) {
+                //! only reachable through the wrapper's malformed-input
+                //! refusal, which already reported the bug loudly
+                return;
             }
 
-            tasksModel.requestActivate(target);
+            tasksModel.requestActivate(taskIndexList[target]);
         }
     }
 }

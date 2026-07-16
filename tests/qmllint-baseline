@@ -137,7 +137,7 @@
 21	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/taskslayout/ScrollEdgeShadows.qml
 26	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/taskslayout/ScrollOpacityMask.qml
 16	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/taskslayout/ScrollPositioner.qml
-47	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/SubWindows.qml
+43	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/SubWindows.qml
 78	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskIcon.qml
 211	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskItem.qml
 181	share/plasma/plasmoids/org.kde.latte.plasmoid/contents/ui/task/TaskMouseArea.qml

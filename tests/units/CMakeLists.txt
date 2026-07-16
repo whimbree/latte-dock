@@ -124,3 +124,14 @@ latte_add_unit_test(rowentrytest)
 # EX-06 VisibleIndexEngine: header-only pure index math and neighbor
 # predicates over RowEntry rows.
 latte_add_unit_test(visibleindextest)
+# EX-19 ColorLuminance: header-only pure color math. The Tools QML shell
+# (tools.cpp) is compiled IN per the sanitized-core rule so its
+# loud-refusal boundary runs instrumented; Qt6::Qml only supplies the
+# QQmlEngine headers its singleton provider signature names.
+latte_add_unit_test(colortoolstest
+    ${CMAKE_SOURCE_DIR}/declarativeimports/core/tools.cpp)
+target_include_directories(colortoolstest PRIVATE
+    ${CMAKE_SOURCE_DIR}/declarativeimports/core)
+target_link_libraries(colortoolstest
+    Qt6::Gui
+    Qt6::Qml)

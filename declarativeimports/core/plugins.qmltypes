@@ -127,12 +127,23 @@ Module {
         exportMetaObjectRevisions: [0]
         Method {
             name: "colorBrightness"
-            type: "float"
+            type: "double"
             Parameter { name: "color"; type: "QColor" }
         }
         Method {
             name: "colorLumina"
-            type: "float"
+            type: "double"
+            Parameter { name: "color"; type: "QColor" }
+        }
+        Method {
+            name: "isLight"
+            type: "bool"
+            Parameter { name: "color"; type: "QColor" }
+            Parameter { name: "threshold"; type: "double" }
+        }
+        Method {
+            name: "isLight"
+            type: "bool"
             Parameter { name: "color"; type: "QColor" }
         }
     }

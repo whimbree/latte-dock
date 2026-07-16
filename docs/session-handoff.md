@@ -28,6 +28,19 @@ Driving docs/prompts/stabilization-execution-prompt.md top to bottom.
    Note for future probes: lifecycleState is the pull-query for "is
    the dock up" - poll it instead of sleeping after restart-staged.
 
+2. DONE - Startup retry deadlock + latency (priority item 2): the
+   deadlock is ng-only machinery (their layoutmanager.cpp retry loop;
+   ours is upstream-shaped, no retries) - closed not-applicable with
+   live evidence (all views' restore() logs show complete applet sets,
+   recorded==produced order), plus 9df0732f9 making restore()'s three
+   silent drop paths loud. Latency: the local measurement record
+   stands (3.7-4.5s, floor owned by upstream sync applet loading).
+   LOGIN FINDING flagged for my hands:
+   ~/.config/autostart/org.kde.latte-dock.desktop points at the
+   PACKAGED latte-dock-ng fork binary - login starts NG, not this
+   port; the autostart story needs my decision (plan item has the
+   detail), and no reboot/login has happened since June 25 anyway.
+
 ## MODEL-TRANSITION PRIORITY STACK (2026-07-15 evening, read this first)
 
 A strong model (Fable 5) is available for only a few more days, then

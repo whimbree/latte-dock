@@ -1557,6 +1557,17 @@ multi-view, multi-monitor setup.
       Remaining startup levers: corona init ~2.4s (theme mask parsing,
       screens, layout templates - unprofiled), the launcher cache
       (landed, 37acf9ca) and the upstream synchronous-load floor.
+      LOGIN FINDING 2026-07-16: the 'slow to appear at login'
+      complaint cannot implicate this port on the current machine -
+      ~/.config/autostart/org.kde.latte-dock.desktop Exec points at
+      the PACKAGED latte-dock-ng binary (the ruizhi-lab fork), so
+      login starts ng, not our build; and the current boot dates to
+      June 25, so no recent login measured anything. NEEDS MY HANDS:
+      decide the autostart story for the port (point the entry at the
+      packaged build from package.nix, or keep dev-session-only
+      startup), then measure a real login with the journal +
+      lifecycleState polling. The lifecycleState D-Bus readback
+      (9d183984e) is the measurement instrument: poll for "running".
       CORONA INIT PROFILED 2026-07-13: the ~2.4s estimate was wrong -
       corona init is only ~1.0s (one 0.35s gap at layout init). The
       real pre-first-paint chunk is the FIRST VIEW's create-to-map
@@ -1859,13 +1870,23 @@ multi-view, multi-monitor setup.
       (weak_ptr singleton, no qApp parent, nothing double-deletes) -
       that fix was for ng's stack, verified against the pinned source.
       Commits: 525f556c6 (+ adcc68357 ratchet baseline)
-- [ ] Fix the startup retry-exhaustion deadlock in
-      `LayoutManager::restore()`: gate `shouldRetry` explicitly on
-      retry count rather than letting it stay permanently true when
-      max retries are exhausted but `expectedAppletCount > 0` - without
-      this the dock never starts its "restored" timer and sits
-      positioned off-screen (-9999,-9999) forever with no visible error
-      Commits:
+- [x] Fix the startup retry-exhaustion deadlock in
+      `LayoutManager::restore()`. RESOLVED 2026-07-16 as NOT
+      APPLICABLE, verified against both trees: shouldRetry/
+      expectedAppletCount/m_restoreRetryCount are latte-dock-ng's own
+      additions (their layoutmanager.cpp:984-1000, a 150ms retry loop
+      because THEIR plasmoidApplets() could be empty at restore time);
+      our tree runs upstream's shape - restore() once at containment
+      completion, no retry machinery to deadlock. The underlying race
+      was checked too: live logs show every view's restore() seeing
+      the complete applet set (recorded order == produced order on
+      all containments), because the C++ containment populates its
+      applets before the containment QML completes. What we did have:
+      restore()'s three SILENT drop paths (null graphic item skips in
+      both alignment branches, stale appletOrder ids) - now loud with
+      applet ids, so if the premise ever breaks the failure names
+      itself instead of surfacing as a missing applet.
+      Commits: 9df0732f9
 - [ ] Guard any code that reads a window/activity/audio tracker object
       during early startup with an explicit "is this tracker actually
       ready yet" property, rather than assuming it's non-null - both

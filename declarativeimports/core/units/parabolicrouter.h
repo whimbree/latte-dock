@@ -22,31 +22,50 @@ namespace Latte {
 //! the identical outcome in one call. Equality-tested against the real
 //! shipped chain driven offscreen (parabolicroutertest's table).
 //!
-//! Semantics reproduced exactly:
-//! - every position outward from the entry is exactly-targeted once while
-//!   the stack is live; separators/hidden items are transparent (forward
-//!   without consuming); normals consume stack[0];
-//! - a bridge client receives the stack AS-RECEIVED and the live walk
-//!   STOPS at this level (the client's row routes with this same core and
-//!   its overflow re-enters through the existing bridge surface);
-//! - an edge spacer targeted with a live stack absorbs
-//!   sum of (s-1) over the first spreadSteps entries and re-emits the
-//!   clear-tail beyond;
-//! - when the stack exhausts to the clear-tail [1], the next position is
-//!   exactly-targeted with it (a spacer exactly there absorbs 0, i.e.
-//!   clears; further spacers chain) and everything beyond clears via the
-//!   broadcast: normals AND transparents apply 1 (the chain's broadcast
-//!   arm calls updateScale on separators too - harmless, preserved),
-//!   clients receive [1], spacers NOT exactly targeted are untouched
-//!   (they have no broadcast arm; the stale-length behavior this leaves
-//!   at edges is Qt5-inherited and pinned by the table's stale case).
+//! The result is an EMISSION PLAN for the shells, not a per-item scale
+//! table: the shells keep the sglUpdateLower/HigherItemScale signals as
+//! their application mechanism, with two receiver arms per item slot -
+//! exact match (apply newScales[0] / hand the stack to a bridge client
+//! as-received) and the clear-broadcast arm (a [1] emission clears every
+//! item beyond its position in the emission's direction). That broadcast
+//! arm is what lets ONE clear emission clear items the row model cannot
+//! see (the containment's other layouts); the core therefore reports
+//! WHERE the clear emission happens instead of expanding it:
+//!
+//! - actions: the live walk only - every position outward from the entry
+//!   is exactly-targeted once while the stack is live; separators/hidden
+//!   items are transparent (forward without consuming); normals consume
+//!   stack[0]; a bridge client receives the stack AS-RECEIVED and the
+//!   live walk STOPS at this level (the client's row routes with this
+//!   same core and its overflow re-enters through the existing bridge
+//!   surface); an edge spacer targeted with a live stack absorbs
+//!   sum of (s-1) over the first spreadSteps entries; a DEAD position
+//!   (an item with no connected slots: production case is a
+//!   zoom-unsupported lockZoom applet with thin tooltips disabled, so
+//!   its ParabolicArea loader never activates) kills the walk outright -
+//!   no emission, no clear, recorded in the dead_* harness cases;
+//! - clearEmissionPos: when the stack exhausts to the clear-tail [1]
+//!   in-row, the position the [1] emission targets (after edge spacers
+//!   chain their absorb-0; a spacer exactly targeted by the clear
+//!   absorbs 0, spacers further out are untouched - they have no
+//!   broadcast arm, the stale-length behavior this leaves at edges is
+//!   Qt5-inherited and pinned by the table's stale case). The emission's
+//!   exact arm applies 1 at this position (nothing when it is dead) and
+//!   its broadcast arm clears everything beyond;
+//! - overflow: the stack still traveling when the walk left the row
+//!   edge - [1] when a clear-tail chained off the edge through spacers,
+//!   the live remainder when the row simply ended. The containment shell
+//!   re-emits it at the boundary index (today's chain emits there too:
+//!   gap indexes match nobody exactly, only clear broadcasts act); the
+//!   plasmoid shell exports it through the bridge.
 namespace ParabolicRouter {
 
 enum class ItemKind {
     Normal,      //!< consumes one scale
     Transparent, //!< separator / margins-area separator / hidden: forwards
     EdgeSpacer,  //!< absorbs on exact targeting only
-    BridgeClient //!< receives the stack as-is; live walk stops here
+    BridgeClient,//!< receives the stack as-is; live walk stops here
+    DeadStop     //!< no connected slots: a live walk dies here silently
 };
 
 struct RowItem {
@@ -68,14 +87,15 @@ struct Action {
 };
 
 struct RouteResult {
+    //! the live walk's applications, in walk order
     QVector<Action> actions;
-    //! stack remaining when the walk left the row edge (the plasmoid twin
-    //! exports it through the bridge; the containment twin has no outside)
+    //! in-row target of the clear-tail [1] emission, -1 when none; the
+    //! plasmoid twin additionally exports [1] through the bridge whenever
+    //! this fired (the chain's sltTrack* forwarded every in-row
+    //! clear-tail emission out)
+    int clearEmissionPos = -1;
+    //! stack remaining when the walk left the row edge
     QVector<double> overflow;
-    //! true when a clear-tail emission happened at an in-row position;
-    //! the plasmoid twin exports [1] through the bridge in that case (the
-    //! chain's sltTrack* forwarded every in-row clear-tail emission out)
-    bool clearTailExported = false;
 };
 
 inline bool isClearTail(const QVector<double> &stack)
@@ -83,13 +103,12 @@ inline bool isClearTail(const QVector<double> &stack)
     return stack.size() == 1 && stack.first() == 1.0;
 }
 
-//! the terminal clear-tail emission targeting pos: exact-apply at pos
-//! (spacers chain their re-emission), then the broadcast beyond
+//! the terminal clear-tail emission targeting pos: edge spacers exactly
+//! there absorb 0 and chain one position further; the first non-spacer
+//! position (dead or not) is where the [1] emission happens
 inline void emitClearTail(const QVector<RowItem> &row, int pos, int step, RouteResult &result)
 {
-    //! spacers exactly targeted absorb 0 and re-emit one position further
     while (pos >= 0 && pos < row.size() && row[pos].kind == ItemKind::EdgeSpacer) {
-        result.clearTailExported = true;
         result.actions.append({pos, ActionKind::SpacerAbsorb, 1.0, 0.0, {}});
         pos += step;
     }
@@ -100,29 +119,14 @@ inline void emitClearTail(const QVector<RowItem> &row, int pos, int step, RouteR
         return;
     }
 
-    result.clearTailExported = true;
-
-    //! exact match at pos plus the broadcast beyond it, one pass: normals
-    //! and transparents apply 1, clients receive [1], spacers beyond are
-    //! never touched
-    for (int p = pos; p >= 0 && p < row.size(); p += step) {
-        switch (row[p].kind) {
-        case ItemKind::Normal:
-        case ItemKind::Transparent:
-            result.actions.append({p, ActionKind::ApplyScale, 1.0, 0.0, {}});
-            break;
-        case ItemKind::BridgeClient:
-            result.actions.append({p, ActionKind::ClientHandoff, 1.0, 0.0, {1.0}});
-            break;
-        case ItemKind::EdgeSpacer:
-            break;
-        }
-    }
+    result.clearEmissionPos = pos;
 }
 
 //! route a scale stack entering the row at entryPos, traveling by step
 //! (+1 toward higher indexes, -1 toward lower). spreadSteps bounds the
 //! spacer absorption window ((spread-1)/2, the spacer's hiddenItemsCount).
+//! An entryPos outside the row returns the whole stack as overflow (the
+//! chain's emission at a gap index: nothing matches exactly).
 inline RouteResult routeStack(const QVector<RowItem> &row, int entryPos, int step,
                               QVector<double> stack, int spreadSteps)
 {
@@ -170,6 +174,10 @@ inline RouteResult routeStack(const QVector<RowItem> &row, int entryPos, int ste
             emitClearTail(row, pos + step, step, result);
             return result;
         }
+        case ItemKind::DeadStop:
+            //! no slots are connected here: the live stack dies, nothing
+            //! beyond is touched (dead_at3_live_dies in the harness)
+            return result;
         }
 
         pos += step;

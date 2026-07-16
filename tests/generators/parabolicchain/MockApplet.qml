@@ -20,6 +20,11 @@ Item {
     property bool firstAppletInContainer: false
     property bool lastAppletInContainer: false
     property bool isBridgeClient: false
+    //! mirrors AppletItem's parabolicAreaLoader.active: when false the item
+    //! has NO ParabolicArea instance, so no slots are connected - the
+    //! production case is a zoom-unsupported applet (systray, autofill,
+    //! wide applets: lockZoom) with thin tooltips disabled
+    property bool hasParabolicArea: true
 
     property var parabolic: null   // assigned by the harness (the hub)
     property var indexer: null
@@ -97,8 +102,9 @@ Item {
         id: restoreAnimation
     }
 
-    RealApplet.ParabolicArea {
-        id: realArea
+    Loader {
+        active: appletItem.hasParabolicArea
         anchors.fill: parent
+        sourceComponent: RealApplet.ParabolicArea {}
     }
 }

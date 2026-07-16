@@ -8,16 +8,23 @@
 //
 // Reference-vector generation method (per docs/TESTING.md): every expected
 // vector below was recorded by driving the SHIPPED containment chain
-// offscreen at HEAD 0613c2ae - the real abilities definition
-// ParabolicEffect hub, real containment ParabolicArea deciders and the
-// real ParabolicEdgeSpacer, instantiated inside per-item mock context
-// scopes (the files resolve appletItem/wrapper/communicator/parabolic
-// through the context chain exactly as in production) over an 8-position
-// row: [tailSpacer, 1..6, headSpacer], spread=5, zoom=1.6, item length
-// 40, Center alignment, a mock bridge client recording handoffs. The
-// plasmoid twin's decider (ParabolicEventsArea sltUpdateItemScale) was
-// verified a strict subset by side-by-side read: same slice/splice and
-// broadcast bodies, no bridge/margins-separator arms.
+// offscreen (14 cases at HEAD 0613c2ae, the dead_* cases at 4fca5a39) -
+// the real abilities definition ParabolicEffect hub, real containment
+// ParabolicArea deciders and the real ParabolicEdgeSpacer, instantiated
+// inside per-item mock context scopes (the files resolve appletItem/
+// wrapper/communicator/parabolic through the context chain exactly as in
+// production) over an 8-position row: [tailSpacer, 1..6, headSpacer],
+// spread=5, zoom=1.6, item length 40, Center alignment, a mock bridge
+// client recording handoffs. The plasmoid twin's decider
+// (ParabolicEventsArea sltUpdateItemScale) was verified a strict subset
+// by side-by-side read: same slice/splice and broadcast bodies, no
+// bridge/margins-separator arms.
+//
+// The Sim below models the POST-CUTOVER receiver side (the two arms the
+// QML slots keep: exact apply / clear broadcast) driven by the core's
+// emission plan; equality of Sim output against the recorded chain
+// vectors is therefore the whole-pipeline equivalence check, core and
+// application contract together.
 //
 // The chain does NOT touch the hovered item itself (its zoom is applied
 // by calculateParabolicScales in the shell), so expected vectors cover
@@ -48,13 +55,33 @@ struct Sim {
     {
     }
 
-    void apply(const RouteResult &route)
+    //! one item slot receiving an emission - the two arms every slot
+    //! keeps after the cutover (deciders deleted)
+    void receive(const QVector<RowItem> &row, int pos, const QVector<double> &stack)
+    {
+        switch (row[pos].kind) {
+        case ItemKind::Normal:
+        case ItemKind::Transparent:
+            // the shells apply through updateScale(max(1, s))
+            scales[pos] = qMax(1.0, stack.first());
+            break;
+        case ItemKind::BridgeClient:
+            clientStacks[pos].append(stack);
+            break;
+        case ItemKind::EdgeSpacer:
+        case ItemKind::DeadStop:
+            // spacers have no exact-apply arm for emissions (absorbs are
+            // direct calls); dead positions have no slots at all
+            break;
+        }
+    }
+
+    void apply(const QVector<RowItem> &row, const RouteResult &route, int step)
     {
         for (const auto &action : route.actions) {
             switch (action.kind) {
             case ActionKind::ApplyScale:
-                // the shells apply through updateScale(max(1, s))
-                scales[action.pos] = qMax(1.0, action.scale);
+                receive(row, action.pos, {action.scale});
                 break;
             case ActionKind::SpacerAbsorb:
                 if (action.pos == 0) {
@@ -64,8 +91,21 @@ struct Sim {
                 }
                 break;
             case ActionKind::ClientHandoff:
-                clientStacks[action.pos].append(action.stack);
+                receive(row, action.pos, action.stack);
                 break;
+            }
+        }
+
+        if (route.clearEmissionPos >= 0) {
+            // ONE [1] emission: exact arm at the target, broadcast arm on
+            // everything beyond it in the emission's direction (spacers
+            // and dead positions excepted - no broadcast arm / no slots)
+            receive(row, route.clearEmissionPos, {1.0});
+            for (int p = route.clearEmissionPos + step; p >= 0 && p < row.size(); p += step) {
+                if (row[p].kind == ItemKind::EdgeSpacer || row[p].kind == ItemKind::DeadStop) {
+                    continue;
+                }
+                receive(row, p, {1.0});
             }
         }
     }
@@ -77,13 +117,14 @@ Sim run(const QVector<RowItem> &row, int hovered, double pct, double preset = 1.
     const Assignment a = assignScales(row, hovered, stacks, kSpreadSteps);
 
     Sim sim(preset);
-    sim.apply(a.lower);
-    sim.apply(a.higher);
+    sim.apply(row, a.lower, -1);
+    sim.apply(row, a.higher, +1);
     return sim;
 }
 
 QVector<RowItem> makeRow(const QVector<int> &transparents = {},
-                         const QVector<int> &clients = {})
+                         const QVector<int> &clients = {},
+                         const QVector<int> &deads = {})
 {
     QVector<RowItem> row(8);
     row[0].kind = ItemKind::EdgeSpacer;
@@ -93,6 +134,9 @@ QVector<RowItem> makeRow(const QVector<int> &transparents = {},
     }
     for (int c : clients) {
         row[c].kind = ItemKind::BridgeClient;
+    }
+    for (int d : deads) {
+        row[d].kind = ItemKind::DeadStop;
     }
     return row;
 }
@@ -132,7 +176,11 @@ private Q_SLOTS:
     void clearTail_resetsPresetsBeyondSpread();
     void spacer_keepsStaleLengthWithoutExactTargeting();
     void overflow_leavesRowEdge();
-    void clearTailExported_flagsInRowClearEmissions();
+    void clearEmissionPos_flagsInRowClearEmissions();
+    void deadStop_liveStackDies();
+    void deadStop_broadcastPassesDeadPosition();
+    void deadStop_exactClearTargetSkipped();
+    void entryOutsideRow_returnsStackAsOverflow();
 };
 
 void ParabolicRouterTest::plainRow_midHover()
@@ -246,13 +294,13 @@ void ParabolicRouterTest::spacer_keepsStaleLengthWithoutExactTargeting()
     const ScaleStacks stacks = computeScales(0.5, kSpreadSteps, kZoom, false);
 
     Sim sim;
-    sim.apply(assignScales(row, 1, stacks, kSpreadSteps).lower);
-    sim.apply(assignScales(row, 1, stacks, kSpreadSteps).higher);
+    sim.apply(row, assignScales(row, 1, stacks, kSpreadSteps).lower, -1);
+    sim.apply(row, assignScales(row, 1, stacks, kSpreadSteps).higher, +1);
     QVERIFY(qAbs(sim.tailLen - 24.0) < 1e-9);
 
     const Assignment inward = assignScales(row, 4, stacks, kSpreadSteps);
-    sim.apply(inward.lower);
-    sim.apply(inward.higher);
+    sim.apply(row, inward.lower, -1);
+    sim.apply(row, inward.higher, +1);
     QVERIFY(qAbs(sim.tailLen - 24.0) < 1e-9); // untouched, not re-zeroed
     compareScales(sim, 4, {1.0, 1.15, 1.45, 1.0, 1.45, 1.15});
 }
@@ -269,22 +317,74 @@ void ParabolicRouterTest::overflow_leavesRowEdge()
 
     // higher: 1 consumes 1.45, 2 consumes 1.15, clear-tail leaves at pos 3
     QCOMPARE(a.higher.overflow, QVector<double>({1.0}));
+    QCOMPARE(a.higher.clearEmissionPos, -1);
     // lower: the whole stack leaves at pos -1 untouched
     QCOMPARE(a.lower.overflow, stacks.left);
 }
 
-void ParabolicRouterTest::clearTailExported_flagsInRowClearEmissions()
+void ParabolicRouterTest::clearEmissionPos_flagsInRowClearEmissions()
 {
     // the chain's sltTrack* forwarded every in-row clear-tail emission out
-    // through the bridge; the flag drives that export in the plasmoid shell
+    // through the bridge; clearEmissionPos drives that export in the
+    // plasmoid shell and the single [1] emission in both shells
     QVector<RowItem> row(6);
     const ScaleStacks stacks = computeScales(0.5, kSpreadSteps, kZoom, false);
 
     const Assignment mid = assignScales(row, 2, stacks, kSpreadSteps);
-    QVERIFY(mid.higher.clearTailExported);  // exhausts at pos 5, in-row
+    QCOMPARE(mid.higher.clearEmissionPos, 5); // exhausts at pos 5, in-row
     QVERIFY(mid.higher.overflow.isEmpty());
-    QVERIFY(!mid.lower.clearTailExported);  // leaves at pos -1 instead
+    QCOMPARE(mid.lower.clearEmissionPos, -1); // leaves at pos -1 instead
     QCOMPARE(mid.lower.overflow, QVector<double>({1.0}));
+}
+
+void ParabolicRouterTest::deadStop_liveStackDies()
+{
+    // CASE dead_at3_live_dies_hover_idx4_pct50 (preset 1.5): the lower
+    // walk dies AT the dead position 3 - positions 1..3 keep their
+    // presets, no clear ever fires in that direction
+    const Sim sim = run(makeRow({}, {}, {3}), 4, 0.5, 1.5);
+    compareScales(sim, 4, {1.5, 1.5, 1.5, 1.5, 1.45, 1.15});
+    QCOMPARE(sim.tailLen, 0.0);
+    QCOMPARE(sim.headLen, 0.0);
+}
+
+void ParabolicRouterTest::deadStop_broadcastPassesDeadPosition()
+{
+    // CASE dead_at5_broadcast_passes_hover_idx1_pct50 (preset 1.5): clear
+    // emitted at 4; the dead 5 keeps its preset (no slots), 6 still
+    // clears through the broadcast arm
+    const Sim sim = run(makeRow({}, {}, {5}), 1, 0.5, 1.5);
+    compareScales(sim, 1, {1.5, 1.45, 1.15, 1.0, 1.5, 1.0});
+    QVERIFY(qAbs(sim.tailLen - 24.0) < 1e-9);
+}
+
+void ParabolicRouterTest::deadStop_exactClearTargetSkipped()
+{
+    // CASE dead_at5_exact_clear_hover_idx2_pct50 (preset 1.5): the clear
+    // emission targets the dead 5 exactly - nothing applies there, the
+    // broadcast still clears 6; lower direction: 1 consumes 1.45, the
+    // tail spacer absorbs the partial leftover (0.15+0)*40 = 6
+    const Sim sim = run(makeRow({}, {}, {5}), 2, 0.5, 1.5);
+    compareScales(sim, 2, {1.45, 1.5, 1.45, 1.15, 1.5, 1.0});
+    QVERIFY(qAbs(sim.tailLen - 6.0) < 1e-9);
+}
+
+void ParabolicRouterTest::entryOutsideRow_returnsStackAsOverflow()
+{
+    // the chain's emission at a gap index (the containment's inter-layout
+    // index gaps): nothing matches exactly, the stack comes back whole so
+    // the shell can re-emit it at the boundary (live: matches nobody;
+    // clear: the broadcast arms act) - today's terminal behavior
+    QVector<RowItem> row(3);
+    const ScaleStacks stacks = computeScales(0.5, kSpreadSteps, kZoom, false);
+
+    const RouteResult below = routeStack(row, -1, -1, stacks.left, kSpreadSteps);
+    QVERIFY(below.actions.isEmpty());
+    QCOMPARE(below.overflow, stacks.left);
+
+    const RouteResult above = routeStack(row, 3, +1, stacks.right, kSpreadSteps);
+    QVERIFY(above.actions.isEmpty());
+    QCOMPARE(above.overflow, stacks.right);
 }
 
 QTEST_GUILESS_MAIN(ParabolicRouterTest)

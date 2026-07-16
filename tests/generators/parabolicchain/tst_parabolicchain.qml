@@ -39,13 +39,14 @@ Item {
 
         readonly property var items: [it1, it2, it3, it4, it5, it6]
 
-        function configure(seps, hiddens, marginsSeps, clients) {
+        function configure(seps, hiddens, marginsSeps, clients, deads) {
             for (var i = 0; i < items.length; ++i) {
                 var it = items[i];
                 it.isSeparator = seps.indexOf(it.index) >= 0;
                 it.isHidden = hiddens.indexOf(it.index) >= 0;
                 it.isMarginsAreaSeparator = marginsSeps.indexOf(it.index) >= 0;
                 it.isBridgeClient = clients.indexOf(it.index) >= 0;
+                it.hasParabolicArea = deads === undefined || deads.indexOf(it.index) < 0;
             }
         }
 
@@ -161,6 +162,25 @@ Item {
             configure([], [], [], [5]);
             resetAll(1.5);
             drive("client_at5_preset_hover_idx1_pct50", 1, 0.5);
+
+            // 12. DEAD position (no ParabolicArea instance - the production
+            // case is a lockZoom applet with thin tooltips off): a live
+            // stack DIES at it, nothing beyond is touched
+            configure([], [], [], [], [3]);
+            resetAll(1.5);
+            drive("dead_at3_live_dies_hover_idx4_pct50", 4, 0.5);
+
+            // 13. the clear-tail BROADCAST passes a dead position: emitted
+            // at 4, the dead 5 keeps its preset, 6 still clears
+            configure([], [], [], [], [5]);
+            resetAll(1.5);
+            drive("dead_at5_broadcast_passes_hover_idx1_pct50", 1, 0.5);
+
+            // 14. clear-tail emitted exactly AT a dead position: no exact
+            // application there, the broadcast beyond still clears
+            configure([], [], [], [], [5]);
+            resetAll(1.5);
+            drive("dead_at5_exact_clear_hover_idx2_pct50", 2, 0.5);
 
             verify(true);
         }

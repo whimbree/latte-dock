@@ -630,7 +630,10 @@ Conventions used by all specs:
 
 - Commits so far: 0613c2ae (design written into this spec), ee66b07c
   (core + 13-slot equality tests + the recording harness at
-  tests/generators/parabolicchain, 14 recorded cases). REMAINING,
+  tests/generators/parabolicchain, 14 recorded cases), plus the
+  pre-cutover design revision commit (dead positions recorded x3,
+  RouteResult reshaped to the emission plan, 17 equality slots - see
+  the DESIGN REVISION bullet). REMAINING,
   strong-model-only, DO NOT DELEGATE: the containment-twin cutover
   (per-area sltUpdateItemScale deciders replaced by routeStack
   application through the host ability; signals demoted to targeted
@@ -736,6 +739,42 @@ Conventions used by all specs:
     cutover. sglClearZoom, the restore state machine
     (ParabolicEffectPrivate), directRendering, hoverPixelSensitivity
     gating and the first/last-item pointer clamp are untouched.
+  - DESIGN REVISION (2026-07-15, pre-cutover, recorded before the
+    cutover commits): reading the application side in full surfaced
+    two things the first design missed, both recorded from the
+    shipped chain before changing the core:
+    - DEAD positions: an item whose parabolicAreaLoader never
+      activates (production case: a zoom-unsupported lockZoom applet
+      - systray, autofill, wide applets - with thin tooltips
+      disabled) has NO connected slots. A live stack DIES there
+      (nothing beyond is touched), while clear-tail broadcasts pass
+      it (receiver-side index filters in the other items). Three
+      dead_* harness cases recorded at 4fca5a39 pin this;
+      ItemKind::DeadStop reproduces it. Plasmoid rows have no dead
+      positions (its loader keys on parabolic.isEnabled alone), but
+      row holes (itemIndex churn) map to DeadStop there too, which
+      matches the chain (no exact match at a hole).
+    - RESULT SHAPE: the chain clears everything beyond an exhaustion
+      point with ONE [1] emission whose receivers filter by index
+      (the broadcast arm) - and that single emission is also what
+      clears items the row cannot see (the containment's OTHER
+      layouts across the index gaps, since the signals are
+      containment-global). Expanding the broadcast into per-position
+      actions in the core would have forced the shells to enumerate
+      foreign layouts. RouteResult therefore carries the LIVE walk's
+      actions plus clearEmissionPos (where the [1] emission goes) and
+      overflow (what left the row edge; the containment shell
+      re-emits it at the boundary index exactly as the chain emitted
+      into gaps, the plasmoid shell exports it through the bridge).
+      The slots keep exactly two arms, both application-only: exact
+      match (apply newScales[0] / hand the stack to a bridge client
+      as-received) and the clear-broadcast arm (unchanged from
+      today). Spacer absorptions leave the signal graph entirely: the
+      shells call the spacer's applyParabolicAbsorb(factor) directly,
+      with the alignment gate precomputed into RowItem.absorbing (the
+      inert-alignment length=0 falls out of factor=0). The
+      clearTailExported flag became derivable (clearEmissionPos >= 0)
+      and was dropped.
 - Test plan: equality harness first - an offscreen qmltest drives the
   EXISTING chain over a synthetic row (real ParabolicArea instances
   resolve their context ids - appletItem, wrapper, communicator,

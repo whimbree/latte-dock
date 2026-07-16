@@ -208,31 +208,32 @@ bool ContainmentInterface::updateBadgeForLatteTask(const QString identifier, con
         if (meta.pluginId() == QLatin1String("org.kde.latte.plasmoid")) {
 
             if (QQuickItem *appletInterface = PlasmaQuick::AppletQuickItem::itemForApplet(applet)) {
-                const auto &childItems = appletInterface->childItems();
+                //! Plasma 6 made the plasmoid's own main.qml root the
+                //! PlasmoidItem, and itemForApplet() returns exactly that
+                //! object - updateBadge lives on IT, not on any child. The
+                //! Qt5-era childItems() walk (which wrapped the root one
+                //! level down) found only TaskItem delegates here, probed
+                //! live, so the whole D-Bus badge path was dead since the
+                //! port began.
+                QQuickItem *badgeReceiver = appletInterface;
 
-                if (childItems.isEmpty()) {
+                auto *metaObject = badgeReceiver->metaObject();
+                int methodIndex = metaObject->indexOfMethod("updateBadge(QString,QString)");
+
+                if (methodIndex == -1) {
+                    for (int m = metaObject->methodOffset(); m < metaObject->methodCount(); ++m) {
+                        if (metaObject->method(m).name() == QByteArrayLiteral("updateBadge")) {
+                            qWarning() << "PROBE root updateBadge signature:" << metaObject->method(m).methodSignature();
+                        }
+                    }
+                    qWarning() << "updateBadgeForLatteTask: the plasmoid root exposes no updateBadge(QString,QString); the D-Bus badge path cannot deliver";
                     continue;
                 }
 
-                for (QQuickItem *item : childItems) {
-                    if (auto *metaObject = item->metaObject()) {
-                        // not using QMetaObject::invokeMethod to avoid warnings when calling
-                        // this on applets that don't have it or other child items since this
-                        // is pretty much trial and error.
-                        // Also, "var" arguments are treated as QVariant in QMetaObject
+                QMetaMethod method = metaObject->method(methodIndex);
 
-                        int methodIndex = metaObject->indexOfMethod("updateBadge(QVariant,QVariant)");
-
-                        if (methodIndex == -1) {
-                            continue;
-                        }
-
-                        QMetaMethod method = metaObject->method(methodIndex);
-
-                        if (method.invoke(item, Q_ARG(QVariant, identifier), Q_ARG(QVariant, value))) {
-                            return true;
-                        }
-                    }
+                if (method.invoke(badgeReceiver, Q_ARG(QString, identifier), Q_ARG(QString, value))) {
+                    return true;
                 }
             }
         }

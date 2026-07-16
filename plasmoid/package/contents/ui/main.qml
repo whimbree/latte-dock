@@ -1498,11 +1498,14 @@ PlasmoidItem {
         return LatteCore.BadgeMath.badgeCountForLauncher(root.badgers, launcherUrl);
     }
 
-    function updateBadge(identifier, value) {
-        // parameters stay UNTYPED by contract: containmentinterface.cpp
+    function updateBadge(identifier: string, value: string) {
+        // parameters stay TYPED by contract: containmentinterface.cpp
         // resolves this method by its metaobject signature
-        // "updateBadge(QVariant,QVariant)" (the whole D-Bus badge path);
-        // typed parameters would change the signature and break it silently
+        // "updateBadge(QString,QString)" (the whole D-Bus badge path).
+        // Qt6 inverted the Qt5 rule here: an untyped QML function
+        // registers as "updateBadge()" with no parameters at all
+        // (measured live with a signature probe), so only typed
+        // parameters are resolvable from C++.
         var tasks = icList.contentItem.children;
         var matched = false;
 

@@ -56,7 +56,7 @@ Per-unit specs (section C), in rank order:
 - [x] EX-19 ColorLuminance - shared brightness/luminance helpers (dedup)
 - [x] EX-20 BadgeMath - badge parsing, proportion, arc geometry
 - [x] EX-21 ScrollOverflowMath - scrollable list overflow/autoscroll math
-- [x] EX-22 ActivitySetAlgebra - activity set filtering (capt blueprint)
+- [x] EX-22 ActivitySetAlgebra - activity set filtering (capt blueprint) - LANDED 8ccad784
 - [x] EX-23 WindowTrackingPredicates - window predicate + extra-view-hints pass (capt blueprint)
 - [x] EX-24 IconSourceClassifier - icon source classification (capt blueprint)
 - [x] EX-25 PanelBackgroundScan - panel background scanline math (capt blueprint)
@@ -1496,6 +1496,10 @@ Conventions used by all specs:
 
 ### EX-22 ActivitySetAlgebra [delegate-safe]
 
+- Commits: 8ccad784 (landed 2026-07-15; 9 test slots - capt's 7 plus
+  the two synchronizer.cpp:789/:795 consumer-pattern cases; live
+  smoke run: dbus switchToLayout round trip Smoke -> My Layout on
+  the throwaway, dock alive, zero crash markers).
 - Header: `app/layouts/activitysetalgebra.h` (capt's placement).
 - Responsibility: free/free-running/valid activity list filtering
   out of Synchronizer.
@@ -1694,6 +1698,15 @@ post-transition backlog, each unit self-contained.
   scripts/coverage-ratchet.sh + tests/ratchet-baseline,
   EX-22 ActivitySetAlgebra as the proving unit (smallest spec,
   exercises the whole pipeline end to end). One session.
+  DONE 2026-07-15: 353fd783 (scaffolding), 70d38a3e (ratchet,
+  negative-tested against three injected regressions), 8ccad784
+  (EX-22). Execution note: the plan's "four units/ directories"
+  are the three production ones plus tests/units/; the ratchet
+  scans the three plus tests/units/app-subtree-units.list for the
+  capt-placement headers. 66a41253 landed alongside: the first
+  full-ctest run surfaced a leaked staged install_manifest.txt
+  un-vacuuming appstreamtest (root cause and both fixes in that
+  commit's body).
 - Wave 1 (strong-model window, serial, feel-bearing): EX-01
   PreviewSwitchEngine, then EX-03 ParabolicMathCore, then EX-02
   ParabolicRouter design + implementation. EX-03 precedes EX-02

@@ -109,6 +109,17 @@ public:
     //! scraping the quit-reason trail in the logs
     QString lifecycleState() const;
 
+    //! plasmashell ShellCorona API shim: plasma-desktop's folder-view
+    //! containment binds its isUiReady to corona.isScreenUiReady(screen)
+    //! (desktopcontainment main.qml:63). Without the method the binding
+    //! throws and stays undefined-falsy FOREVER, so a folder applet
+    //! hosted in a dock treats its screen as never ready. plasmashell's
+    //! semantics are "desktop view visible, no panels still loading";
+    //! the honest equivalent here is "the corona finished loading
+    //! layouts" - per-screen granularity has no Latte meaning since
+    //! docks are not desktop views.
+    Q_INVOKABLE bool isScreenUiReady(int screen) const;
+
     int numScreens() const override;
     QRect screenGeometry(int id) const override;
     QRegion availableScreenRegion(int id) const override;

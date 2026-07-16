@@ -485,6 +485,12 @@ bool Corona::inQuit() const
     return m_lifecyclePhase >= LifecyclePhase::QuitRequested;
 }
 
+bool Corona::isScreenUiReady(int screen) const
+{
+    Q_UNUSED(screen);
+    return m_lifecyclePhase >= LifecyclePhase::Running;
+}
+
 QString Corona::lifecycleState() const
 {
     switch (m_lifecyclePhase) {

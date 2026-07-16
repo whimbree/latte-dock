@@ -23,6 +23,13 @@ function(latte_add_unit_test _name)
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     target_compile_options(${_name} PRIVATE ${LATTE_UNIT_SANITIZE_FLAGS})
     target_link_options(${_name} PRIVATE ${LATTE_UNIT_SANITIZE_FLAGS})
+    # RelWithDebInfo defines QT_NO_DEBUG, which strips Q_ASSERT wholesale -
+    # without this the cores' invariant asserts would be dead code even
+    # here, and the tests would pass with violated preconditions.
+    # QT_FORCE_ASSERTS keeps them live in the test binaries only; the
+    # shipped dock stays assert-free. Corollary (CLAUDE.md code-clarity
+    # law): assert expressions must never carry side effects.
+    target_compile_definitions(${_name} PRIVATE QT_FORCE_ASSERTS)
 endfunction()
 
 # EX-22 ActivitySetAlgebra: header-only pure core, no Latte link needed.

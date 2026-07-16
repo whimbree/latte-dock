@@ -144,8 +144,11 @@ inline void emitClearTail(const QVector<RowItem> &row, int pos, int step, RouteR
 inline RouteResult routeStack(const QVector<RowItem> &row, int entryPos, int step,
                               QVector<double> stack, int spreadSteps)
 {
-    //! step=0 is representable and would loop forever; a negative spread
-    //! window would silently absorb nothing
+    //! step=0 is representable and wrong two ways: the walk never
+    //! advances, so it consumes the whole stack at one position (measured:
+    //! silently returns a corrupt result) and spins forever if that
+    //! position is transparent; a negative spread window would silently
+    //! absorb nothing. Live in the test binaries via QT_FORCE_ASSERTS.
     Q_ASSERT(step == 1 || step == -1);
     Q_ASSERT(spreadSteps >= 0);
 

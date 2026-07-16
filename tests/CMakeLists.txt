@@ -183,6 +183,17 @@ ecm_add_test(contracts/appletwindowparentingtest.cpp
 set_tests_properties(appletwindowparentingtest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+# Contract: the edit-mode detection premise (Applet::setUserConfiguring is a
+# synchronous guarded setter at the pin) - the single property Latte's whole
+# edit-mode entry/exit detection rides on. The file header names the
+# re-audit obligations if a libplasma bump changes the semantics.
+ecm_add_test(contracts/userconfiguringcontracttest.cpp
+    TEST_NAME userconfiguringcontracttest
+    LINK_LIBRARIES Qt6::Test Qt6::Gui Plasma::Plasma KF6::CoreAddons
+)
+set_tests_properties(userconfiguringcontracttest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # Contract: the Qt shutdown sequence the Corona teardown design relies on
 # (aboutToQuit fires inside exit() while the app is live; execCleanup()
 # flushes deferred deletes once; nothing flushes them after exec() returns).

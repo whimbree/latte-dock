@@ -10,6 +10,9 @@
 #include <QVector>
 #include <QtGlobal>
 
+// C++
+#include <optional>
+
 namespace Latte {
 namespace Tasks {
 
@@ -31,8 +34,6 @@ public:
     enum class HideDecision { None, StartCountdown, CancelCountdown };
     enum class Materialize { KeepActive, Revive, Build, BuildEvicting };
 
-    static constexpr int kNoTask = -1;
-
     //! the tested thresholds. QML reads its Timer intervals from these
     //! (through the bridge) so the running values cannot drift from the
     //! tested ones. A request this soon after the previous one is a sweep
@@ -46,7 +47,9 @@ public:
                   "4b533b8d: settle interval at or above the burst threshold degenerates sweeps");
 
     struct SwitchRequest {
-        int taskId = kNoTask;
+        //! a real id from the shell's identity map (ids start at 1); "no
+        //! task" is not a representable request
+        int taskId = 0;
         qint64 nowMs = 0;
         bool dialogVisible = false;
     };
@@ -74,7 +77,7 @@ public:
 
     struct MaterializeResult {
         Materialize kind = Materialize::Build;
-        int evictedTask = kNoTask;
+        std::optional<int> evictedTask;
         //! true when the shell must create a fresh delegate and run the
         //! full model-binding pass; false reuses live bindings (rootIndex
         //! refresh only, the QML-side contract)
@@ -92,7 +95,7 @@ public:
     //! the previous one defers to the settle timer.
     SwitchResult decide(const SwitchRequest &req)
     {
-        if (!req.dialogVisible || m_shownTask == kNoTask || m_shownTask == req.taskId) {
+        if (!req.dialogVisible || !m_shownTask || *m_shownTask == req.taskId) {
             m_lastSwitchRequestMs = req.nowMs;
             return {SwitchDecision::ShowNow, false, false};
         }
@@ -114,18 +117,18 @@ public:
     //! d56a26aa family). Deliberately does NOT stamp the request clock:
     //! the settle adoption is not a switch request, or it would re-enter
     //! the burst check and re-defer forever (4b533b8d).
-    int settle(bool pendingStillHovered, bool dialogVisible)
+    std::optional<int> settle(bool pendingStillHovered, bool dialogVisible)
     {
-        if (m_pendingTask == kNoTask || !pendingStillHovered || !dialogVisible) {
-            return kNoTask;
+        if (!m_pendingTask || !pendingStillHovered || !dialogVisible) {
+            return std::nullopt;
         }
 
-        const int task = m_pendingTask;
-        m_pendingTask = kNoTask;
+        const int task = *m_pendingTask;
+        m_pendingTask.reset();
         return task;
     }
 
-    int pendingTask() const
+    std::optional<int> pendingTask() const
     {
         return m_pendingTask;
     }
@@ -135,7 +138,7 @@ public:
     void shown(int taskId)
     {
         m_shownTask = taskId;
-        m_pendingTask = kNoTask;
+        m_pendingTask.reset();
     }
 
     //! the dialog left the screen (forcePreviewsHiding / visible=false).
@@ -146,8 +149,8 @@ public:
     //! null-keyed unreachable parked entry on every hide/re-hover cycle).
     void dialogHidden()
     {
-        m_shownTask = kNoTask;
-        m_pendingTask = kNoTask;
+        m_shownTask.reset();
+        m_pendingTask.reset();
     }
 
     //! hover state changed: arm or cancel the hide countdown (main.qml
@@ -177,7 +180,7 @@ public:
     MaterializeResult materialize(int taskId)
     {
         if (m_activeCacheTask == taskId) {
-            return {Materialize::KeepActive, kNoTask, false};
+            return {Materialize::KeepActive, std::nullopt, false};
         }
 
         const int parkedIdx = m_parked.indexOf(taskId);
@@ -185,13 +188,13 @@ public:
 
         if (parkedIdx >= 0) {
             m_parked.removeAt(parkedIdx);
-            result = {Materialize::Revive, kNoTask, false};
+            result = {Materialize::Revive, std::nullopt, false};
         } else {
-            result = {Materialize::Build, kNoTask, true};
+            result = {Materialize::Build, std::nullopt, true};
         }
 
-        if (m_activeCacheTask != kNoTask) {
-            m_parked.append(m_activeCacheTask);
+        if (m_activeCacheTask) {
+            m_parked.append(*m_activeCacheTask);
             if (m_parked.size() > m_parkedCapacity) {
                 result.evictedTask = m_parked.takeFirst();
                 if (result.kind == Materialize::Build) {
@@ -218,7 +221,7 @@ public:
         return true;
     }
 
-    int activeCacheTask() const
+    std::optional<int> activeCacheTask() const
     {
         return m_activeCacheTask;
     }
@@ -230,9 +233,9 @@ public:
 
 private:
     int m_parkedCapacity;
-    int m_shownTask = kNoTask;
-    int m_pendingTask = kNoTask;
-    int m_activeCacheTask = kNoTask;
+    std::optional<int> m_shownTask;
+    std::optional<int> m_pendingTask;
+    std::optional<int> m_activeCacheTask;
     qint64 m_lastSwitchRequestMs = 0;
     QVector<int> m_parked; //!< oldest first
 };

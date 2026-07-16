@@ -11,6 +11,10 @@
 // Qt
 #include <QDebug>
 
+// C++
+#include <type_traits>
+#include <variant>
+
 namespace Latte {
 
 ParabolicRouterTools::ParabolicRouterTools(QObject *parent)
@@ -67,35 +71,36 @@ QVariantMap ParabolicRouterTools::route(const QVariantList &row, int entryPos, i
     actions.reserve(result.actions.size() + 1);
     for (const auto &action : result.actions) {
         QVariantMap a;
-        a.insert(QStringLiteral("pos"), action.pos);
-        switch (action.kind) {
-        case ParabolicRouter::ActionKind::ApplyScale:
-            a.insert(QStringLiteral("kind"), QStringLiteral("emit"));
-            a.insert(QStringLiteral("stack"), QVariantList{action.scale});
-            break;
-        case ParabolicRouter::ActionKind::ClientHandoff:
-            a.insert(QStringLiteral("kind"), QStringLiteral("emit"));
-            a.insert(QStringLiteral("stack"), toVariantStack(action.stack));
-            break;
-        case ParabolicRouter::ActionKind::SpacerAbsorb:
-            a.insert(QStringLiteral("kind"), QStringLiteral("absorb"));
-            a.insert(QStringLiteral("factor"), action.absorbFactor);
-            break;
-        }
+        std::visit([&a](const auto &act) {
+            using T = std::decay_t<decltype(act)>;
+            a.insert(QStringLiteral("pos"), act.pos);
+            if constexpr (std::is_same_v<T, ParabolicRouter::ApplyScale>) {
+                a.insert(QStringLiteral("kind"), QStringLiteral("emit"));
+                a.insert(QStringLiteral("stack"), QVariantList{act.scale});
+            } else if constexpr (std::is_same_v<T, ParabolicRouter::ClientHandoff>) {
+                a.insert(QStringLiteral("kind"), QStringLiteral("emit"));
+                a.insert(QStringLiteral("stack"), toVariantStack(act.stack));
+            } else {
+                static_assert(std::is_same_v<T, ParabolicRouter::SpacerAbsorb>);
+                a.insert(QStringLiteral("kind"), QStringLiteral("absorb"));
+                a.insert(QStringLiteral("factor"), act.factor);
+            }
+        }, action);
         actions.append(a);
     }
 
-    if (result.clearEmissionPos >= 0) {
+    if (result.clearEmissionPos) {
         QVariantMap clear;
         clear.insert(QStringLiteral("kind"), QStringLiteral("emit"));
-        clear.insert(QStringLiteral("pos"), result.clearEmissionPos);
+        clear.insert(QStringLiteral("pos"), *result.clearEmissionPos);
         clear.insert(QStringLiteral("stack"), QVariantList{1.0});
         actions.append(clear);
     }
 
     QVariantMap out;
     out.insert(QStringLiteral("actions"), actions);
-    out.insert(QStringLiteral("clearEmissionPos"), result.clearEmissionPos);
+    //! QML keeps the -1-means-none convention at the boundary only
+    out.insert(QStringLiteral("clearEmissionPos"), result.clearEmissionPos.value_or(-1));
     out.insert(QStringLiteral("overflow"), toVariantStack(result.overflow));
     return out;
 }

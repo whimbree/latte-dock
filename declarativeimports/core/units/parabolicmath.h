@@ -32,9 +32,12 @@ inline double scaleLinear(double zoomFactor, double x)
 //! scale for one neighbor slice: the x axis is split into itemsCount
 //! slices, the slice's own sub-position comes from the mouse percentage,
 //! and the scale is 1 + the slope at that x. itemsCount must be >= 1
-//! (computeScales' loop never calls it otherwise).
+//! (computeScales' loop never calls it otherwise; asserted because an
+//! itemsCount of 0 is representable and would divide silently - IEEE
+//! float division never traps, so no sanitizer catches it).
 inline double scaleForItem(double zoomFactor, double mousePosPercentage, int itemIndex, int itemsCount)
 {
+    Q_ASSERT(itemsCount >= 1);
     const double xSliceLength = 1.0 / itemsCount;
     const double minX = (itemIndex - 1) * xSliceLength;
     const double maxX = itemIndex * xSliceLength;

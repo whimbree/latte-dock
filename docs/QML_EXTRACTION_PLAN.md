@@ -44,14 +44,30 @@ Inventory (section A):
 Ranking (section B): [x] done.
 
 Per-unit specs (section C), in rank order:
-- [x] EX-01 PreviewSwitchEngine - preview adoption/debounce/LRU decision core - LANDED 03cf0289+2f23f9bd
+- [x] EX-01 PreviewSwitchEngine - preview adoption/debounce/LRU decision core - LANDED 03cf0289+2f23f9bd.
+  Type discipline (retroactive step-2.5 pass): the kNoTask=-1 sentinel
+  eliminated - shown/pending/active-cache task, settle() result and
+  evictedTask are std::optional<int>, so "no task" is no longer
+  representable as a task id; -1-means-none survives only at the QML
+  boundary in the bridge
 - [x] EX-02 ParabolicRouter - neighbor scale-stack propagation chains -
   LANDED 0613c2ae+ee66b07c+1c94a7ef+504e95e5+faa89fd1 (design, core+
   equality harness, emission-plan revision with recorded dead
   positions, containment cutover, plasmoid cutover; live glide matrix
   run before each cutover merged - preview-anchor geometry
-  byte-identical across pre/post runs)
-- [x] EX-03 ParabolicMathCore - the zoom curve math - LANDED c3c04e49
+  byte-identical across pre/post runs).
+  Type discipline (retroactive step-2.5 pass): the fat kind-tagged
+  Action struct replaced by std::variant with per-kind payloads (an
+  ApplyScale carrying a handoff stack, a ClientHandoff carrying an
+  absorb factor, and an Action with the pos=-1 default are all
+  unrepresentable now), and clearEmissionPos's -1 sentinel became
+  std::optional<int>; -1-means-none survives only at the QML boundary
+  in the wrapper
+- [x] EX-03 ParabolicMathCore - the zoom curve math - LANDED c3c04e49.
+  Type discipline (retroactive step-2.5 pass): scaleForItem's
+  itemsCount=0 silent IEEE division (representable, never traps, no
+  sanitizer sees it) asserted away; no other invalid states were
+  representable
 - [x] EX-04 AutoSizeEngine - iconSize shrink/grow feedback loop
 - [x] EX-05 FillLengthDistributor - Justify/fill two-pass space distribution
 - [x] EX-06 VisibleIndexEngine - visible-index math + separator neighbor walks
@@ -70,7 +86,10 @@ Per-unit specs (section C), in rank order:
 - [x] EX-19 ColorLuminance - shared brightness/luminance helpers (dedup)
 - [x] EX-20 BadgeMath - badge parsing, proportion, arc geometry
 - [x] EX-21 ScrollOverflowMath - scrollable list overflow/autoscroll math
-- [x] EX-22 ActivitySetAlgebra - activity set filtering (capt blueprint) - LANDED 8ccad784
+- [x] EX-22 ActivitySetAlgebra - activity set filtering (capt blueprint) - LANDED 8ccad784.
+  Type discipline (retroactive step-2.5 pass): reviewed, no
+  representable invalid states - list-in/list-out pure functions with
+  no sentinels, no indexes, no lifetime capture
 - [x] EX-23 WindowTrackingPredicates - window predicate + extra-view-hints pass (capt blueprint)
 - [x] EX-24 IconSourceClassifier - icon source classification (capt blueprint)
 - [x] EX-25 PanelBackgroundScan - panel background scanline math (capt blueprint)

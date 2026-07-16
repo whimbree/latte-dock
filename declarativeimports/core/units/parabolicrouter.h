@@ -13,6 +13,10 @@
 #include <QVector>
 #include <QtGlobal>
 
+// C++
+#include <optional>
+#include <variant>
+
 namespace Latte {
 
 //! The parabolic scale-propagation ROUTING as one pure walk (EX-02 in
@@ -76,24 +80,34 @@ struct RowItem {
     bool absorbing = true;
 };
 
-enum class ActionKind { ApplyScale, SpacerAbsorb, ClientHandoff };
-
-struct Action {
-    int pos = -1;
-    ActionKind kind = ActionKind::ApplyScale;
-    double scale = 1.0;             //!< ApplyScale
-    double absorbFactor = 0.0;      //!< SpacerAbsorb: length = factor * totals
-    QVector<double> stack;          //!< ClientHandoff: as-received
+//! per-kind action payloads (step-2.5 type discipline: an ApplyScale
+//! cannot carry a handoff stack, a ClientHandoff cannot carry an absorb
+//! factor, and no action exists without a position)
+struct ApplyScale {
+    int pos;
+    double scale;
 };
+
+struct SpacerAbsorb {
+    int pos;
+    double factor; //!< length = factor * totals
+};
+
+struct ClientHandoff {
+    int pos;
+    QVector<double> stack; //!< as-received
+};
+
+using Action = std::variant<ApplyScale, SpacerAbsorb, ClientHandoff>;
 
 struct RouteResult {
     //! the live walk's applications, in walk order
     QVector<Action> actions;
-    //! in-row target of the clear-tail [1] emission, -1 when none; the
+    //! in-row target of the clear-tail [1] emission, when one fired; the
     //! plasmoid twin additionally exports [1] through the bridge whenever
-    //! this fired (the chain's sltTrack* forwarded every in-row
+    //! this holds a value (the chain's sltTrack* forwarded every in-row
     //! clear-tail emission out)
-    int clearEmissionPos = -1;
+    std::optional<int> clearEmissionPos;
     //! stack remaining when the walk left the row edge
     QVector<double> overflow;
 };
@@ -109,7 +123,7 @@ inline bool isClearTail(const QVector<double> &stack)
 inline void emitClearTail(const QVector<RowItem> &row, int pos, int step, RouteResult &result)
 {
     while (pos >= 0 && pos < row.size() && row[pos].kind == ItemKind::EdgeSpacer) {
-        result.actions.append({pos, ActionKind::SpacerAbsorb, 1.0, 0.0, {}});
+        result.actions.append(SpacerAbsorb{pos, 0.0});
         pos += step;
     }
 
@@ -154,13 +168,13 @@ inline RouteResult routeStack(const QVector<RowItem> &row, int entryPos, int ste
 
         switch (item.kind) {
         case ItemKind::Normal:
-            result.actions.append({pos, ActionKind::ApplyScale, stack.first(), 0.0, {}});
+            result.actions.append(ApplyScale{pos, stack.first()});
             stack.removeFirst();
             break;
         case ItemKind::Transparent:
             break;
         case ItemKind::BridgeClient:
-            result.actions.append({pos, ActionKind::ClientHandoff, 1.0, 0.0, stack});
+            result.actions.append(ClientHandoff{pos, stack});
             return result;
         case ItemKind::EdgeSpacer: {
             double factor = 0.0;
@@ -170,7 +184,7 @@ inline RouteResult routeStack(const QVector<RowItem> &row, int entryPos, int ste
                     factor += stack.at(i) - 1.0;
                 }
             }
-            result.actions.append({pos, ActionKind::SpacerAbsorb, 1.0, factor, {}});
+            result.actions.append(SpacerAbsorb{pos, factor});
             emitClearTail(row, pos + step, step, result);
             return result;
         }

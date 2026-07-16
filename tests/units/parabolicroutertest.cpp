@@ -79,29 +79,29 @@ struct Sim {
     void apply(const QVector<RowItem> &row, const RouteResult &route, int step)
     {
         for (const auto &action : route.actions) {
-            switch (action.kind) {
-            case ActionKind::ApplyScale:
-                receive(row, action.pos, {action.scale});
-                break;
-            case ActionKind::SpacerAbsorb:
-                if (action.pos == 0) {
-                    tailLen = action.absorbFactor * kTotalsLength;
+            std::visit([&](const auto &act) {
+                using T = std::decay_t<decltype(act)>;
+                if constexpr (std::is_same_v<T, ApplyScale>) {
+                    receive(row, act.pos, {act.scale});
+                } else if constexpr (std::is_same_v<T, SpacerAbsorb>) {
+                    if (act.pos == 0) {
+                        tailLen = act.factor * kTotalsLength;
+                    } else {
+                        headLen = act.factor * kTotalsLength;
+                    }
                 } else {
-                    headLen = action.absorbFactor * kTotalsLength;
+                    static_assert(std::is_same_v<T, ClientHandoff>);
+                    receive(row, act.pos, act.stack);
                 }
-                break;
-            case ActionKind::ClientHandoff:
-                receive(row, action.pos, action.stack);
-                break;
-            }
+            }, action);
         }
 
-        if (route.clearEmissionPos >= 0) {
+        if (route.clearEmissionPos) {
             // ONE [1] emission: exact arm at the target, broadcast arm on
             // everything beyond it in the emission's direction (spacers
             // and dead positions excepted - no broadcast arm / no slots)
-            receive(row, route.clearEmissionPos, {1.0});
-            for (int p = route.clearEmissionPos + step; p >= 0 && p < row.size(); p += step) {
+            receive(row, *route.clearEmissionPos, {1.0});
+            for (int p = *route.clearEmissionPos + step; p >= 0 && p < row.size(); p += step) {
                 if (row[p].kind == ItemKind::EdgeSpacer || row[p].kind == ItemKind::DeadStop) {
                     continue;
                 }
@@ -317,7 +317,7 @@ void ParabolicRouterTest::overflow_leavesRowEdge()
 
     // higher: 1 consumes 1.45, 2 consumes 1.15, clear-tail leaves at pos 3
     QCOMPARE(a.higher.overflow, QVector<double>({1.0}));
-    QCOMPARE(a.higher.clearEmissionPos, -1);
+    QVERIFY(!a.higher.clearEmissionPos.has_value());
     // lower: the whole stack leaves at pos -1 untouched
     QCOMPARE(a.lower.overflow, stacks.left);
 }
@@ -331,9 +331,9 @@ void ParabolicRouterTest::clearEmissionPos_flagsInRowClearEmissions()
     const ScaleStacks stacks = computeScales(0.5, kSpreadSteps, kZoom, false);
 
     const Assignment mid = assignScales(row, 2, stacks, kSpreadSteps);
-    QCOMPARE(mid.higher.clearEmissionPos, 5); // exhausts at pos 5, in-row
+    QCOMPARE(mid.higher.clearEmissionPos.value_or(-1), 5); // exhausts at pos 5, in-row
     QVERIFY(mid.higher.overflow.isEmpty());
-    QCOMPARE(mid.lower.clearEmissionPos, -1); // leaves at pos -1 instead
+    QVERIFY(!mid.lower.clearEmissionPos.has_value()); // leaves at pos -1 instead
     QCOMPARE(mid.lower.overflow, QVector<double>({1.0}));
 }
 

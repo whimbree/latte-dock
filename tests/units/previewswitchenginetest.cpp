@@ -130,7 +130,7 @@ void PreviewSwitchEngineTest::decide_deferCancelsHideCountdownAndArmsSettle()
     QCOMPARE(r.decision, SwitchDecision::Defer);
     QVERIFY(r.cancelHideCountdown);
     QVERIFY(r.armSettleTimer);
-    QCOMPARE(e.pendingTask(), 2);
+    QCOMPARE(e.pendingTask().value_or(-1), 2);
 
     // an immediate adoption carries no countdown instruction: show() itself
     // stops the countdown as its first act (that stays QML-side)
@@ -169,13 +169,13 @@ void PreviewSwitchEngineTest::settle_adoptsLastHoveredTask()
 
     QCOMPARE(e.decide({2, 1100, true}).decision, SwitchDecision::Defer);
     QCOMPARE(e.decide({3, 1200, true}).decision, SwitchDecision::Defer);
-    QCOMPARE(e.pendingTask(), 3);
+    QCOMPARE(e.pendingTask().value_or(-1), 3);
 
-    QCOMPARE(e.settle(true, true), 3);
+    QCOMPARE(e.settle(true, true).value_or(-1), 3);
 
     // adoption consumed the pending switch
-    QCOMPARE(e.pendingTask(), PreviewSwitchEngine::kNoTask);
-    QCOMPARE(e.settle(true, true), PreviewSwitchEngine::kNoTask);
+    QVERIFY(!e.pendingTask().has_value());
+    QVERIFY(!e.settle(true, true).has_value());
 }
 
 void PreviewSwitchEngineTest::settle_neverReentersBurstCheck()
@@ -188,7 +188,7 @@ void PreviewSwitchEngineTest::settle_neverReentersBurstCheck()
     showTask(e, 1, 1000);
 
     QCOMPARE(e.decide({2, 1100, true}).decision, SwitchDecision::Defer); // stamps 1100
-    QCOMPARE(e.settle(true, true), 2);                                   // fires ~1350; must NOT stamp
+    QCOMPARE(e.settle(true, true).value_or(-1), 2);                                   // fires ~1350; must NOT stamp
     e.shown(2);
 
     // gap from the last real request (1100) is 400 > threshold: immediate.
@@ -206,7 +206,7 @@ void PreviewSwitchEngineTest::settle_noAdoptionWhenPointerLeft()
     showTask(e, 1, 1000);
 
     QCOMPARE(e.decide({2, 1100, true}).decision, SwitchDecision::Defer);
-    QCOMPARE(e.settle(false, true), PreviewSwitchEngine::kNoTask);
+    QVERIFY(!e.settle(false, true).has_value());
 }
 
 void PreviewSwitchEngineTest::settle_noAdoptionWhenDialogHidden()
@@ -215,7 +215,7 @@ void PreviewSwitchEngineTest::settle_noAdoptionWhenDialogHidden()
     showTask(e, 1, 1000);
 
     QCOMPARE(e.decide({2, 1100, true}).decision, SwitchDecision::Defer);
-    QCOMPARE(e.settle(true, false), PreviewSwitchEngine::kNoTask);
+    QVERIFY(!e.settle(true, false).has_value());
 }
 
 void PreviewSwitchEngineTest::shown_supersedesPendingSwitch()
@@ -227,8 +227,8 @@ void PreviewSwitchEngineTest::shown_supersedesPendingSwitch()
 
     QCOMPARE(e.decide({2, 1100, true}).decision, SwitchDecision::Defer);
     e.shown(3);
-    QCOMPARE(e.pendingTask(), PreviewSwitchEngine::kNoTask);
-    QCOMPARE(e.settle(true, true), PreviewSwitchEngine::kNoTask);
+    QVERIFY(!e.pendingTask().has_value());
+    QVERIFY(!e.settle(true, true).has_value());
 }
 
 void PreviewSwitchEngineTest::dialogHidden_clearsPendingAndShownTask()
@@ -239,7 +239,7 @@ void PreviewSwitchEngineTest::dialogHidden_clearsPendingAndShownTask()
 
     e.dialogHidden();
 
-    QCOMPARE(e.pendingTask(), PreviewSwitchEngine::kNoTask);
+    QVERIFY(!e.pendingTask().has_value());
     // no shown task anymore: the next request is a first show, immediate
     // even at burst cadence
     QCOMPARE(e.decide({2, 1150, true}).decision, SwitchDecision::ShowNow);
@@ -293,7 +293,7 @@ void PreviewSwitchEngineTest::lru_buildsOnceThenKeepsActive()
     auto r = e.materialize(1);
     QCOMPARE(r.kind, Materialize::Build);
     QVERIFY(r.fresh);
-    QCOMPARE(r.evictedTask, PreviewSwitchEngine::kNoTask);
+    QVERIFY(!r.evictedTask.has_value());
 
     // same task again: the active delegate is reused, no rebuild
     r = e.materialize(1);
@@ -313,7 +313,7 @@ void PreviewSwitchEngineTest::lru_reviveKeepsWarmEntries()
     QCOMPARE(r.kind, Materialize::Revive);
     QVERIFY(!r.fresh);
     QCOMPARE(e.parkedTasks(), QVector<int>({2}));
-    QCOMPARE(e.activeCacheTask(), 1);
+    QCOMPARE(e.activeCacheTask().value_or(-1), 1);
 }
 
 void PreviewSwitchEngineTest::lru_buildAtCapacityEvictsOldest()
@@ -323,13 +323,13 @@ void PreviewSwitchEngineTest::lru_buildAtCapacityEvictsOldest()
     for (int t = 1; t <= 5; ++t) {
         const auto r = e.materialize(t);
         QCOMPARE(r.kind, Materialize::Build);
-        QCOMPARE(r.evictedTask, PreviewSwitchEngine::kNoTask);
+        QVERIFY(!r.evictedTask.has_value());
     }
     QCOMPARE(e.parkedTasks(), QVector<int>({1, 2, 3, 4}));
 
     const auto r = e.materialize(6); // parks 5 -> depth 5 -> evict 1
     QCOMPARE(r.kind, Materialize::BuildEvicting);
-    QCOMPARE(r.evictedTask, 1);
+    QCOMPARE(r.evictedTask.value_or(-1), 1);
     QCOMPARE(e.parkedTasks(), QVector<int>({2, 3, 4, 5}));
 }
 
@@ -354,7 +354,7 @@ void PreviewSwitchEngineTest::lru_dropRemovesWithoutEvictionSideEffects()
     // the freed slot means the next build does NOT evict
     const auto r = e.materialize(6); // parks 5 -> depth 4, no eviction
     QCOMPARE(r.kind, Materialize::Build);
-    QCOMPARE(r.evictedTask, PreviewSwitchEngine::kNoTask);
+    QVERIFY(!r.evictedTask.has_value());
     QCOMPARE(e.parkedTasks(), QVector<int>({1, 3, 4, 5}));
 }
 

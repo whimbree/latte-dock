@@ -61,16 +61,17 @@ bool PreviewSwitchBridge::shouldDeferSwitch(QObject *task, bool dialogVisible)
 
 QObject *PreviewSwitchBridge::pendingTask() const
 {
-    return m_taskById.value(m_engine.pendingTask(), nullptr);
+    const auto id = m_engine.pendingTask();
+    return id ? m_taskById.value(*id, nullptr) : nullptr;
 }
 
 QObject *PreviewSwitchBridge::settlePending(bool pendingStillHovered, bool dialogVisible)
 {
-    const int task = m_engine.settle(pendingStillHovered, dialogVisible);
+    const auto id = m_engine.settle(pendingStillHovered, dialogVisible);
     //! a pending task that died before the settle fired has no map entry
     //! anymore (dropTask erased it); returning null makes the timer adopt
     //! nothing, which is the correct outcome for that race
-    return m_taskById.value(task, nullptr);
+    return id ? m_taskById.value(*id, nullptr) : nullptr;
 }
 
 void PreviewSwitchBridge::shown(QObject *task)
@@ -124,7 +125,7 @@ QVariantMap PreviewSwitchBridge::materialize(QObject *task)
     verdict.insert(QStringLiteral("changed"), result.kind != PreviewSwitchEngine::Materialize::KeepActive);
     verdict.insert(QStringLiteral("fresh"), result.fresh);
     verdict.insert(QStringLiteral("revive"), result.kind == PreviewSwitchEngine::Materialize::Revive);
-    verdict.insert(QStringLiteral("evict"), result.evictedTask != PreviewSwitchEngine::kNoTask);
+    verdict.insert(QStringLiteral("evict"), result.evictedTask.has_value());
     return verdict;
 }
 

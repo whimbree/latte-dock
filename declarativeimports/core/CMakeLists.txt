@@ -4,6 +4,7 @@ set(lattecoreplugin_SRCS
     lattecoreplugin.cpp
     badgemathtools.cpp
     dialog.cpp
+    dropclassifiertools.cpp
     environment.cpp
     iconitem.cpp
     parabolicmathtools.cpp

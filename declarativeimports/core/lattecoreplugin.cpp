@@ -10,6 +10,7 @@
 // local
 #include "badgemathtools.h"
 #include "dialog.h"
+#include "dropclassifiertools.h"
 #include "environment.h"
 #include "iconitem.h"
 #include "parabolicmathtools.h"
@@ -33,6 +34,7 @@ void LatteCorePlugin::registerTypes(const char *uri)
     qmlRegisterType<Latte::IconItem>(uri, 0, 2, "IconItem");
     qmlRegisterType<Latte::Quick::Dialog>(uri, 0, 2, "Dialog");
     qmlRegisterType<Latte::WheelStepper>(uri, 0, 2, "WheelStepper");
+    qmlRegisterSingletonType<Latte::DropClassifierTools>(uri, 0, 2, "DropClassifier", &Latte::dropclassifiertools_qobject_singletontype_provider);
     qmlRegisterSingletonType<Latte::Environment>(uri, 0, 2, "Environment", &Latte::environment_qobject_singletontype_provider);
     qmlRegisterSingletonType<Latte::Tools>(uri, 0, 2, "Tools", &Latte::tools_qobject_singletontype_provider);
     qmlRegisterSingletonType<Latte::ParabolicMathTools>(uri, 0, 2, "ParabolicMath", &Latte::parabolicmathtools_qobject_singletontype_provider);

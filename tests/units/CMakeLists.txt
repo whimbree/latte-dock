@@ -205,3 +205,13 @@ target_link_libraries(colortoolstest
 # refusals run instrumented).
 latte_add_unit_test(scrollmathtest
     ${CMAKE_SOURCE_DIR}/plasmoid/plugin/scrolloverflowmath.cpp)
+
+# EX-14 DropEventClassifier: header-only pure classification + routing,
+# plus its QML-facing wrapper compiled IN per the sanitized-core rule
+# (the boundary refusals and QJSValue predicate marshalling run
+# instrumented); Qt6::Qml for QJSEngine/QJSValue.
+latte_add_unit_test(dropclassifiertest
+    ${CMAKE_SOURCE_DIR}/declarativeimports/core/dropclassifiertools.cpp)
+target_link_libraries(dropclassifiertest
+    Qt6::Gui
+    Qt6::Qml)

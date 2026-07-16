@@ -1827,7 +1827,24 @@ multi-view, multi-monitor setup.
       edit-mode mustBeShown revived it); a dock STARTED under a locked
       screen stalls for minutes before "Adding View" runs. Reproduce
       with loginctl lock-session/unlock-session and the screenshot
-      loop, then trace the visibility/startup state machine
+      loop, then trace the visibility/startup state machine.
+      REPRO ATTEMPT 2026-07-16 (throwaway, one cycle): loginctl
+      lock-session 3, 40s hold, unlock - CLEAN. Dock survived, all
+      five views stayed mapped (dumpwins before/after), no ~20s exit,
+      no invisibility. IMPORTANT nuance: a short lock never blanks
+      the outputs, and the historical fingerprint ("CLEARED SCREEN",
+      remove/re-add) is an OUTPUT event - the failing ingredient is
+      DPMS/output-off, not the locker itself. Next repro needs a
+      kscreen-doctor --dpms off cycle or a long lock (past the
+      display-sleep timer) - hostile while I am at the desk, so it
+      waits for a coordinated or idle moment. The ~20s mystery exit
+      remains armed with the full quit trail + lifecycleState; the
+      next natural occurrence names its trigger. (Mid-repro note: the
+      "uninvoked chrome + duplicate view" seen in the log at
+      18:09:15-19 was MY OWN hands at the desk - ParabolicEventsArea
+      first-hover warnings at 18:09:12 prove a real pointer - not an
+      uninvoked-action defect; do not conflate with the round-27
+      boot-time uninvoked config view, which had no human.)
       Commits:
 - [x] Implement session shutdown/logout handling as one deliberate
       pattern rather than iterating. RESOLVED 2026-07-16 against the

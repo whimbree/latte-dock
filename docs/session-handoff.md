@@ -41,6 +41,18 @@ Driving docs/prompts/stabilization-execution-prompt.md top to bottom.
    port; the autostart story needs my decision (plan item has the
    detail), and no reboot/login has happened since June 25 anyway.
 
+3. PARTIAL - Lock/unlock visibility (priority item 3): one clean
+   throwaway cycle (lock 40s, unlock): dock survived, five views
+   mapped before AND after, no ~20s exit, no invisibility. The
+   missing ingredient is an OUTPUT-OFF event (DPMS), which a short
+   lock never produces - the DPMS-cycle arm is deferred to a
+   coordinated/idle moment (I was at the desk and the lock already
+   interrupted me once). Both mystery symptoms stay armed with the
+   new quit trail + lifecycleState readback. THROWAWAY LAYOUT STATE:
+   it now carries MY extra duplicated bottom dock on DP-2 (view 14,
+   I made it by hand at 18:09 while poking the throwaway mid-repro)
+   - expect SIX views next -d run, or remove view 14 first.
+
 ## MODEL-TRANSITION PRIORITY STACK (2026-07-15 evening, read this first)
 
 A strong model (Fable 5) is available for only a few more days, then

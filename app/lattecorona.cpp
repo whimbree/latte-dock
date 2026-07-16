@@ -39,6 +39,7 @@
 #include "tools/commontools.h"
 #include "view/originalview.h"
 #include "view/view.h"
+#include "view/settings/primaryconfigview.h"
 #include "view/settings/viewsettingsfactory.h"
 #include "view/windowstracker/windowstracker.h"
 #include "view/windowstracker/allscreenstracker.h"
@@ -1246,6 +1247,44 @@ QStringList Corona::viewAppletsOrder(const uint &containmentId)
     }
 
     return order;
+}
+
+void Corona::setViewEditMode(const uint &containmentId, const bool &editing)
+{
+    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+
+    if (!view) {
+        qWarning() << "corona: setViewEditMode requested for containment" << containmentId << "which has no view";
+        return;
+    }
+
+    if (editing) {
+        //! the same ensemble the context menu's Edit Dock... lands in: that
+        //! entry emits configureRequested -> View::showConfigurationInterface,
+        //! which TOGGLES the chrome; showSettingsWindow() is the enter-only
+        //! wrapper around the identical path (mustBeShown + configuration
+        //! interface + window activities), already used by the global
+        //! shortcut and by clones redirecting to their original. Idempotent
+        //! when the settings chrome is already shown for this view.
+        view->showSettingsWindow();
+        return;
+    }
+
+    //! the same exit the settings chrome's close button uses
+    //! (LatteDockConfiguration.qml -> viewConfig.hideConfigWindow()). The
+    //! chrome is a shared singleton, so it may only be hidden when it is
+    //! parented to THIS view - hiding it otherwise would end another view's
+    //! editing session. Deliberately NOT gated on isVisible(): an exit
+    //! racing the chrome's deferred show must still cancel it, which
+    //! hideConfigWindow's cancelDeferredShow handles.
+    auto configView = m_viewSettingsFactory->primaryConfigView();
+
+    if (!view->inEditMode() || !configView || configView->parentView() != view) {
+        qWarning() << "corona: setViewEditMode exit requested for containment" << containmentId << "which is not in edit mode";
+        return;
+    }
+
+    configView->hideConfigWindow();
 }
 
 QString Corona::viewsData()

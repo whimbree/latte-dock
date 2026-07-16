@@ -206,6 +206,11 @@ public Q_SLOTS:
     void moveViewToLayout(const uint &containmentId, const QString &layoutName);
     void removeView(const uint &containmentId);
 
+    //! D-Bus coarse action (docs/dbus-observability-interface.md): enter or
+    //! leave a view's edit mode through the same paths the context menu's
+    //! Edit Dock... entry and the settings chrome's close button use
+    void setViewEditMode(const uint &containmentId, const bool &editing);
+
     void setBackgroundFromBroadcast(QString activity, QString screenName, QString filename);
     void setBroadcastedBackgroundsEnabled(QString activity, QString screenName, bool enabled);
     void showAlternativesForApplet(Plasma::Applet *applet);

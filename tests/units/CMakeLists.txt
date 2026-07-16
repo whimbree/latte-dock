@@ -30,3 +30,11 @@ ecm_add_test(parabolicmathtest.cpp
 )
 set_tests_properties(parabolicmathtest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# EX-02 ParabolicRouter: header-only pure routing walk.
+ecm_add_test(parabolicroutertest.cpp
+    TEST_NAME parabolicroutertest
+    LINK_LIBRARIES Qt6::Test
+)
+set_tests_properties(parabolicroutertest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")

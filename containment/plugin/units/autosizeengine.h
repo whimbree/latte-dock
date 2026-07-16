@@ -136,6 +136,7 @@ struct ShrinkResult {
 inline ShrinkResult shrinkUntilFits(int maxIconSize, int currentIconSize,
                                     double layoutLength, double toShrinkLimit)
 {
+    Q_ASSERT(maxIconSize >= 1); //! a non-positive ceiling is a caller bug
     Q_ASSERT(currentIconSize >= 1); //! projection divides by it
 
     int nextIconSize = maxIconSize;
@@ -164,6 +165,7 @@ struct GrowResult {
 inline GrowResult growWhileFits(int maxIconSize, int currentIconSize,
                                 double layoutLength, double toGrowLimit)
 {
+    Q_ASSERT(maxIconSize >= 1); //! a non-positive ceiling would "apply" size 0
     Q_ASSERT(currentIconSize >= 1); //! projection divides by it
 
     int nextIconSize = currentIconSize;
@@ -239,6 +241,7 @@ inline AutoSizeStep step(const AutoSizeInput &input, History &history)
 {
     Q_ASSERT(input.maxLength > 0); //! the QML shell's <= 0 contract keeps this out
     Q_ASSERT(input.currentIconSize >= 1); //! projection divides by it
+    Q_ASSERT(input.maxIconSize >= 1); //! a non-positive ceiling is a caller bug
 
     const double toShrinkLimit = input.maxLength - (input.zoomFactor * input.itemLength);
     const double toGrowLimit = input.maxLength - (1.2 * input.zoomFactor * input.itemLength);

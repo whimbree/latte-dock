@@ -22,9 +22,25 @@
 
 #include <QtTest>
 
+// C++
+#include <type_traits>
+#include <variant>
+
 #include "../../containment/plugin/units/autosizeengine.h"
 
 using namespace Latte::AutoSizeEngine;
+
+// The invalid states the type discipline eliminates, proven unrepresentable
+// at compile time (step-2.5 law): a "nothing found" or "restore automatic"
+// outcome cannot smuggle a garbage size along (the alternatives carry no
+// payload), and the outcome set is closed - the wrapper's std::visit
+// dispatch static_asserts exhaustiveness against exactly these three.
+static_assert(std::is_empty_v<KeepCurrent>,
+              "KeepCurrent must not carry a size for callers to misread");
+static_assert(std::is_empty_v<RestoreAutomaticMax>,
+              "RestoreAutomaticMax must not carry a size; -1 exists only at the QML boundary");
+static_assert(std::variant_size_v<AutoSizeStep> == 3,
+              "AutoSizeStep grew an alternative: extend the tests and the wrapper dispatch");
 
 class AutoSizeEngineTest : public QObject
 {
@@ -47,6 +63,9 @@ private Q_SLOTS:
     void step_growMidRangeAppliesSize();
     void step_protectorBlocksRepeatingGrow();
     void step_noFitGrowKeepsCurrentAndHistory();
+    void step_zeroItemLengthCollapsesTheBand();
+    void step_zeroLayoutLengthGrowsToCeiling();
+    void step_growRightAfterBoundaryShrinkIsRejected();
 };
 
 namespace {
@@ -398,6 +417,61 @@ void AutoSizeEngineTest::step_noFitGrowKeepsCurrentAndHistory()
 
     QVERIFY(std::holds_alternative<KeepCurrent>(result));
     QCOMPARE(history.size(), 0);
+}
+
+void AutoSizeEngineTest::step_zeroItemLengthCollapsesTheBand()
+{
+    // itemLength 0 makes both limits equal maxLength (no zoom reserve to
+    // subtract): under it grows, over it shrinks, exactly at it keeps -
+    // the degenerate band is empty, not a trap. The grow stops at 56: the
+    // ceiling candidate 64 projects exactly 1000, and the strict < keeps
+    // a projection AT the limit out
+    History history;
+
+    const AutoSizeInput under = makeInput(500.0, 1000.0, 0.0, 32, 64, 1.6, std::optional<int>(32));
+    const AutoSizeStep grown = step(under, history);
+    const auto *applied = std::get_if<ApplySize>(&grown);
+    QVERIFY(applied);
+    QCOMPARE(applied->iconSize, 56);
+
+    history.clear();
+    const AutoSizeInput over = makeInput(1500.0, 1000.0, 0.0, 32, 64, 1.6, std::optional<int>(32));
+    QVERIFY(std::holds_alternative<ApplySize>(step(over, history)));
+
+    history.clear();
+    const AutoSizeInput exact = makeInput(1000.0, 1000.0, 0.0, 32, 64, 1.6, std::optional<int>(32));
+    QVERIFY(std::holds_alternative<KeepCurrent>(step(exact, history)));
+}
+
+void AutoSizeEngineTest::step_zeroLayoutLengthGrowsToCeiling()
+{
+    // an empty row projects 0 at every candidate, so a grow saturates at
+    // the ceiling and restores automatic sizing instead of looping
+    History history;
+    const AutoSizeInput input = makeInput(0.0, 1000.0, 64.0, 32, 64, 1.6, std::optional<int>(32));
+    QVERIFY(std::holds_alternative<RestoreAutomaticMax>(step(input, history)));
+}
+
+void AutoSizeEngineTest::step_growRightAfterBoundaryShrinkIsRejected()
+{
+    // the spec's asymmetric-limits case, driven as consecutive passes: a
+    // shrink exits just under the shrink limit (1000 at icon 64 against
+    // toShrinkLimit 897.6 applies 56, projecting 875), the re-measure sits
+    // inside the grow window (875 < toGrowLimit 877.12) so the grow branch
+    // ARMS, but the only candidate 64 projects 1000 again and does not
+    // fit - the 1.2x margin leaves no room for a bounce-back grow at the
+    // boundary
+    History history;
+
+    const AutoSizeInput overflow = makeInput(1000.0, 1000.0, 64.0, 64, 64, 1.6, std::nullopt);
+    const AutoSizeStep shrunk = step(overflow, history);
+    const auto *applied = std::get_if<ApplySize>(&shrunk);
+    QVERIFY(applied);
+    QCOMPARE(applied->iconSize, 56);
+
+    const AutoSizeInput remeasured = makeInput(875.0, 1000.0, 64.0, 56, 64, 1.6, std::optional<int>(56));
+    QVERIFY(std::holds_alternative<KeepCurrent>(step(remeasured, history)));
+    QCOMPARE(history.size(), 1); // the rejected grow recorded nothing
 }
 
 QTEST_GUILESS_MAIN(AutoSizeEngineTest)

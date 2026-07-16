@@ -1,5 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2018 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -7,7 +9,6 @@
 #define COMMONTOOLS_H
 
 // Qt
-#include <QColor>
 #include <QRect>
 #include <QString>
 
@@ -16,13 +17,9 @@ class QWindow;
 
 namespace Latte {
 
-float colorBrightness(QColor color);
-float colorBrightness(QRgb rgb);
-float colorBrightness(float r, float g, float b);
-
-float colorLumina(QColor color);
-float colorLumina(QRgb rgb);
-float colorLumina(float r, float g, float b);
+// the color brightness/luminance helpers moved to the ColorTools pure core
+// (declarativeimports/core/units/colortools.h, EX-19 in
+// docs/QML_EXTRACTION_PLAN.md) - one authority instead of nine copies
 
 QString rectToString(const QRect &rect);
 QRect stringToRect(const QString &str);

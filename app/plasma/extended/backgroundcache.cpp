@@ -7,6 +7,7 @@
 
 // local
 #include "../../tools/commontools.h"
+#include "../../../declarativeimports/core/units/colortools.h"
 
 // Qt
 #include <QDebug>
@@ -217,7 +218,7 @@ float BackgroundCache::brightnessFromArea(QImage &image, int firstRow, int first
 
             for (int col = firstColumn; col < endColumn ; ++col) {
                 QRgb pixelData = line[col];
-                float pixelBrightness = Latte::colorBrightness(pixelData);
+                float pixelBrightness = Latte::ColorTools::colorBrightness(pixelData);
 
                 areaBrightness = (areaBrightness == -1000) ? pixelBrightness : (areaBrightness + pixelBrightness);
             }
@@ -378,7 +379,7 @@ float BackgroundCache::brightnessForFile(QString imageFile, Plasma::Types::Locat
 
     //! if it is a color
     if (imageFile.startsWith("#")) {
-        return Latte::colorBrightness(QColor(imageFile));
+        return Latte::ColorTools::colorBrightness(QColor(imageFile));
     }
 
     updateImageCalculations(imageFile, location);

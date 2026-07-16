@@ -7,6 +7,7 @@
 
 //! local
 #include "../../tools/commontools.h"
+#include "../../../declarativeimports/core/units/colortools.h"
 
 //! Qt
 #include <QDebug>
@@ -88,7 +89,7 @@ void PatternWidget::setTextColor(const QString &color)
     }
 
     m_textColor = color;
-    m_textColorBrightness = Latte::colorBrightness(QColor(color));
+    m_textColorBrightness = Latte::ColorTools::colorBrightness(QColor(color));
 
     Q_EMIT textColorChanged();
 }

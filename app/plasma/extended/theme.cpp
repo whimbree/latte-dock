@@ -14,6 +14,7 @@
 #include "../../view/panelshadows_p.h"
 #include "../../wm/schemecolors.h"
 #include "../../tools/commontools.h"
+#include "../../../declarativeimports/core/units/colortools.h"
 
 // Qt
 #include <QDebug>
@@ -428,8 +429,8 @@ void Theme::loadThemePaths()
 
 void Theme::loadThemeLightness()
 {
-    float textColorLum = Latte::colorLumina(m_defaultScheme->textColor());
-    float backColorLum = Latte::colorLumina(m_defaultScheme->backgroundColor());
+    float textColorLum = Latte::ColorTools::colorLumina(m_defaultScheme->textColor());
+    float backColorLum = Latte::ColorTools::colorLumina(m_defaultScheme->backgroundColor());
 
     if (backColorLum > textColorLum) {
         m_isLightTheme = true;

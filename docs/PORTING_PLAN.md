@@ -2081,13 +2081,26 @@ multi-view, multi-monitor setup.
       vs acceptable noise; (b) our own BindingsExternal.qml:281 reads
       'localGeometry' of null twice during startup; (c) digitalclock
       Tooltip.qml 'text' of null, third-party internal noise.
-      Also still owed: the at-the-desk semantic walk of
-      every control on both tabs against Qt5 (check especially
-      TaskMouseArea handling all 9 TaskAction enum values - ng
-      eabf7c89a found 3/9, 5/9, 5/9 handled for left/middle/modifier
-      clicks - and ConfigInteraction.qml cfg_hoverAction hardcoded to
-      NoneAction in ng before their fix)
-      Commits: 32df5b47 (Tasks page config access)
+      AUDIT PROGRESS 2026-07-16 (the named sub-checks, done from
+      code + pinned sources): (a) TaskMouseArea/TaskAction coverage
+      is ALREADY the fixed shape here - the action->command mapping
+      is a single source of truth (code/TaskActions.js, written
+      explicitly against ng's 9-offered-3-handled bug) and
+      tst_taskactions.qml pins that every value each config combo
+      offers resolves to a real command; nothing to fix. (b)
+      ConfigInteraction.qml cfg_hoverAction is properly aliased to
+      the combo with a bidirectional enum<->index mapping - ng's
+      hardcoded-NoneAction defect is not present. (c) The
+      folder-view isScreenUiReady decision RESOLVED as a shim
+      (b8a489c84): the missing invokable left the applet's isUiReady
+      undefined-falsy forever, worse than noise. STILL OWED and
+      needs my hands: the full at-the-desk semantic walk of every
+      control on every page against Qt5 feel/behavior (the
+      Tasks-config lesson - a control that renders but applies
+      nothing - can only be caught by driving each one and watching
+      the dock respond).
+      Commits: 32df5b47 (Tasks page config access), b8a489c84
+      (isScreenUiReady shim)
 - [x] Edit-mode canvas can stay on the previous output after a
       screen-only relocation with edit mode open (observed ONCE live:
       top dock DP-2 -> DP-3 left the canvas band at DP-2's top with
@@ -2216,9 +2229,14 @@ showed how much of the dock can only be driven by a pointer today.
       on should be pull-queryable, not log-scraped.
       SEED LANDED 2026-07-16: lifecycleState() readback
       (startup/running/quit-requested/unloaded) shipped with the
-      session-shutdown work (9d183984e); the full reviewed interface
-      design remains this item's job.
-      Commits:
+      session-shutdown work (9d183984e) and viewAppletsOrder with the
+      clone-sync work (f7561df37). THE REVIEWED INTERFACE DESIGN IS
+      WRITTEN: docs/dbus-observability-interface.md (read surfaces as
+      JSON keyed on containment id, coarse actions, the debug gate,
+      the rejected-with-reasons list, and the 4-step landing order -
+      viewsData + setViewEditMode first). Implementation proceeds
+      per that document.
+      Commits: 9d183984e, f7561df37 (seeds)
 - [ ] Convert nondeterministic e2e tests to deterministic ones: every
       screenshot-compare or sleep-and-hope check that is really about
       STATE moves to a deterministic D-Bus-driven or offscreen-qmltest

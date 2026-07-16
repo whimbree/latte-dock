@@ -2271,18 +2271,41 @@ showed how much of the dock can only be driven by a pointer today.
       real, reproducible, user-facing bugs went unnoticed for a long
       time under exactly that kind of confidence
       Commits:
-- [ ] Stand up the e2e harness deferred from Phase 0's
-      test-infrastructure decision (real widget add/remove driven
-      through KWin D-Bus with actual screenshot capture, modeled on
-      latte-dock-qt6's) and verify the coverage ratchet baseline is
-      still honest against the Phase 0 standard. A microvm is planned to
-      provide a microvm for real-GUI CI; tests written meanwhile
-      should assume that runtime (fakepointer already covers
-      move/click/rightclick/drag/glide/scroll - drag doubles as
-      drag-and-drop since it is press/waypoints/release).
-      GUI-CI-candidate tests banked so far: widget-explorer->dock
-      drag-add, AlternativesHelper applet swap (needs a live applet),
-      the settings-window cold-open geometry loop.
+- [ ] CaptSilver testability adoption (REPLACES the microvm GUI-CI
+      plan, my direction 2026-07-16; the full analysis is
+      docs/captsilver-testability-adoption.md and the study record is
+      docs/agent-logs/2026-07-16-captsilver-testability-study.md).
+      HARD CONSTRAINT: everything must run in CI under a plain
+      VM - no real GPU. Sub-items, in adoption order:
+      - [ ] P1: the sceneprobe visual-regression harness,
+            lavapipe-only (QQuickRenderControl + QRhiTextureRenderTarget
+            readback under nested kwin_wayland --virtual; fixed-step
+            animation driver; three failure gates; two-parameter
+            comparator; per-scene tolerance overrides; explicit bless
+            flow with gate self-test). Bless OUR goldens in the nix
+            environment, pin fonts in scenes, write scenes for our own
+            defect history (ShadowedItem padding, colorizer stack,
+            monochromatic icons, BadgeEffect, MultiEffect permutations).
+            Commits:
+      - [ ] P2: the Plasma-6 silent-failure contract pins
+            (createApplet QRectF, KPluginMetaData path ctor, knsrc
+            KPackageStructure, no-ActionPlugins default, internalAction
+            handle, Binding.restoreMode zoom collapse) - each verified
+            against Qt5 semantics first.
+            Commits:
+      - [ ] P3: behavioral tests over lattedock-core (screenpool,
+            visibility-reveal, abstractlayout, activitiesinfo,
+            syncedlaunchers client demotion, lastactivewindow, the
+            vendored plasmoid backend pins, data types, settings
+            models).
+            Commits:
+      - [ ] P4: e2e pixel assertions (latte-imgdiff + KWin ScreenShot2
+            before/after under nested kwin, D-Bus-driven, seeded HOME);
+            fakepointer keeps covering live pointer-delivery tests.
+            GUI-CI-candidate tests already banked: widget-explorer
+            drag-add, AlternativesHelper swap, settings-window
+            cold-open geometry loop.
+            Commits:
       Commits:
 - [x] SYNC PASS 2026-07-14 (record; hashes updated in CLAUDE.md):
       latte-dock-ng through 456154efb (10 commits): FOLDED

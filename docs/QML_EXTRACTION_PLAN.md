@@ -1524,6 +1524,47 @@ Conventions used by all specs:
 
 ### EX-11 LauncherListOps [delegate-safe]
 
+- Commits: 490c8ad4 (tests/qml/tst_launcherlistops.qml written FIRST
+  against the shipped bodies - registries, count latches, the
+  validator's four observable outcomes driven through the real Timer -
+  and kept green across all three cutovers as the twin-equivalence
+  evidence), 91bc91d8 (core + LauncherListOps singleton +
+  TasksExtendedRegistries wrappers + 29 sanitized test slots;
+  permutation tables generated in-test with std::next_permutation),
+  958f0547 (plugins.qmltypes for the new registrations), 27c3cf58
+  (Launchers.qml cutover, qmllint 33->0), 49ae22df (registry cutover,
+  17->0), e1eb38b8 (planner cutover, 7->0) - registry and planner
+  cutovers separate per the risk line below. Execution corrections
+  and recorded deviations (details in docs/agent-logs/EX-11.md):
+  (a) `currentStoredLauncherList` is UNCALLED - here AND at f0ad7b23;
+  dead Qt5-inherited ability API, not live parsing logic as this spec
+  assumed. The grammar is real live data (launchers59 and the host
+  lists, written by libtaskmanager launcherList(), verified at the
+  pinned v6.6.5:365), so the core owns it per the interface and the
+  function stays as a one-line shell with the finding recorded on it.
+  (b) Activity matching is parsed-list membership; Qt5
+  substring-scanned the raw record, so an id inside the URL text
+  false-matched - unrepresentable now. Malformed records (tag without
+  newline, empty tail, empty tag, bracket-in-url) are refused loudly
+  instead of Qt5's silent mis-reads. (c) The planner is named
+  planMoves (verb-first law) and is the left-to-right pull: minimal
+  for adjacent swaps, termination proven (applying plan[0] strictly
+  shrinks the plan, exhaustive n<=5), deliberately not LIS-minimal
+  (obviousness beats optimality at n<=20, one move per 400ms tick).
+  The shell keeps Qt5's one-move-per-tick cadence. (d) Qt5's
+  length-mismatched-goal shape fell into the 'why we reached ???'
+  branch that neither stopped nor restarted (silent dead-stop, never
+  synced); it is now the ordinary settling-restart. (e) Empty launcher
+  urls are refused loudly at the registry boundary (Qt5 pushed an
+  inert ghost whose add latched the paused-state counts until the 30s
+  GC). (f) The waiting/to-be-added substring equality's WHY is
+  established and tested: the same launcher travels as bare url and as
+  url?iconData=... (launcherUrlWithIcon), and probes use whichever
+  spelling they hold. (g) freeSeparatorName keeps launcherPosition as
+  the live existence oracle (shell filters the core's candidate list),
+  honoring this spec's `freeSeparatorName(existing)` interface without
+  swapping the Qt5 query path. Live recipe pending at merge
+  (docs/agent-logs/EX-11.md carries the exact recipes).
 - Header: `plasmoid/plugin/units/launcherlistops.h`
 - Responsibility: launcher list algebra - stored-record parsing,
   separator name allocation, order reconciliation planning, and the

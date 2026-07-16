@@ -1094,6 +1094,15 @@ PlasmoidItem {
 
         TasksLayout.MouseHandler {
             id: mouseHandler
+            //! document ids outrank the shell's same-named properties
+            //! here, so these resolve to the ids (the EX-14 injection
+            //! seam); toolTipDelegate is a root property, not an id
+            tasksRoot: root
+            backend: backend
+            tasksModel: tasksModel
+            windowsPreviewDlg: windowsPreviewDlg
+            toolTipDelegate: root.toolTipDelegate
+            appletAbilities: _appletAbilities
             anchors.bottom: (root.location === PlasmaCore.Types.BottomEdge) ? scrollableList.bottom : undefined
             anchors.top: (root.location === PlasmaCore.Types.TopEdge) ? scrollableList.top : undefined
             anchors.left: (root.location === PlasmaCore.Types.LeftEdge) ? scrollableList.left : undefined
@@ -1137,11 +1146,15 @@ PlasmoidItem {
                 function onLocationChanged() { mouseHandler.reassertSizeBindings(); }
             }
 
-            property int maxThickness: ((appletAbilities.parabolic.isEnabled && appletAbilities.parabolic.isHovered)
-                                        || (appletAbilities.parabolic.isEnabled && windowPreviewIsShown)
-                                        || appletAbilities.animations.hasThicknessAnimation) ?
-                                           appletAbilities.metrics.mask.thickness.maxZoomedForItems : // dont clip bouncing tasks when zoom=1
-                                           appletAbilities.metrics.mask.thickness.normalForItems
+            //! _appletAbilities by id, not the injected appletAbilities
+            //! property: a BINDING can evaluate before the injected
+            //! property is assigned (the EX-04 startup-order class);
+            //! the document id always resolves
+            property int maxThickness: ((_appletAbilities.parabolic.isEnabled && _appletAbilities.parabolic.isHovered)
+                                        || (_appletAbilities.parabolic.isEnabled && windowPreviewIsShown)
+                                        || _appletAbilities.animations.hasThicknessAnimation) ?
+                                           _appletAbilities.metrics.mask.thickness.maxZoomedForItems : // dont clip bouncing tasks when zoom=1
+                                           _appletAbilities.metrics.mask.thickness.normalForItems
 
             function onlyLaunchersInDroppedList(list){
                 return list.every(function (item) {

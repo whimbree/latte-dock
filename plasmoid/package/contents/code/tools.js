@@ -135,21 +135,5 @@ function activateNextPrevTask(next) {
     tasksModel.requestActivate(taskIndexList[target]);
 }
 
-function insertIndexAt(above, x, y) {
-    if (above && above.itemIndex) {
-        return above.itemIndex;
-    } else {
-        var distance = root.vertical ? y : x;
-        //var step = root.vertical ? LayoutManager.taskWidth() : LayoutManager.taskHeight();
-        var step = appletAbilities.metrics.totals.length;
-        var stripe = Math.ceil(distance / step);
-
-        /* if (stripe === LayoutManager.calculateStripes()) {
-            return tasksModel.count - 1;
-        } else {
-            return stripe * LayoutManager.tasksPerStripe();
-        }*/
-
-        return stripe-1;
-    }
-}
+//! insertIndexAt moved to C++ (LatteCore.DropClassifier, EX-14 in
+//! docs/QML_EXTRACTION_PLAN.md); MouseHandler.qml was its only caller.

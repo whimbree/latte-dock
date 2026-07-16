@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -12,12 +13,27 @@ import org.kde.draganddrop 2.0
 
 import org.kde.taskmanager 0.1 as TaskManager
 
-import "../../code/tools.js" as TaskTools
+import org.kde.latte.core 0.2 as LatteCore
 
+//! Thin drag/drop shell (EX-14, docs/QML_EXTRACTION_PLAN.md): mime
+//! classification and the onDragMove suppression/reorder routing come
+//! from LatteCore.DropClassifier; this file keeps the scene effects
+//! (model moves, hover bookkeeping, preview windows) and the trivial
+//! live reads the snapshot marshals. Identity comparisons (above vs
+//! ignoredItem/hoveredItem/dragSource) stay here, where the object
+//! references live.
 Item {
     // signal urlDropped(url url)
     id: dArea
     signal urlsDropped(var urls)
+
+    //! injected from main.qml (document ids outrank these names there)
+    property Item tasksRoot
+    property QtObject backend
+    property QtObject tasksModel
+    property QtObject windowsPreviewDlg
+    property Item toolTipDelegate
+    property Item appletAbilities
 
     property Item target
     property Item ignoredItem
@@ -38,15 +54,15 @@ Item {
         interval: 200
 
         onTriggered: {
-            ignoredItem = null;
+            dArea.ignoredItem = null;
         }
     }
 
     Connections {
-        target: root
-        onDragSourceChanged: {
-            if (!dragSource) {
-                ignoredItem = null;
+        target: dArea.tasksRoot
+        function onDragSourceChanged() {
+            if (!dArea.tasksRoot.dragSource) {
+                dArea.ignoredItem = null;
                 ignoreItemTimer.stop();
             }
         }
@@ -62,35 +78,15 @@ Item {
         property bool inMovingTask: false
         property bool inDroppingFiles: false
 
+        //! the OR of the stored flags rather than a core call: it must
+        //! recompute when clearDroppingFlags() resets them, and the flag
+        //! values themselves are the classifier's single-authority answer
         readonly property bool eventIsAccepted: inMovingTask || inDroppingSeparator || inDroppingOnlyLaunchers || inDroppingFiles
 
         property int droppedPosition: -1;
         property Item hoveredItem
 
-        function isDroppingSeparator(event) {
-            var appletName = String(event.mimeData.getDataAsByteArray("text/x-plasmoidservicename"));
-            var isSeparator = (appletName === "audoban.applet.separator" || appletName === "org.kde.latte.separator");
-
-            return ((event.mimeData.formats.indexOf("text/x-plasmoidservicename") === 0) && isSeparator);
-        }
-
-        function isDroppingOnlyLaunchers(event) {
-            if (event.mimeData.hasUrls || (event.mimeData.formats.indexOf("text/x-plasmoidservicename") !== 0)) {
-                var onlyLaunchers = event.mimeData.urls.every(function (item) {
-                    return backend.isApplication(item)
-                });
-
-                return onlyLaunchers;
-            }
-
-            return false;
-        }
-
-        function isMovingTask(event) {
-            return event.mimeData.formats.indexOf("application/x-orgkdeplasmataskmanager_taskbuttonitem") >= 0;
-        }
-
-        function clearDroppingFlags() {
+        function clearDroppingFlags(): void {
             inDroppingFiles = false;
             inDroppingOnlyLaunchers = false;
             inDroppingSeparator = false;
@@ -98,22 +94,20 @@ Item {
         }
 
         onHoveredItemChanged: {
-            if (hoveredItem && windowsPreviewDlg.activeItem && hoveredItem !== windowsPreviewDlg.activeItem ) {
-                windowsPreviewDlg.hide(6.7);
+            if (hoveredItem && dArea.windowsPreviewDlg.activeItem && hoveredItem !== dArea.windowsPreviewDlg.activeItem ) {
+                dArea.windowsPreviewDlg.hide(6.7);
             }
         }
 
         onDragEnter: (event) => {
-            inMovingTask = isMovingTask(event);
-            inDroppingOnlyLaunchers = !inMovingTask && isDroppingOnlyLaunchers(event);
-            inDroppingSeparator = !inMovingTask && isDroppingSeparator(event);
-            inDroppingFiles = !inDroppingOnlyLaunchers && event.mimeData.hasUrls;
+            const flags = LatteCore.DropClassifier.classifyTasksDrag(
+                        event.mimeData,
+                        (url) => { return dArea.backend.isApplication(url); });
 
-            /*console.log(" tasks moving task :: " + inMovingTask);
-            console.log(" tasks only launchers :: " + inDroppingOnlyLaunchers);
-            console.log(" tasks separator :: " + inDroppingSeparator);
-            console.log(" tasks only files :: " + inDroppingFiles);
-            console.log(" tasks event accepted :: " + eventIsAccepted);*/
+            inMovingTask = flags.movingTask;
+            inDroppingOnlyLaunchers = flags.droppingOnlyLaunchers;
+            inDroppingSeparator = flags.droppingSeparator;
+            inDroppingFiles = flags.droppingFiles;
 
             if (!eventIsAccepted) {
                 clearDroppingFlags();
@@ -133,64 +127,71 @@ Item {
 
             dArea.containsDrag = true;
 
-            if (target.animating) {
+            if (dArea.target.animating) {
                 return;
             }
 
-            var eventToTarget = mapToItem(target, event.x, event.y);
+            var eventToTarget = mapToItem(dArea.target, event.x, event.y);
 
-            var above = target.childAtPos(eventToTarget.x, eventToTarget.y);
+            var above = dArea.target.childAtPos(eventToTarget.x, eventToTarget.y);
 
-            // If we're mixing launcher tasks with other tasks and are moving
-            // a (small) launcher task across a non-launcher task, don't allow
-            // the latter to be the move target twice in a row for a while, as
-            // it will naturally be moved underneath the cursor as result of the
-            // initial move, due to being far larger than the launcher delegate.
+            // The suppression rules routed below: if we're mixing launcher
+            // tasks with other tasks and are moving a (small) launcher task
+            // across a non-launcher task, don't allow the latter to be the
+            // move target twice in a row for a while, as it will naturally
+            // be moved underneath the cursor as result of the initial move,
+            // due to being far larger than the launcher delegate.
             // TODO: This restriction (minus the timer, which improves things)
             // has been proven out in the EITM fork, but could be improved later
             // by tracking the cursor movement vector and allowing the drag if
             // the movement direction has reversed, establishing user intent to
             // move back.
-            if (root.dragSource == null
-                    && ignoredItem == above)
-                return;
+            const decision = LatteCore.DropClassifier.decideTasksDragMove({
+                dragSource: dArea.tasksRoot.dragSource ? {
+                    itemIndex: dArea.tasksRoot.dragSource.itemIndex,
+                    isLauncher: dArea.tasksRoot.dragSource.m.IsLauncher === true,
+                    isAbove: dArea.tasksRoot.dragSource === above
+                } : null,
+                above: above ? {
+                    itemIndex: above.itemIndex,
+                    hasModelData: above.m !== null && above.m !== undefined,
+                    isLauncher: above.m ? above.m.IsLauncher === true : false
+                } : null,
+                hasIgnoredItem: dArea.ignoredItem !== null,
+                aboveIsIgnored: above === dArea.ignoredItem,
+                aboveIsHovered: hoveredItem === above,
+                sortIsManual: dArea.tasksModel.sortMode === TaskManager.TasksModel.SortManual,
+                posX: eventToTarget.x,
+                posY: eventToTarget.y,
+                vertical: dArea.tasksRoot.vertical,
+                itemStep: dArea.appletAbilities.metrics.totals.length
+            });
 
-            if (root.dragSource != null
-                    && root.dragSource.m.IsLauncher === true && above != null
-                    && above.m != null
-                    && above.m.IsLauncher !== true && above == ignoredItem) {
+            switch (decision.action) {
+            case LatteCore.DropClassifier.MoveTaskSuppressRepeatTarget:
                 return;
-            } else {
-                //ignoredItem = null;
+            case LatteCore.DropClassifier.MoveTaskReorder: {
+                dArea.tasksRoot.dragSource.z = 100;
+                dArea.ignoredItem = above;
+
+                const pos = dArea.tasksRoot.dragSource.itemIndex;
+                dArea.tasksModel.move(pos, decision.moveTo);
+
+                ignoreItemTimer.restart();
+                break;
             }
-
-            //at some point it was needed the following  && above != ignoredItem
-            //but know not... strange... && above != ignoredItem
-            //I use the ignoredItem in order to reduce the move calls as much
-            //as possible
-            if (tasksModel.sortMode == TaskManager.TasksModel.SortManual && root.dragSource && ignoredItem == null) {
-                var insertAt = TaskTools.insertIndexAt(above, eventToTarget.x, eventToTarget.y);
-
-                if (root.dragSource != above && root.dragSource.itemIndex != insertAt) {
-                    //      console.log(root.dragSource.itemIndex + " - "+insertAt);
-                    root.dragSource.z = 100;
-                    ignoredItem = above;
-
-                    var pos = root.dragSource.itemIndex;
-                    tasksModel.move(pos, insertAt);
-
-                    ignoreItemTimer.restart();
-                }
-            } else if (!root.dragSource && above && hoveredItem != above) {
+            case LatteCore.DropClassifier.MoveTaskHoverAbove:
                 hoveredItem = above;
                 activationTimer.restart();
-            } else if (!above) {
+                break;
+            case LatteCore.DropClassifier.MoveTaskClearHover:
                 hoveredItem = null;
                 activationTimer.stop();
+                break;
             }
 
-            if (hoveredItem && windowsPreviewDlg.visible && toolTipDelegate.rootIndex !== hoveredItem.modelIndex() ) {
-                windowsPreviewDlg.hide(6);
+            if (hoveredItem && dArea.windowsPreviewDlg.visible && dArea.toolTipDelegate.rootIndex !== hoveredItem.modelIndex() ) {
+                dArea.windowsPreviewDlg.hide(6);
             }
         }
 
@@ -203,7 +204,10 @@ Item {
         }
 
         onDrop: (event) => {
-            if (!eventIsAccepted) {
+            const action = LatteCore.DropClassifier.tasksDropAction(
+                        inMovingTask, inDroppingOnlyLaunchers, inDroppingSeparator, inDroppingFiles);
+
+            if (action === LatteCore.DropClassifier.TasksDropIgnore) {
                 clearDroppingFlags();
                 event.ignore();
                 return;
@@ -212,14 +216,12 @@ Item {
             // Reject internal drops.
             dArea.containsDrag = false;
 
-            if (inDroppingSeparator) {
-                if (hoveredItem && hoveredItem.itemIndex >=0){
-                    appletAbilities.launchers.addInternalSeparatorAtPos(hoveredItem.itemIndex);
-                } else {
-                    appletAbilities.launchers.addInternalSeparatorAtPos(0);
-                }
-            } else if (inDroppingOnlyLaunchers || inDroppingFiles) {
-                parent.urlsDropped(event.mimeData.urls);
+            if (action === LatteCore.DropClassifier.TasksDropAddSeparator) {
+                dArea.appletAbilities.launchers.addInternalSeparatorAtPos(
+                            LatteCore.DropClassifier.separatorDropPosition(
+                                hoveredItem !== null, hoveredItem ? hoveredItem.itemIndex : -1));
+            } else if (action === LatteCore.DropClassifier.TasksDropUrls) {
+                dArea.urlsDropped(event.mimeData.urls);
             }
 
             clearDroppingFlags();
@@ -236,17 +238,17 @@ Item {
                     return;
                 }
 
-                if (parent.hoveredItem.m.IsGroupParent === true) {
-                    root.showPreviewForTasks(parent.hoveredItem);
-                    // groupDialog.visualParent = parent.hoveredItem;
+                if (dropHandler.hoveredItem.m.IsGroupParent === true) {
+                    dArea.tasksRoot.showPreviewForTasks(dropHandler.hoveredItem);
+                    // groupDialog.visualParent = dropHandler.hoveredItem;
                     // groupDialog.visible = true;
-                } else if (parent.hoveredItem.m.IsLauncher !== true) {
-                    if(windowsPreviewDlg.visible && toolTipDelegate.currentItem !==parent.hoveredItem.itemIndex ) {
-                        windowsPreviewDlg.hide(5);
-                        toolTipDelegate.currentItem=-1;
+                } else if (dropHandler.hoveredItem.m.IsLauncher !== true) {
+                    if(dArea.windowsPreviewDlg.visible && dArea.toolTipDelegate.currentItem !== dropHandler.hoveredItem.itemIndex ) {
+                        dArea.windowsPreviewDlg.hide(5);
+                        dArea.toolTipDelegate.currentItem=-1;
                     }
 
-                    tasksModel.requestActivate(parent.hoveredItem.modelIndex());
+                    dArea.tasksModel.requestActivate(dropHandler.hoveredItem.modelIndex());
                 }
             }
         }

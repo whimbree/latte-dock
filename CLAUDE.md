@@ -184,6 +184,42 @@ preference. Concretely:
   absent and alternative states (the step-2.5 law in
   docs/TESTING.md); const correctness; value types where copies are
   cheap.
+- Expressive, concise code that follows ESTABLISHED LANGUAGE
+  PATTERNS. "The purpose of abstracting is not to be vague, but to
+  create a new semantic level in which one can be absolutely
+  precise" (Dijkstra) - established idioms ARE those semantic
+  levels: std::visit over a variant is a precise sentence
+  ("exhaustively handle every alternative, compiler-enforced"),
+  switch is one ("enumerated dispatch"), RAII is one ("ownership
+  follows scope"). Use them, including if constexpr,
+  constexpr/consteval, concepts, [[likely]]/[[unlikely]] - freely
+  and especially where they make things faster, give gcc/clang
+  better codegen or diagnostic hints, or turn runtime errors into
+  compile errors. What is BANNED is self-built flow control wearing
+  a language feature's clothes: an immediately-invoked lambda bent
+  into a switch, hand-rolled dispatch contraptions replacing
+  if/else - those have no established meaning, so the reader must
+  simulate the machinery to learn what it does. Cautionary tale
+  from this repo's own history: a std::visit + if-constexpr
+  dispatch was once "simplified" to a get_if chain in the name of
+  plainness - deleting the compile-time exhaustiveness guarantee
+  and replacing it with a runtime bad_variant_access. The idiom was
+  the precise form; the "plain" version was the vague one. When an
+  idiom's payoff is not obvious at the site, say what it is (the
+  explained-optimization rule below).
+- Concepts (C++20) are welcome where they make template constraints
+  readable. C++23 is allowed WITH A RECORDED REASON: raising the
+  standard is a build-system change with blast radius, so it follows
+  the same process the C++17->20 bump did (the reasoned comment at
+  the top-level CMakeLists, full build-check on both WITH_X11
+  variants before anything rides on it).
+- Optimization levels, verified in this tree: the packaged build
+  (package.nix) is nixpkgs-default Release, i.e. -O3 -DNDEBUG - the
+  maximum reasonable level (-Ofast is not reasonable: it breaks IEEE
+  semantics the parabolic math relies on). The dev tree deliberately
+  stays RelWithDebInfo (-O2 -g) because the gdb-wrapper workflow and
+  live debugging depend on it - do not "optimize" the dev loop at
+  the cost of debuggability.
 - When code stays rough after honest refactoring effort - irreducible
   domain complexity, protocol mirrors, hot paths - the comment
   carries what the code cannot: the data patterns, the invariants,

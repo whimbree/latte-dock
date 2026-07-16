@@ -188,6 +188,28 @@ executing session reads its orders, because they bind every wave):
   never shared_ptr around QObjects against the parent system), no
   naked new/delete/malloc/free, enum class, optional/variant per the
   step-2.5 type law, const correctness.
+- Expressive, concise code following ESTABLISHED LANGUAGE PATTERNS
+  (Dijkstra: abstraction exists to create a semantic level where
+  one can be absolutely precise - idioms are those levels).
+  std::visit/if constexpr/constexpr/concepts/[[likely]] are
+  established and welcome, especially where they buy speed, better
+  compiler hints, or compile-time errors. BANNED is self-built flow
+  control wearing a feature's clothes: IIFEs bent into switches,
+  hand-rolled dispatch replacing if/else - constructs with no
+  established meaning the reader must simulate. This repo once
+  "simplified" a visit+if-constexpr dispatch into a get_if chain
+  and thereby traded a compile-time exhaustiveness guarantee for a
+  runtime bad_variant_access: the idiom was the precise form. Say
+  an idiom's payoff at the site when not obvious. C++23 only with a
+  recorded reason and the full standard-bump process (reasoned
+  CMakeLists comment, build-check both WITH_X11 variants).
+- Optimization: the packaged build is Release -O3 (nixpkgs default,
+  the maximum reasonable level; never -Ofast, it breaks IEEE
+  semantics the parabolic math relies on); the dev tree stays
+  RelWithDebInfo because the gdb workflow depends on it.
+- The extraction ledger tracks PLANNING and EXECUTION as separate
+  checkboxes per unit; landing a unit ticks the executed box with
+  hashes, never just the spec box.
 - Where code stays rough after real refactoring effort (irreducible
   domain complexity, protocol mirrors, hot paths), the comment
   carries the data patterns and invariants the code cannot show.

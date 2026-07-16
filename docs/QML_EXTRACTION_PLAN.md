@@ -23,6 +23,11 @@ source to paste.
 
 Kept current as sections land. A PENDING spec names its scope in one
 line; DONE means the full spec is written to the section-C template.
+Every unit carries TWO boxes: the unit line's box is PLANNING (spec
+written), the indented "executed" box is EXECUTION (landed per the
+Method's done-criteria: core + tests green sanitized + cutover +
+live recipe + hashes recorded). A unit is finished only when both
+are ticked.
 
 - [x] STEP-2.5 sanitizer + type-discipline pass - LANDED 2026-07-15:
   ASan+UBSan on all tests/units targets (latte_add_unit_test,
@@ -51,55 +56,79 @@ Inventory (section A):
 Ranking (section B): [x] done.
 
 Per-unit specs (section C), in rank order:
-- [x] EX-01 PreviewSwitchEngine - preview adoption/debounce/LRU decision core - LANDED 03cf0289+2f23f9bd.
-  Type discipline (retroactive step-2.5 pass): the kNoTask=-1 sentinel
-  eliminated - shown/pending/active-cache task, settle() result and
-  evictedTask are std::optional<int>, so "no task" is no longer
-  representable as a task id; -1-means-none survives only at the QML
-  boundary in the bridge
-- [x] EX-02 ParabolicRouter - neighbor scale-stack propagation chains -
-  LANDED 0613c2ae+ee66b07c+1c94a7ef+504e95e5+faa89fd1 (design, core+
-  equality harness, emission-plan revision with recorded dead
-  positions, containment cutover, plasmoid cutover; live glide matrix
-  run before each cutover merged - preview-anchor geometry
-  byte-identical across pre/post runs).
-  Type discipline (retroactive step-2.5 pass): the fat kind-tagged
-  Action struct replaced by std::variant with per-kind payloads (an
-  ApplyScale carrying a handoff stack, a ClientHandoff carrying an
-  absorb factor, and an Action with the pos=-1 default are all
-  unrepresentable now), and clearEmissionPos's -1 sentinel became
-  std::optional<int>; -1-means-none survives only at the QML boundary
-  in the wrapper
-- [x] EX-03 ParabolicMathCore - the zoom curve math - LANDED c3c04e49.
-  Type discipline (retroactive step-2.5 pass): scaleForItem's
-  itemsCount=0 silent IEEE division (representable, never traps, no
-  sanitizer sees it) asserted away; no other invalid states were
-  representable
+- [x] EX-01 PreviewSwitchEngine - preview adoption/debounce/LRU decision core
+  - [x] executed: LANDED 03cf0289+2f23f9bd.
+    Type discipline (retroactive step-2.5 pass): the kNoTask=-1
+    sentinel eliminated - shown/pending/active-cache task, settle()
+    result and evictedTask are std::optional<int>, so "no task" is no
+    longer representable as a task id; -1-means-none survives only at
+    the QML boundary in the bridge
+- [x] EX-02 ParabolicRouter - neighbor scale-stack propagation chains
+  - [x] executed: LANDED 0613c2ae+ee66b07c+1c94a7ef+504e95e5+faa89fd1
+    (design, core+equality harness, emission-plan revision with
+    recorded dead positions, containment cutover, plasmoid cutover;
+    live glide matrix run before each cutover merged - preview-anchor
+    geometry byte-identical across pre/post runs).
+    Type discipline (retroactive step-2.5 pass): the fat kind-tagged
+    Action struct replaced by std::variant with per-kind payloads (an
+    ApplyScale carrying a handoff stack, a ClientHandoff carrying an
+    absorb factor, and an Action with the pos=-1 default are all
+    unrepresentable now), and clearEmissionPos's -1 sentinel became
+    std::optional<int>; -1-means-none survives only at the QML
+    boundary in the wrapper
+- [x] EX-03 ParabolicMathCore - the zoom curve math
+  - [x] executed: LANDED c3c04e49.
+    Type discipline (retroactive step-2.5 pass): scaleForItem's
+    itemsCount=0 silent IEEE division (representable, never traps, no
+    sanitizer sees it) asserted away; no other invalid states were
+    representable
 - [x] EX-04 AutoSizeEngine - iconSize shrink/grow feedback loop
+  - [ ] executed
 - [x] EX-05 FillLengthDistributor - Justify/fill two-pass space distribution
+  - [ ] executed
 - [x] EX-06 VisibleIndexEngine - visible-index math + separator neighbor walks
+  - [ ] executed
 - [x] EX-07 StorageIdRemapper - layout-file id remapping (capt blueprint)
+  - [ ] executed
 - [x] EX-08 ScreenGeometryCalculator - available screen rect/region (capt blueprint)
+  - [ ] executed
 - [x] EX-09 PositionerGeometry - view sizing/placement math (capt blueprint)
+  - [ ] executed
 - [x] EX-10 MaskInputGeometry - visibility mask + input region rect math
+  - [ ] executed
 - [x] EX-11 LauncherListOps - launcher order algebra, registries, stored-list parsing
+  - [ ] executed
 - [x] EX-12 ColorizerDecisionCore - applyTheme/scheme selection tree
+  - [ ] executed
 - [x] EX-13 ViewTypeAndBackgroundPredicates - Panel-vs-Dock chain + background states
+  - [ ] executed
 - [x] EX-14 DropEventClassifier - drag mime classification + insert index
+  - [ ] executed
 - [x] EX-15 WheelAccumulator - wheel delta accumulation/threshold semantics
+  - [ ] executed
 - [x] EX-16 GroupWindowCycler - next/previous/minimize target selection
+  - [ ] executed
 - [x] EX-17 TooltipTextComposer - preview title/subtext string transforms
+  - [ ] executed
 - [x] EX-18 LengthOffsetClamp - maxLength/offset mutual clamp (dedup)
+  - [ ] executed
 - [x] EX-19 ColorLuminance - shared brightness/luminance helpers (dedup)
+  - [ ] executed
 - [x] EX-20 BadgeMath - badge parsing, proportion, arc geometry
+  - [ ] executed
 - [x] EX-21 ScrollOverflowMath - scrollable list overflow/autoscroll math
-- [x] EX-22 ActivitySetAlgebra - activity set filtering (capt blueprint) - LANDED 8ccad784.
-  Type discipline (retroactive step-2.5 pass): reviewed, no
-  representable invalid states - list-in/list-out pure functions with
-  no sentinels, no indexes, no lifetime capture
+  - [ ] executed
+- [x] EX-22 ActivitySetAlgebra - activity set filtering (capt blueprint)
+  - [x] executed: LANDED 8ccad784.
+    Type discipline (retroactive step-2.5 pass): reviewed, no
+    representable invalid states - list-in/list-out pure functions
+    with no sentinels, no indexes, no lifetime capture
 - [x] EX-23 WindowTrackingPredicates - window predicate + extra-view-hints pass (capt blueprint)
+  - [ ] executed
 - [x] EX-24 IconSourceClassifier - icon source classification (capt blueprint)
+  - [ ] executed
 - [x] EX-25 PanelBackgroundScan - panel background scanline math (capt blueprint)
+  - [ ] executed
 
 Section D (coverage + ratchet): [x] done.
 Section E (waves): [x] done.

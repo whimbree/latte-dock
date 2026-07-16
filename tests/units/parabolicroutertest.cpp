@@ -79,6 +79,8 @@ struct Sim {
     void apply(const QVector<RowItem> &row, const RouteResult &route, int step)
     {
         for (const auto &action : route.actions) {
+            // exhaustive by construction: a new Action alternative fails
+            // the static_assert at compile time
             std::visit([&](const auto &act) {
                 using T = std::decay_t<decltype(act)>;
                 if constexpr (std::is_same_v<T, ApplyScale>) {

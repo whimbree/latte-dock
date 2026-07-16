@@ -71,6 +71,8 @@ QVariantMap ParabolicRouterTools::route(const QVariantList &row, int entryPos, i
     actions.reserve(result.actions.size() + 1);
     for (const auto &action : result.actions) {
         QVariantMap a;
+        //! exhaustive by construction: a new Action alternative fails the
+        //! static_assert at compile time instead of misdispatching here
         std::visit([&a](const auto &act) {
             using T = std::decay_t<decltype(act)>;
             a.insert(QStringLiteral("pos"), act.pos);

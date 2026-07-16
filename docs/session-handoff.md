@@ -10,6 +10,21 @@ archaeology.
 
 Driving docs/prompts/stabilization-execution-prompt.md top to bottom.
 
+LATE-SESSION STATE: priority items 1-7 done or flagged (details in
+the numbered entries below); the settings desk-walk, the DPMS
+lock/unlock arm, one real logout cycle, and the reorder/stuck-icons
+real-mouse checks are the four things waiting on my hands. Item 8's
+D-Bus interface design is WRITTEN (docs/dbus-observability-interface.md)
+and item 9 became the CaptSilver adoption plan
+(docs/captsilver-testability-adoption.md). FOUR worktree/read agents
+were dispatched in parallel at session end (logs in docs/agent-logs/,
+2026-07-16-*): a11y surface inventory (read-only baseline for the
+keyboard/AT-SPI quartet items), viewsData+setViewEditMode
+implementation, sceneprobe P1 transplant (lavapipe-only), and P2
+contract-pin transplants. Their branches merge serially with full
+gates; if this session ends before the merges, the worktree branches
+and their logs carry everything needed to finish.
+
 1. DONE - Session shutdown teardown (priority item 1): 525f556c6
    (~Corona explicit dependency-order deletes; the deleteLater pile was
    a silent no-op - Qt contract pinned in quitteardowncontractstest),

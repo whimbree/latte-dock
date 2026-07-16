@@ -2655,9 +2655,9 @@ multi-view, multi-monitor setup.
       closes defers with its do-not-delegate marker, never delegates.
       The remaining 21 delegate-safe units are the post-transition
       backlog (waves 2-4 in the plan's section E).
-      Commits: bab18b2c, 2fb1bd27, f017854c, e554bf04 (the plan
-      document; execution commits get recorded per unit in the plan's
-      ledger)
+      Commits: bab18b2c, 2fb1bd27, f017854c, e554bf04, b70ccb55 (the
+      plan document; execution commits get recorded per unit in the
+      plan's ledger)
 
 ### Phase 11: Nix packaging + Docker build verification
 

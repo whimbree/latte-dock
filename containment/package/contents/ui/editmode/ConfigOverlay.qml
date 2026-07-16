@@ -418,22 +418,24 @@ MouseArea {
 
 
         onVisualParentChanged: {
-            if (visualParent && currentApplet
-                    && (currentApplet.applet || currentApplet.isSeparator || currentApplet.isInternalViewSplitter)) {
+            var curapplet = configurationArea.currentApplet;
 
-                configureButton.visible = !currentApplet.isInternalViewSplitter
-                        && (currentApplet.applet.plasmoid.pluginName !== "org.kde.latte.plasmoid")
-                        && currentApplet.applet.plasmoid.internalAction("configure")
-                        && currentApplet.applet.plasmoid.internalAction("configure").enabled;
-                closeButton.visible = !currentApplet.isInternalViewSplitter && currentApplet.applet.plasmoid.internalAction("remove") && currentApplet.applet.plasmoid.internalAction("remove").enabled;
-                lockButton.visible = !currentApplet.isInternalViewSplitter
-                        && !currentApplet.communicator.indexerIsSupported
-                        && !currentApplet.communicator.appletBlocksParabolicEffect
-                        && !currentApplet.isSeparator;
+            if (visualParent && curapplet
+                    && (curapplet.applet || curapplet.isSeparator || curapplet.isInternalViewSplitter)) {
 
-                colorizingButton.visible = root.colorizerEnabled && !currentApplet.appletBlocksColorizing && !currentApplet.isInternalViewSplitter;
+                configureButton.visible = !curapplet.isInternalViewSplitter
+                        && (curapplet.applet.plasmoid.pluginName !== "org.kde.latte.plasmoid")
+                        && curapplet.applet.plasmoid.internalAction("configure")
+                        && curapplet.applet.plasmoid.internalAction("configure").enabled;
+                closeButton.visible = !curapplet.isInternalViewSplitter && curapplet.applet.plasmoid.internalAction("remove") && curapplet.applet.plasmoid.internalAction("remove").enabled;
+                lockButton.visible = !curapplet.isInternalViewSplitter
+                        && !curapplet.communicator.indexerIsSupported
+                        && !curapplet.communicator.appletBlocksParabolicEffect
+                        && !curapplet.isSeparator;
 
-                label.text = currentApplet.isInternalViewSplitter ? i18n("Justify Splitter") : currentApplet.applet.plasmoid.title;
+                colorizingButton.visible = root.colorizerEnabled && !curapplet.appletBlocksColorizing && !curapplet.isInternalViewSplitter;
+
+                tooltipMouseArea.appletTitle = curapplet.isInternalViewSplitter ? i18n("Justify Splitter") : curapplet.applet.plasmoid.title;
             }
         }
 
@@ -443,6 +445,35 @@ MouseArea {
             width: handleRow.childrenRect.width + (2 * handleRow.spacing)
             height: Math.max(configureButton.height, label.contentHeight, closeButton.height)
             hoverEnabled: true
+
+            //! Qt5 hung these hints on the buttons as popup tooltips; popups flicker
+            //! here (the no-QQC2.ToolTip rule below), so the hovered button's hint
+            //! rides the in-dialog label instead, taking the applet title's place
+            //! for as long as the button is hovered.
+            property string appletTitle
+            //! the label is sized to the widest string it can ever carry (see the
+            //! TextMetrics beside it), so the title-to-hint swap never resizes this
+            //! dialog: a hover-driven resize moves the buttons under the resting
+            //! pointer, hover drops and re-fires, and the handle strobes - the same
+            //! loop family as the banned popup tooltips. Geometry that never reacts
+            //! to hover cannot loop.
+            //! the hint strings live in the sizing TextMetrics beside the label -
+            //! single authority for both the shown text and the reserved width
+            readonly property string hoveredButtonHint: {
+                if (configureButton.hovered) {
+                    return configureHintMetrics.text;
+                }
+                if (colorizingButton.hovered) {
+                    return paintingHintMetrics.text;
+                }
+                if (lockButton.hovered) {
+                    return parabolicHintMetrics.text;
+                }
+                if (closeButton.hovered) {
+                    return removeHintMetrics.text;
+                }
+                return "";
+            }
             LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
             LayoutMirroring.childrenInherit: true
 
@@ -478,6 +509,41 @@ MouseArea {
                         anchors.rightMargin: Kirigami.Units.smallSpacing
                         textFormat: Text.PlainText
                         maximumLineCount: 1
+                        horizontalAlignment: Text.AlignHCenter
+                        width: Math.max(titleMetrics.advanceWidth,
+                                        configureHintMetrics.advanceWidth,
+                                        paintingHintMetrics.advanceWidth,
+                                        parabolicHintMetrics.advanceWidth,
+                                        removeHintMetrics.advanceWidth)
+                        text: tooltipMouseArea.hoveredButtonHint !== ""
+                              ? tooltipMouseArea.hoveredButtonHint
+                              : tooltipMouseArea.appletTitle
+
+                        TextMetrics {
+                            id: titleMetrics
+                            font: label.font
+                            text: tooltipMouseArea.appletTitle
+                        }
+                        TextMetrics {
+                            id: configureHintMetrics
+                            font: label.font
+                            text: i18n("Configure applet")
+                        }
+                        TextMetrics {
+                            id: paintingHintMetrics
+                            font: label.font
+                            text: i18n("Enable painting for this applet")
+                        }
+                        TextMetrics {
+                            id: parabolicHintMetrics
+                            font: label.font
+                            text: i18n("Disable parabolic effect for this applet")
+                        }
+                        TextMetrics {
+                            id: removeHintMetrics
+                            font: label.font
+                            text: i18n("Remove applet")
+                        }
                     }
 
                     Row{
@@ -489,7 +555,7 @@ MouseArea {
                             icon.name: "color-picker"
 
                             onClicked: {
-                                fastLayoutManager.setOption(currentApplet.applet.plasmoid.id, "userBlocksColorizing", !checked);
+                                fastLayoutManager.setOption(configurationArea.currentApplet.applet.plasmoid.id, "userBlocksColorizing", !checked);
                             }
                         }
 
@@ -499,7 +565,7 @@ MouseArea {
                             icon.name: checked ? "lock" : "unlock"
 
                             onClicked: {
-                                fastLayoutManager.setOption(currentApplet.applet.plasmoid.id, "lockZoom", checked);
+                                fastLayoutManager.setOption(configurationArea.currentApplet.applet.plasmoid.id, "lockZoom", checked);
                             }
                         }
 

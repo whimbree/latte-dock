@@ -435,21 +435,36 @@ welcome but not required.
       instead of the dead surface-null check
       Commits: cf05d856 (the whole plasma-shell surface path is gone
       from every Latte window, not just the View)
-- [ ] Bind `kde_output_order_v1` for primary-output detection (Plasma
+- [x] Bind `kde_output_order_v1` for primary-output detection (Plasma
       6 KWin no longer advertises `kde_primary_output_v1`), treat the
-      first output in the order as primary. Without this the dock can
-      silently land on the wrong monitor in multi-display setups
+      first output in the order as primary. VERIFIED 2026-07-16: the
+      order protocol is bound (WaylandOutputOrder in
+      primaryoutputwatcher.cpp) and consumed by both screen pools;
+      across a dozen live restarts this session every view landed on
+      its recorded output (DP-2 x4 edges + DP-3 bottom + clones,
+      dumpwins-checked each time).
       Commits: 958ec6aa (kde_primary_output_v1 stays bound as the
       fallback for older sessions)
-- [ ] Implement struts/exclusive-zone reservation via
+- [x] Implement struts/exclusive-zone reservation via
       `zwlr_layer_shell_v1`'s `exclusive_zone` through LayerShellQt
       directly (`PlasmaShellSurface`'s `PanelBehavior` is deprecated
       and ignored by KWin, reserves nothing). Reserve the zone equal to
       *current visible* panel thickness, not a max-possible-expansion
-      value (over-reservation bug latte-dock-ng hit)
-      Commits: 8e9a3dc6 (mapping layer + unit test), fb1302f5 (the
-      zone rides the dock's own layer surface; the rect handed to
-      setViewStruts is strutsThickness, the visible thickness)
+      value (over-reservation bug latte-dock-ng hit).
+      LIVE-VERIFIED AND HARDENED 2026-07-16: the mechanism was right
+      but a trigger gap silently defeated it - canSetStrut() reads
+      isOffScreen(), true throughout startup, and isOffScreen was the
+      only strut input with no re-trigger, so AlwaysVisible docks
+      could sit reserving NOTHING (protocol log: zone published then
+      reset to 0; KWin maximize area confirmed). Fixed 538abc8ec
+      (isOffScreenChanged -> coalesced strut update; KWin clientArea
+      verified full reservations on every edge post-startup). Dodge
+      modes correctly reserve zero (real config checked). The
+      REMAINING startup-stranding defect this hunt exposed is filed
+      as its own Phase 8 item below.
+      Commits: 8e9a3dc6 (mapping layer + unit test), fb1302f5 (zone
+      rides the dock's own layer surface), 538abc8ec (off-screen
+      re-trigger + loud remove-reason logging)
 - [x] In multi-screen setups, call `setScreen()` on both the `QWindow`
       and the `LayerShellQt::Window` before configuring the surface, or
       struts land on the wrong monitor
@@ -883,37 +898,62 @@ before implementing, not just before merging.
       this is the item to reopen. Headless coverage note: fakepointer
       drag can drive explorer->dock drops once a GUI CI vm exists.
       Commits: (no port-side change needed)
-- [ ] Position-aware drop insertion: defer QML item access via a 0ms
-      singleShot timer (immediate access breaks the Wayland event
-      chain), and carry the intended insertion index as an explicit
-      property rather than trusting the position Plasma's own signal
-      hands back
-      Commits:
-- [ ] **Widget add via double-click**: use `TapHandler.onTapped`
-      (coexists cleanly with a sibling `DragArea`) rather than
-      `MouseArea.onDoubleClicked` (one fork found it could race against
-      widget-explorer's own add/remove toggle, needing a debounce timer
-      band-aid)
-      Commits:
+- [x] Position-aware drop insertion. VERIFIED PRESENT BY CONSTRUCTION
+      2026-07-16: the intended insertion index is carried explicitly -
+      DragDropArea's onDrop reads dndSpacerIndex() and encodes it into
+      the x,y handed to processMimeData via indexToMasquearadedPoint
+      (base -23456), and onAppletAdded decodes it back through
+      isMasqueradedIndex -> addAppletItem(applet, index). Plasma's own
+      geometryHint is only trusted when no spacer index exists. The
+      0ms-singleShot prescription addressed ng's C++ drop handler
+      shape; our drop path touches no QML items beyond the
+      already-parented spacer, so there is nothing to defer.
+      Commits: (mechanism landed across the drag-drop port; no new
+      change needed - this entry records the audit)
+- [x] **Widget add via click**: RESOLVED by 0aa7ffb6's adopted
+      explorer QML, audited 2026-07-16: AppletDelegate uses exactly
+      the prescribed TapHandler.onTapped coexisting with the sibling
+      DragArea (no MouseArea.onDoubleClicked, no debounce band-aid).
+      Single-click add matches current plasmashell's explorer
+      semantics. Landing position is Qt5-faithful: WidgetExplorer's
+      addApplet -> createApplet carries the (-1,-1) no-position
+      sentinel at the pin (containment.h:208), which our
+      addAppletItem(x,y) routes to end-of-main-layout append, same as
+      Qt5. Found and fixed while auditing: the 'aplet' typo in
+      pluginNameForApplet's fourth fallback (c97c6bb38).
+      Commits: 0aa7ffb6 (mechanism), c97c6bb38 (typo)
 - [ ] **Default insertion position**: implement boundary-applet
       detection (system tray, the Latte tasks plasmoid) once, shared by
       both the drag and double-click add paths, so new widgets land
-      just before the boundary rather than at the absolute end
+      just before the boundary rather than at the absolute end.
+      ANALYSIS 2026-07-16: this is an ng UX deviation, NOT Qt5
+      behavior - Qt5 Latte appended positionless adds at the absolute
+      end, and this port currently matches Qt5 exactly (verified: the
+      (-1,-1) sentinel path falls through to end-append). Implementing
+      it is a deliberate behavior deviation under the
+      maintained-continuation framing - MY CALL to make; if wanted,
+      the shared hook is addAppletItem's end-append fallback in
+      containment/plugin/layoutmanager.cpp:1300 plus the index==count
+      arm of the index overload.
       Commits:
-- [ ] **Edit-mode entry/exit detection** - research first: determine
-      whether `plasmoid.userConfiguring`/
-      `plasmoid.containment.userConfiguring`'s QML change notification
-      is actually unreliable on Qt6/Plasma6, and why, before
-      implementing anything. Latte-dock-ng went through at least 8
-      distinct attempts here (direct property binding, containment
-      fallback, explicit signal connections, global block-everything
-      overlay, punch-through overlay, polling timers at several
-      different intervals in different components, C++-level
-      middle-button interception, a timer finally scoped to active
-      edit mode only) without landing on something clean. If polling
-      turns out to be genuinely necessary, start from whichever of
-      those iterations is closest to final, not from scratch
-      Commits:
+- [x] **Edit-mode entry/exit detection** - RESEARCHED AND PINNED
+      2026-07-16. Verdict: the notification is RELIABLE on Qt6/Plasma6
+      and no polling or overlay machinery is needed. At the pinned
+      libplasma 6.6.5, Applet::setUserConfiguring is a synchronous
+      equal-value-guarded setter with a plain NOTIFY (read from
+      applet.cpp); our detection is one property with one writer
+      (PrimaryConfigView -> setUserConfiguring, containment QML binds
+      Plasmoid.userConfiguring at main.qml:99, View re-broadcasts the
+      containment signal as inEditModeChanged). ng's 8 attempts were
+      chasing bugs that live elsewhere - the same traps this port
+      already root-caused as fb621102 (stale PERSISTED
+      inConfigureAppletsMode restoring edit visuals at boot) and
+      4a8ac480 (chrome focus-grab racing its own mapping; hideEvent
+      running session-end work on transient hides). The contract is
+      pinned in tests/contracts/userconfiguringcontracttest.cpp so a
+      libplasma bump that defers or compresses the signal fails in
+      ctest before it breaks detection.
+      Commits: 87417a0c7 (contract pin; no product code change needed)
 - [ ] **Drag-to-reorder jitter**: read latte-dock-qt6's actual reorder-
       handling source (not just its commit log) to understand why it
       works cleanly there before implementing, since it's the one
@@ -1904,6 +1944,32 @@ multi-view, multi-monitor setup.
       applet ids, so if the premise ever breaks the failure names
       itself instead of surfacing as a missing applet.
       Commits: 9df0732f9
+- [ ] Startup-stranding: some cold/loaded startups leave
+      root.inStartup TRUE forever on every view (filed 2026-07-16
+      from the struts hunt). Consequences: startupFinished() never
+      reaches the positioner, absoluteGeometry keeps the -9999
+      startup coordinates, canSetStrut() stays false so AlwaysVisible
+      docks reserve nothing, and the slide-in never runs - yet the
+      docks LOOK correct because layer-shell placement rides anchors,
+      not window position, which is what let this hide. Reproduced 5x
+      today, every time on first-run-after-a-C++-rebuild timing;
+      never on warm restarts (8+ clean). Localization so far: on the
+      one stranded run with partial instrumentation, restore() ran on
+      all six views ("applets found" logged) but the startup delayer
+      never fired and the watchdog never armed - the chain dies
+      between the C++ hasRestoredAppletsChanged emission (a plain 2s
+      QTimer lambda, unconditional) and the QML Connections handler /
+      Timer.start() taking effect. Armed instrumentation (538abc8ec):
+      breadcrumbs at both fragile hops plus a 15s console.warn
+      watchdog dumping the full state - the next natural occurrence
+      names its dying hop. Suspects to check when it fires:
+      Connections delivery under type-loader pressure, the QML Timer
+      never being started vs never firing, and the animation-driver
+      angle (frame-callback-starved window freezing a running
+      SequentialAnimation). Fix at the origin once named; do NOT
+      paper it with a retry timer.
+      Commits: 538abc8ec (instrumentation + the struts-side
+      re-trigger that heals non-stranded runs)
 - [ ] Guard any code that reads a window/activity/audio tracker object
       during early startup with an explicit "is this tracker actually
       ready yet" property, rather than assuming it's non-null - both

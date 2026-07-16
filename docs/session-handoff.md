@@ -41,6 +41,26 @@ Driving docs/prompts/stabilization-execution-prompt.md top to bottom.
    port; the autostart story needs my decision (plan item has the
    detail), and no reboot/login has happened since June 25 anyway.
 
+5/6. DONE with a big catch - Phase 7 research + Phase 4 layer-shell
+   (priority items 5-6, partially): edit-mode detection contract
+   pinned (87417a0c7, userconfiguringcontracttest - the notification
+   is reliable, ng chased ghosts); reorder research verdict NO CHANGE
+   NEEDED (agent log docs/agent-logs/2026-07-16-reorder-research.md:
+   ours == qt6 fork == upstream placeholder design; ng's jitter was
+   their own live-item feedback loop); click-add and drop-insertion
+   audited as already-correct (masqueraded index, TapHandler, Qt5
+   end-append); 'aplet' typo fixed (c97c6bb38 + baseline shrink).
+   THE CATCH: the Phase 4 struts check found AlwaysVisible docks
+   reserving NOTHING - root-caused to the isOffScreen trigger gap,
+   fixed 538abc8ec and verified via KWin clientArea; and a DEEPER
+   intermittent startup-stranding defect (inStartup stuck true
+   forever, first-run-after-rebuild timing) is filed as a new Phase 8
+   item with a 15s watchdog + breadcrumbs armed in the containment.
+   kde_output_order_v1 item verified done and ticked. STILL OPEN in
+   the Phase 7 cluster: stuck-icons z=100 suspect (task delegates
+   never reset z after reorder - agent finding), dead
+   target.animating guard removal, boundary-insertion owner call.
+
 4. DONE - Cloned-view sync gap (priority item 4): e3fdcae78
    (apply-or-defer + retry for all three manually-synced properties),
    f7561df37 (viewAppletsOrder D-Bus readback). Live-verified: clone

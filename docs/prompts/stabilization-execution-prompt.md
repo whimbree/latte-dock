@@ -33,6 +33,11 @@ not repeated here).
 - Parallel work: spawn worktree subagents per unit of work where tasks
   are disjoint; the orchestrator merges serially (rebase onto master,
   ff-merge, full gates, live checks, ledger/plan tick, push, prune).
+  LIMITS (my direction 2026-07-16): at most 2 subagents at a time, and
+  every subagent keeps a running log of what it did and found in
+  docs/agent-logs/ (one file per dispatch, named
+  YYYY-MM-DD-<short-task-slug>.md) - the ledger strategy that keeps
+  models and subagents accountable over long horizons.
   Merge lessons already paid for: tests/units/CMakeLists.txt and
   plugin-registration files are both-append unions; tests/ratchet-
   baseline count = union size with a sorted entry list; tests/qmllint-
@@ -105,9 +110,24 @@ plan item for the recorded decision. Never land replacement icons.)
       item, focus events, Orca pass as acceptance). Do b before c;
       a and d together (they share the focus/role work).
 
-9. **Hosted CI + microvm GUI e2e harness** (Phase 10): the local gates
-   are pure shell over cmake/ctest; stand up the pipeline, then the
-   microvm compositor harness for the pointer-delivery tests.
+9. **CaptSilver testability adoption** (Phase 10; REPLACES the
+   microvm/hosted-CI item, my direction 2026-07-16): study
+   latte-dock-qt6's testability improvements - every test they have
+   that we don't (63 test files vs our 39), and especially their
+   committed visual regression harness ("sceneprobe"): golden PNGs of
+   the parabolic zoom, multieffect, shadows etc., rendered and diffed
+   per GPU backend with a proper per-channel tolerance comparator.
+   HARD CONSTRAINT (my clarification): our CI must run with just KVM
+   or some VMM - NO real-dGPU dependency. Their harness's dGPU golden
+   arm is not an adoption target; what we want is the
+   lavapipe/software-raster path (deterministic software rendering is
+   what makes VM-only CI viable). Adopt as much as fits: the analysis
+   lands as a docs/ file first (what to adopt, transplant cost,
+   conflicts with our upstream-shaped tree), then the adoption work
+   is executed as normal plan items. The microvm compositor harness
+   idea is superseded by this - lavapipe-rendered golden scenes cover
+   the headless-GUI-CI need for rendering; pointer-delivery e2e keeps
+   fakepointer on the live session for now.
 
 10. **The tail**: extraction ledger live-verification leftovers (each
     executed note names its recipes; two need the author's hands:

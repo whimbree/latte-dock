@@ -1963,6 +1963,32 @@ multi-view, multi-monitor setup.
 
 ### Phase 10: Stabilization / verification
 
+- [ ] WindowId newtype hardening (filed 2026-07-16 from the EX-23
+      design review). 8e8cdf31 replaced upstream's WindowId = QVariant
+      with QByteArray because Qt6 removed QVariant's relational
+      operators (QMap<WindowId,...> keys and wid<=0 checks stopped
+      compiling); right substrate, but stringly-typed by today's law:
+      any QByteArray or bare char* converts implicitly into a
+      WindowId parameter (QT_NO_CAST_FROM_BYTEARRAY is still stubbed
+      out), and all six wid.toUInt() sites in xwindowinterface.cpp
+      ignore the ok flag, so a malformed id silently becomes window 0
+      (X11 is best-effort, which contains but does not excuse it).
+      The fix: a newtype wrapper keeping QByteArray storage (zero
+      conversion from KWayland uuid()) with explicit
+      fromWaylandUuid()/fromX11WId() constructors and an
+      std::optional<quint32>-returning toX11WId() so the silent-0
+      parse becomes a loud absence at the boundary; the QML-facing
+      winId property stays QVariant (Qt6 exposes raw QByteArray to
+      QML as ArrayBuffer - the 8e8cdf31 boundary decision holds).
+      Alternatives weighed and rejected in the review:
+      std::variant<monostate,quint32,QByteArray> over-models a
+      single-platform process and touches every call site harder;
+      QString doubles memory and adds a conversion. Blast radius is
+      the whole wm/ surface - do it as its own pass with the
+      windowinfowraptest and EX-23 predicate tests as the safety net,
+      not opportunistically inside another unit.
+      Commits:
+
 - [ ] Verify against the full known-bug list at the top of this doc by
       actually driving each interaction (add/remove/drag/edit-mode/
       right-click/task-manager) in a running session - not by reading

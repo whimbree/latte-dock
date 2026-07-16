@@ -2823,22 +2823,38 @@ prerequisites in the phases above are done.
       today (AppletItem.qml isSeparator + latteStyleApplet arms, the
       export-template applets list, and the parabolic router treats
       isSeparator items as Transparent) - we recognize an applet we
-      do not provide. latte-dock-ng vendored it in-tree at v1.0.14
-      and ported it to Qt6 with their own fixes on top (6cb0c7e51
-      separator line length matched to app-icon separators,
-      21ee748c0 task-widget boundary stabilization) - fold THEIR
-      copy per the fork-sync judgment rules: read their fix commits
-      individually against the original applet source, take what is
-      correct, write our own commits; a new top-level applets/
-      subtree with its own install rules, staged like the other
-      packages so the QML gates and the qmllint baseline cover it.
-      Done means: applet installs and staged-loads, drops into a
-      dock via the widget explorer, isSeparator recognition and
-      parabolic transparency verified live (glide across it), and
-      the sibling spacer applet (org.kde.latte.spacer, same
-      companion family, also id-recognized by AppletItem) gets an
-      explicit fold-or-reject decision recorded here rather than
-      staying implicit.
+      do not provide. SHAPE (decided 2026-07-15 after weighing
+      in-tree vs submodule vs flake input): companion applets live
+      in their OWN repos consumed as FLAKE INPUTS, never submodules
+      and not in-tree - the dock never compiles their source, only
+      stages their built packages, and the flake is this project's
+      single pinning mechanism (a submodule is a second one that
+      drifts against the lock; in-tree bloats the dock's scope and
+      discards the applet's identity). Fork
+      github.com/psifidotos/applet-latte-separator (the standalone
+      upstream, verified public 2026-07-15) with full history
+      preserved and port it there. TWO more sources to diff at
+      execution: psifidotos's own GitHub Latte-Dock mirror carries
+      an in-tree copy at applets/separator on its master (may have
+      diverged from the standalone repo, and is the likely ancestry
+      of ng's vendored copy), and latte-dock-ng's Qt6 port at
+      v1.0.14 with their own fixes (6cb0c7e51 separator line length
+      matched to app-icon separators, 21ee748c0 task-widget boundary
+      stabilization) - fold per the fork-sync judgment rules, read
+      individually, take what is correct. The applet repo
+      carries its own thin gates (compile check + qmllint over its
+      QML, the step-2.5 law from birth); THIS repo's work is the
+      integration: the flake input, staging the applet package for
+      the throwaway, and live verification. Done means: pinned
+      input, applet drops into a dock via the widget explorer,
+      isSeparator recognition and parabolic transparency verified
+      live (glide across it), and the sibling spacer applet
+      (org.kde.latte.spacer, upstream
+      github.com/psifidotos/applet-latte-spacer, also id-recognized)
+      gets an explicit same-shape-or-reject decision recorded here.
+      This item establishes the applet-repo + flake-input + staging
+      pipeline on a trivially small applet; the appmenu port below
+      reuses it.
       Commits:
 - [ ] Full port of applet-window-appmenu (decided 2026-07-15): ship
       a Latte-maintained global menu applet so we can support
@@ -2861,14 +2877,23 @@ prerequisites in the phases above are done.
       (c) decide vendor-vs-depend for dbusmenu parsing the way
       docs/taskmanager-integration-research.md decided the tasks
       backend (record the decision the same way);
-      (d) only then the applet port itself, in-tree under applets/,
+      (d) only then the applet port itself, IN ITS OWN REPO: fork
+      github.com/psifidotos/applet-window-appmenu to whimbree with
+      full history preserved (the same founding move as this repo),
+      port there in cutover-sized commits with the step-2.5 law
+      applied from birth (strict QML, typed cores for any extracted
+      logic, asserts, its own thin compile+qmllint gates),
       Qt5-faithful to the ORIGINAL applet's behavior per the
-      standing rule (its config options are the spec), landing in
-      cutover-sized commits with the step-2.5 law applied from birth
-      (strict QML, typed cores for any extracted logic, asserts).
+      standing rule (its config options are the spec). The applet
+      stays independently useful in plain plasmashell panels - that
+      is half its audience and a design constraint, not an accident.
+      THIS repo consumes it as a FLAKE INPUT (never a submodule:
+      the dock only stages the built package, and the flake is the
+      single pinning mechanism) and tracks here the integration
+      work: input + staging + live verification in a dock.
       PREREQUISITES: the separator item above lands first (it
-      creates the applets/ subtree + packaging shape this reuses,
-      on a trivially small applet); interim, verify stock
+      proves the applet-repo + flake-input + staging pipeline on a
+      trivially small applet); interim, verify stock
       org.kde.plasma.appmenu hosts correctly in a Latte dock (live
       check, currently UNVERIFIED - needs the appmenu KDED module
       running) so users have a working global menu while the port

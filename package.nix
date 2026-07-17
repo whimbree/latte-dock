@@ -69,6 +69,12 @@
 
   wayland,
 
+  # tests/sceneprobe (built under BUILD_TESTING, which the package build
+  # keeps on so the test tree can never rot unbuilt) links the Vulkan
+  # loader directly.
+  vulkan-headers,
+  vulkan-loader,
+
   # Best-effort X11 backend. Off by default: Wayland is the only runtime the
   # port targets, and dropping it keeps the closure lean. The C++ still
   # compiles with it on (option WITH_X11 in the top-level CMakeLists).
@@ -140,6 +146,9 @@ stdenv.mkDerivation (finalAttrs: {
     qt5compat
 
     wayland
+
+    vulkan-headers
+    vulkan-loader
   ]
   ++ lib.optionals withX11 [
     libX11

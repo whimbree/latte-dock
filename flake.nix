@@ -66,7 +66,23 @@
             kdePackages.extra-cmake-modules
             jq # scripts/qmllint-gate.sh parses qmllint --json with it
             imagemagick # cropping live-verification and docs screenshots
+
+            # sceneprobe render gate (scripts/sceneprobe-gate.sh): a nested
+            # throwaway compositor gives the probe a Vulkan-capable wayland
+            # QPA. Process-level tool only - its QML/plugin trees are never
+            # added to any *_PATH (the import-path doctrine below).
+            kdePackages.kwin # kwin_wayland --virtual
           ];
+
+          # Pure-CPU Vulkan pieces for the sceneprobe render gate, from the
+          # flake pin so goldens are blessed against the exact Mesa and
+          # validation layer CI runs (never /run/opengl-driver, which is
+          # whatever the host system happens to run). Consumed by
+          # tests/sceneprobe/run_in_kwin.sh.
+          LATTE_VULKAN_LAVAPIPE_ICD =
+            "${pkgs.mesa}/share/vulkan/icd.d/lvp_icd.x86_64.json";
+          LATTE_VK_LAYER_PATH =
+            "${pkgs.vulkan-validation-layers}/share/vulkan/explicit_layer.d";
 
           # The QML module search path for the headless QML checks and the
           # staged live runs (scripts/lib-qml-env.sh). mkShell does not run
@@ -165,6 +181,11 @@
             kxmlgui
           ]) ++ (with pkgs; [
             wayland
+
+            # tests/sceneprobe links the Vulkan loader directly
+            # (find_package(Vulkan)); headers for vulkan/vulkan.h.
+            vulkan-headers
+            vulkan-loader
 
             # Best-effort X11 path (HAVE_X11): XCB RANDR/SHAPE/EVENT + SM per
             # the top-level CMakeLists. Qt5X11Extras is gone in Qt6; native

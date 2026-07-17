@@ -5,15 +5,16 @@
 # mapping in the compositor takes the keyboard focus and the mode must
 # fall back to off ON ITS OWN (a dock stuck focusable breaks every
 # fullscreen application - that is the defect class this pins).
-# e2e-mode: nested-only
 #
-# Unlike the sibling e2e scripts this one is self-contained: it starts
-# its own staged dock against a throwaway config copy, so it must run
-# inside the nested vehicle with a PRIVATE bus (the dock exits instantly
-# on the KDBusService unique name otherwise - the documented trap):
-#
-#   nix develop -c tests/sceneprobe/run_in_kwin.sh dbus-run-session -- \
-#       tests/e2e/keyboard-navigation-mode.sh
+# Uses the driver's managed vehicle dock like every sibling recipe. The
+# first version launched its OWN dock instead (written before the driver
+# existed); under the driver's shared bus that second launch died on the
+# KDBusService unique name AND its forwarded activation popped the
+# Settings window on the driver dock - which then held keyboard focus,
+# so enterKeyboardNavigation's requestActivate never landed and the
+# focus-loss leg failed while ALSO poisoning whichever recipe ran next
+# (caught 2026-07-17 promoting the suite; the window dump in the ledger
+# is the evidence). Recipes must never launch a second dock.
 #
 # The focus-taker is a minimal QML window, not konsole: konsole's cold
 # start inside the nested session exceeded every reasonable wait and the
@@ -21,14 +22,9 @@
 # mode; the qml window maps in about a second).
 set -u
 
-repo="$(cd "$(dirname "$0")/../.." && pwd)"
+repo="${E2E_REPO:?run through scripts/run-e2e.sh}"
+source "$repo/tests/e2e/lib.sh"
 scratch="$(mktemp -d /tmp/kbnav-e2e.XXXXXX)"
-log="$scratch/dock.log"
-cfg="$scratch/config"
-mkdir -p "$cfg"
-if [ -d "$repo/build/_runconfig" ]; then
-    cp -r "$repo/build/_runconfig/." "$cfg/"
-fi
 
 cat > "$scratch/focus-taker.qml" <<'EOF'
 import QtQuick
@@ -38,13 +34,9 @@ EOF
 call() { busctl --user call org.kde.lattedock /Latte org.kde.LatteDock "$@"; }
 viewsjson() { call viewsData | sed 's/^s "//; s/"$//; s/\\"/"/g'; }
 
-env LATTE_CONFIG_HOME="$cfg" "$repo/scripts/run-staged.sh" -d > "$log" 2>&1 &
-DOCK=$!
 TAKER=""
-
 cleanup() {
     [ -n "$TAKER" ] && kill "$TAKER" 2>/dev/null
-    kill "$DOCK" 2>/dev/null
     rm -rf "$scratch" 2>/dev/null
 }
 trap cleanup EXIT INT TERM
@@ -52,27 +44,11 @@ trap cleanup EXIT INT TERM
 fail() { echo "FAIL: $1"; exit 1; }
 pass() { echo "ok: $1"; }
 
-state=""
-for _ in $(seq 1 45); do
-    state=$(call lifecycleState 2>/dev/null | awk '{print $2}')
-    [ "$state" = '"running"' ] && break
-    kill -0 "$DOCK" 2>/dev/null || fail "dock died during startup (log kept out of tree: $log)"
-    sleep 1
-done
-[ "$state" = '"running"' ] || fail "dock never reached running"
-pass "lifecycleState running"
+e2e_wait_settled 45 || fail "vehicle dock never settled"
+pass "driver dock running and settled"
 
-#! "running" is corona-level; the views themselves can appear and settle
-#! moments later - poll for a real record, then for inStartup to clear
-cid=""
-for _ in $(seq 1 30); do
-    cid=$(viewsjson | jq -r '.[0].containmentId // empty' 2>/dev/null)
-    [ -n "$cid" ] && break
-    sleep 1
-done
+cid=$(viewsjson | jq -r '.[0].containmentId // empty' 2>/dev/null)
 { [ -n "$cid" ] && [ "$cid" != "null" ]; } || fail "no containment id in viewsData"
-
-for _ in $(seq 1 20); do viewsjson | grep -q '"inStartup":true' || break; sleep 1; done
 pass "containment id $cid"
 
 kbnav() { viewsjson | jq -r ".[] | select(.containmentId == $cid) | .keyboardNavigation"; }
@@ -101,6 +77,20 @@ pass "exit over D-Bus: keyboardNavigation false"
 call setViewKeyboardNavigation ub "$cid" true >/dev/null
 for _ in $(seq 1 10); do [ "$(kbnav)" = "true" ] && break; sleep 0.5; done
 [ "$(kbnav)" = "true" ] || fail "re-enter before the focus-loss leg failed"
+
+#! Wait for the compositor to actually grant the layer-shell dock its
+#! OnDemand keyboard focus before mapping the taker. This state is
+#! Qt-level (QWindow::active on the layer surface) and NOT observable
+#! over D-Bus or KWin scripting - KWin's workspace.activeWindow never
+#! reports layer surfaces. If the taker maps before the grant lands the
+#! dock was never active, so there is no active->inactive transition for
+#! the exit watcher to catch and the leg races false-negative (proven
+#! 2026-07-17: the leg passed deterministically once ~1.5s of probe
+#! overhead sat here, failed without it). The settle is for an
+#! inherently-unobservable compositor grant, not a value clamp; the
+#! denial half of this (grant refused, not merely slow) is the filed
+#! keyboard-item follow-up.
+sleep 3
 
 qml "$scratch/focus-taker.qml" > /dev/null 2>&1 &
 TAKER=$!

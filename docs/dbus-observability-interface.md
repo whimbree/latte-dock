@@ -117,6 +117,12 @@ Landed before or during the 2026-07-16 stabilization session:
   settings combo does; needed by the lock/unlock and struts e2e
   recipes (flipping AlwaysVisible/dodge without config-file surgery
   and dock restarts, which is how this session did it).
+- `setViewKeyboardNavigation(u containmentId, b navigating)` (added
+  2026-07-17 with the keyboard focus mode) - the same
+  View::enter/exitKeyboardNavigation the Meta+Alt+D global shortcut
+  drives, targeted at one view; the test surface for the mode, since
+  kglobalaccel invokes race registration inside the nested vehicle.
+  Readback: viewsData()'s keyboardNavigation field.
 
 Rejected for now, with reasons recorded: setAppletsOrder over D-Bus
 (reorder is a drag interaction; tests that need order changes drive
@@ -176,3 +182,8 @@ the in-process KConfigPropertyMap caches).
   lastActiveWindowAppName: LastActiveWindow exposes appName, not a
   stable appId, and appName is application identity, not window
   content - still NO titles anywhere.
+- viewsData also carries keyboardNavigation (2026-07-17): whether the
+  view is in keyboard-navigation mode, i.e. temporarily accepting
+  keyboard focus. The exit paths are asserted through this field
+  (a stuck true means a dock stuck focusable - the exact defect the
+  mode's design guards against).

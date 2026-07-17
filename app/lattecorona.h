@@ -257,6 +257,12 @@ public Q_SLOTS:
     //! settings Behavior combo does; unknown names are refused loudly
     void setViewVisibilityMode(const uint &containmentId, const QString &mode);
 
+    //! D-Bus coarse action (docs/dbus-observability-interface.md): enter or
+    //! leave a view's keyboard-navigation mode through the same
+    //! View::enter/exitKeyboardNavigation paths the Meta+Alt+D global
+    //! shortcut drives; readback is viewsData()'s keyboardNavigation field
+    void setViewKeyboardNavigation(const uint &containmentId, const bool &navigating);
+
     void setBackgroundFromBroadcast(QString activity, QString screenName, QString filename);
     void setBroadcastedBackgroundsEnabled(QString activity, QString screenName, bool enabled);
     void showAlternativesForApplet(Plasma::Applet *applet);

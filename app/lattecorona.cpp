@@ -1361,6 +1361,24 @@ void Corona::setViewVisibilityMode(const uint &containmentId, const QString &mod
     view->visibility()->setMode(*visibilityMode);
 }
 
+void Corona::setViewKeyboardNavigation(const uint &containmentId, const bool &navigating)
+{
+    auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);
+
+    if (!view) {
+        qWarning() << "corona: setViewKeyboardNavigation requested for containment" << containmentId << "which has no view";
+        return;
+    }
+
+    //! the same enter/exit the Meta+Alt+D global shortcut drives, targeted
+    //! at one view; readback is viewsData()'s keyboardNavigation field
+    if (navigating) {
+        view->enterKeyboardNavigation();
+    } else {
+        view->exitKeyboardNavigation();
+    }
+}
+
 QString Corona::viewTasksData(const uint &containmentId)
 {
     auto view = m_layoutsManager->synchronizer()->viewForContainment(containmentId);

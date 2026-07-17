@@ -150,6 +150,7 @@ struct ViewRecord {
     QRect inputMask;
     bool editMode{false};
     bool inConfigureAppletsMode{false};
+    bool keyboardNavigation{false};
 };
 
 //! Enum-to-string names for the JSON fields. Exhaustive switches with no
@@ -493,6 +494,7 @@ inline QJsonObject serializeViewRecord(const ViewRecord &record)
     json[QStringLiteral("inputRegionRects")] = inputRegion;
     json[QStringLiteral("editMode")] = record.editMode;
     json[QStringLiteral("inConfigureAppletsMode")] = record.inConfigureAppletsMode;
+    json[QStringLiteral("keyboardNavigation")] = record.keyboardNavigation;
 
     return json;
 }

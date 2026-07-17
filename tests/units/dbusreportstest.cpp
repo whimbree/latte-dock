@@ -213,6 +213,7 @@ void DbusReportsTest::recordSerialization()
     record.inputMask = QRect(13, 14, 15, 16);
     record.editMode = true;
     record.inConfigureAppletsMode = true;
+    record.keyboardNavigation = true;
 
     const QJsonObject json = serializeViewRecord(record);
 
@@ -242,6 +243,7 @@ void DbusReportsTest::recordSerialization()
 
     QCOMPARE(json.value(QStringLiteral("editMode")).toBool(), true);
     QCOMPARE(json.value(QStringLiteral("inConfigureAppletsMode")).toBool(), true);
+    QCOMPARE(json.value(QStringLiteral("keyboardNavigation")).toBool(), true);
 }
 
 void DbusReportsTest::viewRecordKeySet()
@@ -253,6 +255,7 @@ void DbusReportsTest::viewRecordKeySet()
         QStringLiteral("inStartup"), QStringLiteral("inputRegionRects"),
         QStringLiteral("isCloned"), QStringLiteral("isClonedFrom"),
         QStringLiteral("isHidden"), QStringLiteral("isOffScreen"),
+        QStringLiteral("keyboardNavigation"),
         QStringLiteral("layout"), QStringLiteral("localGeometry"),
         QStringLiteral("maskRect"), QStringLiteral("onPrimary"),
         QStringLiteral("publishedStruts"), QStringLiteral("screen"),

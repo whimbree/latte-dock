@@ -53,7 +53,7 @@ sidebarOnDemand|sidebarAutoHide|normalWindow), `isHidden`,
 `inStartup`, `isOffScreen`, `absoluteGeometry`, `localGeometry`,
 `screenGeometry` (all `[x,y,w,h]`), `strutsThickness`,
 `publishedStruts`, `maskRect`, `inputRegionRects` (array of rects),
-`editMode`, `inConfigureAppletsMode`.
+`editMode`, `inConfigureAppletsMode`, `keyboardNavigation`.
 
 This replaces pixel-peeping for dock state: hidden-or-not, where the
 input region really is, whether startup stranded (`inStartup` stuck
@@ -96,6 +96,9 @@ call viewTemplatesData                 # as: name,id pairs flattened
 ```bash
 call setViewEditMode ub 1 true         # enter Edit Dock for view 1 (false = close chrome)
 call setViewVisibilityMode us 1 "dodgeActive"   # the settings combo; names as viewsData reports
+call setViewKeyboardNavigation ub 1 true        # enter/leave keyboard navigation (what Meta+Alt+D
+                                                # toggles); readback: viewsData keyboardNavigation.
+                                                # false is always safe: exits are idempotent
 call activateTaskAt ui 1 3             # what Meta+3 does on view 1: 1-BASED visual entry
                                        # index (badges' numbering); active task toggles
                                        # (minimize), launcher-only entries launch

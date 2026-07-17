@@ -178,7 +178,11 @@ e2e_tasks_view() {
     local id
     for id in $(e2e_json viewsData | python3 -c '
 import json, sys
-views = [v for v in json.load(sys.stdin) if v["edge"] in ("bottom", "top")]
+# hidden views (sidebars, auto-hidden docks) are excluded: they have no
+# input region to drive and their reported width breathes with slide
+# animations, which once flipped the pick onto an on-demand sidebar
+views = [v for v in json.load(sys.stdin)
+         if v["edge"] in ("bottom", "top") and not v["isHidden"]]
 # deterministic: widest first, bottom beats top on ties (my config carries
 # same-width top and bottom docks; every by-hand calibration used bottom)
 views.sort(key=lambda v: (-v["absoluteGeometry"][2], v["edge"] != "bottom"))

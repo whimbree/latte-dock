@@ -2601,7 +2601,29 @@ showed how much of the dock can only be driven by a pointer today.
             2026-07-17; the itemized list with skip verdicts lives in
             the adoption plan doc - ~14 suites over shared headers,
             shortcutstest and storagetest first).
-            Commits:
+            STATUS 2026-07-17 evening wave: 14 suites adopted
+            (shortcuts, storage, universalsettings, layoutmanager,
+            importerlogic, wmtools, popupplacement contract from
+            coretypesenum, commontools, coretools, generictools,
+            panelbackground, configcontrols, schemesmodel, viewmodels
+            - ctest 66 -> 80 entries), 2 skipped with reasons in the
+            adoption doc (appletremovaltest contradicts our parking
+            contract; coretypesenum's EdgePosition is their-tree-only),
+            2 DEFERRED (layoutsmodeltest, viewsmodeltest: both need a
+            live Latte::Corona, which in this upstream-shaped tree
+            means the whole app machinery - session D-Bus, activities,
+            layout loading; needs its own harness investigation, the
+            fork leans on its DI seams). FOUR inherited defects found
+            by the wave and fixed at the origin, each landing before
+            the test that pins it: updateView's dead-key maxLength
+            write, nameOfConfigFile's Qt6 remove(-1,..) end-wrap chop,
+            stringToRect's out-of-range crash on corrupted screen
+            records, and the four icon helpers sizing from the raw -1
+            thickMargin sentinel. Ledger:
+            docs/agent-logs/2026-07-17-p3b-transplants.md.
+            Commits: 16c7a0a92..d40f5a17d on p3b-transplants
+            (17 commits: 13 test + 4 fix; worktree hashes - re-pin
+            at merge time if rebased)
       - [ ] P4: e2e pixel assertions (latte-imgdiff + KWin ScreenShot2
             before/after under nested kwin, D-Bus-driven, seeded HOME);
             fakepointer keeps covering live pointer-delivery tests.

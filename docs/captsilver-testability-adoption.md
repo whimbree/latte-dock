@@ -143,22 +143,73 @@ mechanical include-level pass over every fork test we lack by name;
 the 33-name gap splits into 10 their-architecture skips, a few
 already-covered-differently, and these, all over headers our tree
 shares - each still gets the P3 method: verify the premise against
-OUR code first, raise past the fork's cases, negative-test):
-shortcutstest (shortcutstracker+modifiertracker; high value now that
-the shortcuts host is alive again), storagetest (layouts/storage.h
-breadth beyond our id-remap pair), universalsettingstest,
-layoutmanagertest + appletremovaltest (containment LayoutManager
-restore/save/removal beyond our parking suite), importerlogictest
-(breadth beyond importerregressiontest), layoutsmodeltest +
-viewsmodeltest + schemesmodeltest (settings models beyond our
-applets+screens pair), viewmodelstest (app/view/tasksmodel +
-indicatorinfo), wmtoolstest (wm/tasktools + schemecolors),
-commontoolstest/coretoolstest/generictoolstest (helper suites,
-partial overlap with our units - premise check decides),
-coretypesenumtest (enum value pins; synergizes with the D-Bus name
-maps), panelbackgroundtest + configcontrolstest (verify against our
-panelbackgroundscantest/backgroundstatetest and the qml
-config-control tests before adopting). Their-architecture skips, so
+OUR code first, raise past the fork's cases, negative-test).
+EXECUTED 2026-07-17 (evening wave, p3b-transplants branch; ledger
+docs/agent-logs/2026-07-17-p3b-transplants.md carries the full
+per-candidate reasoning; four inherited defects fixed at the origin,
+each before the test that pins it):
+- shortcutstest - ADOPTED, raised (data-driven badge table with the
+  branches they skipped; session bus neutered so KGlobalAccel can
+  never reach the desktop's kglobalacceld - their version registered
+  a test component in the live daemon on every run).
+- storagetest - ADOPTED, raised (view() defaults table, updateView
+  non-Latte refusal, clean-layout scanner negatives, observable
+  plugins() filter, LayoutSettings clearing). FIXED FIRST: upstream's
+  updateView wrote maxLength at the containment level while view()
+  reads [General] - edits routed through view data were lost (their
+  b48903ec parallel). Their importContainments case dropped: private
+  here, pinned through newView's inactive branch instead.
+- universalsettingstest - ADOPTED, adapted (2-arg ctor here; pins OUR
+  transient inConfigureAppletsMode divergence, which their tree still
+  persists; layoutsMemoryUsage private here, not reached).
+- layoutmanagertest - ADOPTED minus their scheduled-destruction cases
+  (our 71b0d75a parking contract refuses loudly without a container;
+  layoutmanagerparkingtest pins it - theirs asserts blind tracking).
+- appletremovaltest - SKIPPED: asserts remove-now on destroyed(),
+  which contradicts our two-phase undo parking (askdestroy contract +
+  parkingLifecycle pin our timeline).
+- importerlogictest - ADOPTED, raised (data-driven archives +2 rows,
+  split data homes making systemShellDataPath observable; their
+  uniqueLayoutName cases skipped - importerregressiontest is deeper).
+  FIXED FIRST: nameOfConfigFile's Qt6 remove(-1,..) wraps to the END
+  and chopped the last character off extensionless import names.
+- wmtoolstest - ADOPTED, raised (data-driven skipTaskbar, by-name
+  possibleSchemeFile resolution rows; their icon-theme assertion
+  dropped as environment-dependent).
+- coretypesenumtest - ADOPTED AS popupplacementcontracttest, raised:
+  parses the pinned libplasma plasmaextracomponents qmltypes and pins
+  all nine PopupPlacement members by declared index (they hardcode
+  three ints); their EdgePosition half SKIPPED (their-tree enum,
+  absent here).
+- commontoolstest - ADOPTED, reshaped (color math lives in ColorTools
+  EX-19 here, already pinned by colortoolstest). FIXED FIRST:
+  stringToRect indexed parts[1] blind - a corrupted [ScreenConnectors]
+  entry was an out-of-range crash at load; now a loud boundary
+  refusal, pinned by seven malformed rows.
+- coretoolstest - ADOPTED, reshaped (Environment + extras.h only;
+  frameworksVersion pinned to OUR KCoreAddons::version() contract,
+  not their PLASMA_VERSION).
+- generictoolstest - ADOPTED, raised (RTL flip case added). FIXED
+  FIRST: all four icon helpers sized the icon from the raw -1
+  thickMargin sentinel instead of the resolved margin (their d3be9b71
+  parallel) - delegate icons oversized by 4px under defaults.
+- panelbackgroundtest - ADOPTED (both trees fixed the Wayland band
+  the same way; legacy-fallthrough demo + shipped-wrapper scan).
+- configcontrolstest - ADOPTED (Qt6 final-member/tooltip/TabBar/
+  ListModel rules + scans of our components CheckBox/TextField/
+  ItemDelegate; semantics fragments moved to plain QtQuick.Controls).
+- schemesmodeltest - ADOPTED (XDG-isolated; our BreezeLight fallback
+  in possibleSchemeFile still resolves row 0 to the empty scheme).
+- viewmodelstest - ADOPTED (TasksModel signal discipline + indicator
+  Info record; bare AppletQuickItems, public default ctor at 6.7.3).
+- layoutsmodeltest + viewsmodeltest - DEFERRED: both construct a live
+  Latte::Corona, which in this upstream-shaped tree spins the whole
+  app machinery (session D-Bus registration, activities, layout
+  loading) - needs its own corona-test-harness investigation; the
+  fork's versions lean on their DI-seam architecture. Their
+  currentData dangling-reference static_assert premise checked: ours
+  already returns by value. Filed as the P3b tail.
+Their-architecture skips, so
 the next pass does not re-derive them: addviewdecision,
 startuplayoutplanner, validviewsmapbuilder, viewcontainertransition,
 viewpriority, viewsyncplan, activitystatescache, settingsnameutils

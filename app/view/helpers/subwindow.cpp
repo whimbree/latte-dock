@@ -61,52 +61,6 @@ SubWindow::SubWindow(Latte::View *view, QString debugType) :
         updateGeometry();
     });
 
-    if (!KWindowSystem::isPlatformWayland()) {
-        //! IMPORTANT!!! ::: This fixes a bug when closing an Activity all views from all Activities are
-        //!  disappearing! With this code parts they reappear!!!
-        m_visibleHackTimer1.setInterval(400);
-        m_visibleHackTimer2.setInterval(2500);
-        m_visibleHackTimer1.setSingleShot(true);
-        m_visibleHackTimer2.setSingleShot(true);
-
-        connectionsHack << connect(this, &QWindow::visibleChanged, this, [&]() {
-            if (!m_inDelete && m_latteView && m_latteView->layout() && !isVisible()) {
-                m_visibleHackTimer1.start();
-                m_visibleHackTimer2.start();
-            } else if (!m_inDelete) {
-                //! For some reason when the window is hidden in the edge under X11 afterwards
-                //! is losing its window flags
-                m_corona->wm()->setViewExtraFlags(this);
-            }
-        });
-
-        connectionsHack << connect(&m_visibleHackTimer1, &QTimer::timeout, this, [&]() {
-            if (!m_inDelete && m_latteView && m_latteView->layout() && !isVisible()) {
-                show();
-                Q_EMIT forcedShown();
-                //qDebug() << m_debugType + ":: Enforce reshow from timer 1...";
-            } else {
-                //qDebug() << m_debugType + ":: No needed reshow from timer 1...";
-            }
-        });
-
-        connectionsHack << connect(&m_visibleHackTimer2, &QTimer::timeout, this, [&]() {
-            if (!m_inDelete && m_latteView && m_latteView->layout() && !isVisible()) {
-                show();
-                Q_EMIT forcedShown();
-                //qDebug() << m_debugType + ":: Enforce reshow from timer 2...";
-            } else {
-                //qDebug() << m_debugType + ":: No needed reshow from timer 2...";
-            }
-        });
-
-        connectionsHack << connect(this, &SubWindow::forcedShown, this, [&]() {
-            m_corona->wm()->unregisterIgnoredWindow(m_trackedWindowId);
-            m_trackedWindowId = WindowSystem::WindowId::fromX11WId(winId());
-            m_corona->wm()->registerIgnoredWindow(m_trackedWindowId);
-        });
-    }
-
     setupWaylandIntegration();
 
     connect(m_corona->wm(), &WindowSystem::AbstractWindowInterface::latteWindowAdded, this, &SubWindow::updateWaylandId);
@@ -123,13 +77,6 @@ SubWindow::~SubWindow()
     m_corona->wm()->unregisterIgnoredWindow(m_trackedWindowId);
 
     m_latteView = nullptr;
-
-    // clear mode
-    m_visibleHackTimer1.stop();
-    m_visibleHackTimer2.stop();
-    for (auto &c : connectionsHack) {
-        disconnect(c);
-    }
 }
 
 int SubWindow::location()

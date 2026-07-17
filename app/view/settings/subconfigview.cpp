@@ -183,7 +183,7 @@ Latte::WindowSystem::WindowId SubConfigView::trackedWindowId()
         updateWaylandId();
     }
 
-    return !KWindowSystem::isPlatformWayland() ? WindowSystem::WindowId::fromX11WId(winId()) : m_waylandWindowId;
+    return m_waylandWindowId;
 }
 
 Latte::Corona *SubConfigView::corona() const

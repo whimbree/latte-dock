@@ -47,7 +47,6 @@ public:
     Latte::WindowSystem::WindowId trackedWindowId();
 
 Q_SIGNALS:
-    void forcedShown(); //[workaround] forced shown to avoid a KWin issue that hides windows when activities are stopped
     void calculatedGeometryChanged();
 
 protected:
@@ -83,14 +82,6 @@ protected:
     QColor m_showColor;
 
     QTimer m_fixGeometryTimer;
-
-    //! HACK: Timers in order to handle KWin faulty
-    //! behavior that hides Views when closing Activities
-    //! with no actual reason
-    QTimer m_visibleHackTimer1;
-    QTimer m_visibleHackTimer2;
-    //! Connections for the KWin visibility hack
-    QList<QMetaObject::Connection> connectionsHack;
 
     Latte::View *m_latteView{nullptr};
 

@@ -5,28 +5,39 @@
 */
 
 //! Upstream contract (tests/contracts/README.md): libplasma askDestroy()
-//! signal ordering at the pinned v6.6.5, earned in 71b0d75a where the System
+//! signal ordering at the pinned v6.7.3, earned in 71b0d75a where the System
 //! Tray's ghost slot lived exactly as long as the undo window.
 //!
 //! askDestroy() - the widget-removal entry point behind every applet's
 //! "remove" action - marks the applet destroyed() and keeps the OBJECT alive
-//! for the undo notification (60s fallback timer). What it emits depends on
-//! the applet's type, and Latte's containment LayoutManager keys its
-//! two-phase parking on exactly this timeline:
+//! for the undo notification (60s fallback timer). Latte's containment
+//! LayoutManager keys its two-phase parking on exactly this timeline, which
+//! since 6.7 is the SAME for every applet class:
 //!
-//! - plain applet: destroyedChanged(true), then Containment::appletRemoved
-//!   fires IMMEDIATELY (synchronously inside askDestroy), and fires a SECOND
-//!   time when the object really dies (~Applet emits appletDeleted, which
-//!   the containment re-broadcasts as appletRemoved). removeAppletItem must
-//!   treat destroyed()==true as "park, undo still possible" both times.
+//! destroyedChanged(true) first, then Containment::appletRemoved fires
+//! IMMEDIATELY (synchronously inside askDestroy) with the applet pruned from
+//! Containment::applets(), and fires a SECOND time when the object really
+//! dies (~Applet emits appletDeleted, which the containment re-broadcasts as
+//! appletRemoved - unconditionally, list membership does not gate it).
+//! removeAppletItem must treat destroyed()==true as "park, undo still
+//! possible" both times. Undo re-inserts into applets() and re-emits
+//! appletAdded; addAppletItem tolerates arriving after the destruction
+//! watcher already unparked (its "reaches here twice" guard).
 //!
-//! - containment-type applet (the System Tray is a Plasma::Containment of
-//!   type CustomEmbedded): askDestroy() guards its immediate emit AND the
-//!   applets() list removal with !isContainment(), so NO appletRemoved fires
-//!   and the applet stays in Containment::applets() for the whole undo
-//!   window. Its ONLY appletRemoved arrives at object death. Latte parks on
-//!   destroyedChanged(true) instead of waiting for a signal that will not
-//!   come (the AppletItem.qml destruction watcher).
+//! HISTORY - the 6.6.5 contract this test originally pinned: askDestroy()
+//! guarded the immediate emit AND the list removal with !isContainment(),
+//! so a containment-type applet (the System Tray is a Plasma::Containment
+//! of type CustomEmbedded) got NO immediate appletRemoved, stayed in
+//! applets() for the whole undo window, and its ONLY appletRemoved arrived
+//! at object death. libplasma 6.7 widened the guard to
+//! `containment() && containment() != q` (both in askDestroy's tail and in
+//! the undo re-add), so CustomEmbedded trays now follow the plain-applet
+//! ordering exactly. Latte's parking survives the change by construction -
+//! setAppletInScheduledDestruction is idempotent per id in both directions,
+//! and the AppletItem.qml destruction watcher (which parks on
+//! destroyedChanged and is now redundant-but-first for parking) remains the
+//! unpark-before-appletAdded ordering guarantee on undo. Caught by this
+//! test at the 2026-07-17 re-pin.
 //!
 //! The undo window's end is simulated with a direct delete: the real timer
 //! path (AppletPrivate::cleanUpAndDelete) ends in deleteLater() on the same
@@ -81,7 +92,7 @@ class AskDestroySignalOrderingTest : public QObject
 private Q_SLOTS:
     void initTestCase();
     void plainAppletRemovedImmediatelyAndAgainAtDeath();
-    void containmentTypeAppletRemovedOnlyAtDeath();
+    void containmentTypeAppletRemovedImmediatelyAndAgainAtDeath();
 
 private:
     Plasma::Containment *createHostContainment(Plasma::Corona *corona);
@@ -177,7 +188,7 @@ void AskDestroySignalOrderingTest::plainAppletRemovedImmediatelyAndAgainAtDeath(
     delete host;
 }
 
-void AskDestroySignalOrderingTest::containmentTypeAppletRemovedOnlyAtDeath()
+void AskDestroySignalOrderingTest::containmentTypeAppletRemovedImmediatelyAndAgainAtDeath()
 {
     TestCorona corona;
     Plasma::Containment *host = createHostContainment(&corona);
@@ -204,21 +215,30 @@ void AskDestroySignalOrderingTest::containmentTypeAppletRemovedOnlyAtDeath()
 
     QVERIFY(invokeAskDestroy(tray));
 
-    //! destroyedChanged(true) is the ONLY instant signal for this class -
-    //! the AppletItem.qml destruction watcher parks on it (71b0d75a)
+    //! destroyedChanged(true) still arrives FIRST - the AppletItem.qml
+    //! destruction watcher parks on it (71b0d75a) before removeAppletItem
+    //! ever runs, and setAppletInScheduledDestruction's per-id idempotence
+    //! is what makes the second park attempt below a no-op
     QVERIFY(tray->destroyed());
     QCOMPARE(destroyedChangedSpy.count(), 1);
     QCOMPARE(destroyedChangedSpy.at(0).at(0).toBool(), true);
 
-    QVERIFY2(removedSpy.count() == 0, "containment-type applets must NOT get appletRemoved from askDestroy "
-                                       "(!isContainment() guard) - if one arrives now, the 71b0d75a parking "
-                                       "machinery double-handles the removal");
-    QVERIFY2(host->applets().contains(tray), "containment-type applets stay in Containment::applets() for the whole undo window");
+    //! the 6.7 contract: containment-type applets now get the SAME immediate
+    //! emit and applets() prune as plain applets (the 6.6.5 !isContainment()
+    //! guard became `containment() != q`); removeAppletItem runs here with
+    //! destroyed()==true and must park idempotently, not double-handle
+    QVERIFY2(removedSpy.count() == 1, "containment-type applets must get appletRemoved IMMEDIATELY since libplasma 6.7 "
+                                       "(guard widened to containment() != q) - a count of 0 means the substrate reverted "
+                                       "to the 6.6.5 !isContainment() behavior and the parking timeline moved again");
+    QVERIFY2(!host->applets().contains(tray), "since 6.7 askDestroy prunes containment-type applets from Containment::applets() "
+                                              "immediately, same as plain applets");
     QVERIFY(!alive.isNull());
 
-    //! only object death delivers their appletRemoved
+    //! object death re-broadcasts appletRemoved a second time
+    //! (ContainmentPrivate::appletDeleted emits without checking list
+    //! membership); removeAppletItem must no-op on the already-parked id
     delete tray;
-    QVERIFY2(removedSpy.count() == 1, "the containment-type applet's ONLY appletRemoved must arrive at object death; "
+    QVERIFY2(removedSpy.count() == 2, "appletRemoved must fire again at the containment-type applet's object death; "
                                        "removeAppletItem finalizes nothing before this");
 
     delete host;

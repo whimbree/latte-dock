@@ -1323,15 +1323,19 @@ void LayoutManager::removeAppletItem(QObject *applet)
         return;
     }
 
-    //! Plasma 6 undo contract (libplasma askDestroy()): deleting a widget marks it
-    //! destroyed() and keeps the object alive while the "Widget Removed" undo
-    //! notification is open (60s fallback timer). For regular applets appletRemoved
-    //! fires immediately at that point; for containment-type applets (System Tray)
-    //! askDestroy() guards its emit with !isContainment(), so their ONLY appletRemoved
-    //! arrives from inside ~Applet when the undo window ends. Either way
-    //! destroyed()==true means "undo still possible": park the container, which hides
-    //! the slot instantly and keeps it restorable. Physical cleanup happens when the
-    //! applet object really dies: the container self-destructs through
+    //! Plasma 6 undo contract (libplasma askDestroy(), pinned at 6.7.3 by
+    //! askdestroysignalorderingtest): deleting a widget marks it destroyed() and
+    //! keeps the object alive while the "Widget Removed" undo notification is open
+    //! (60s fallback timer). Since libplasma 6.7 EVERY applet class - plain and
+    //! containment-type (System Tray) alike - gets appletRemoved immediately at
+    //! that point (6.6.5 guarded the emit with !isContainment(); 6.7 widened it to
+    //! containment() != q), and a second time from inside ~Applet when the undo
+    //! window ends. Either way destroyed()==true means "undo still possible": park
+    //! the container, which hides the slot instantly and keeps it restorable. The
+    //! AppletItem.qml destruction watcher usually parked the id already
+    //! (destroyedChanged fires before the emit) - setAppletInScheduledDestruction
+    //! is idempotent per id, so this call no-ops then. Physical cleanup happens
+    //! when the applet object really dies: the container self-destructs through
     //! AppletItem.onAppletChanged and the parking entry prunes itself (see
     //! setAppletInScheduledDestruction). destroyed()==false is a direct
     //! Plasma::Applet deletion (e.g. synced applets): finalize immediately.

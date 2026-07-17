@@ -32,8 +32,12 @@ kactivitymanagerd D-Bus activation in the container. schemesmodeltest
 non-hermeticity (XDG_DATA_DIRS) also still open. Deferred to keep this PR
 the clean "render harness runs in-container" unit.
 
-NEXT: gate-all on the branch (CMakeLists + lib-qml-env are code) -> PR +
-lean Opus review -> ff-merge. Then B2, or widen Phase A to more distros.
+MERGED via PR #9 (ff, master at 3de11200e; lean Opus review MERGE, one
+nit filed under B2: qml-interaction-tests.sh:18 hardcodes lib/qml in its
+staging-reuse guard, same class). NEXT: B2 (e2e vehicle in-container) to
+finish the Arch end-to-end story - risky unknown is kactivitymanagerd
+D-Bus activation in the container (the dock waits on the activities
+consumer reaching Running).
 
 ## 2026-07-17 multi-distro CI Phase A: ARCH LEG PROVEN + MERGED (PR #8)
 

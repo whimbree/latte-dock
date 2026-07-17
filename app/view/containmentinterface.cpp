@@ -66,16 +66,10 @@ ContainmentInterface::~ContainmentInterface()
 {
 }
 
-void ContainmentInterface::identifyShortcutsHost()
+QQuickItem *ContainmentInterface::findShortcutsHost(QQuickItem *containmentGraphicItem)
 {
-    if (m_shortcutsHost) {
-        return;
-    }
-
-    QQuickItem *graphicItem = PlasmaQuick::AppletQuickItem::itemForApplet(m_view->containment());
-
-    if (!graphicItem) {
-        return;
+    if (!containmentGraphicItem) {
+        return nullptr;
     }
 
     //! Plasma 6: containment roots must BE ContainmentItem types, so
@@ -88,13 +82,14 @@ void ContainmentInterface::identifyShortcutsHost()
     //! no-op'd; Meta+number only appeared to work through fallbacks.
     //! Same tree change and same fix shape as Panel.qml's viewLayout
     //! discovery (the round-five context-menu repair). Child scan kept
-    //! for safety, mirroring Panel.qml.
+    //! for safety, mirroring Panel.qml. Pinned offscreen by
+    //! tests/shortcutshosttest.cpp.
     QQuickItem *viewLayout{nullptr};
 
-    if (graphicItem->objectName() == QLatin1String("containmentViewLayout")) {
-        viewLayout = graphicItem;
+    if (containmentGraphicItem->objectName() == QLatin1String("containmentViewLayout")) {
+        viewLayout = containmentGraphicItem;
     } else {
-        const auto &childItems = graphicItem->childItems();
+        const auto &childItems = containmentGraphicItem->childItems();
 
         for (QQuickItem *item : childItems) {
             if (item->objectName() == QLatin1String("containmentViewLayout")) {
@@ -105,44 +100,85 @@ void ContainmentInterface::identifyShortcutsHost()
     }
 
     if (!viewLayout) {
-        qWarning() << "containmentinterface: containmentViewLayout not found for containment"
-                   << (m_view->containment() ? m_view->containment()->id() : 0)
-                   << "- entry activation and shortcut badges will not work on this view";
-        return;
+        return nullptr;
     }
 
     const auto &layoutChildren = viewLayout->childItems();
 
     for (QQuickItem *subitem : layoutChildren) {
         if (subitem->objectName() == QLatin1String("PositionShortcutsAbilityHost")) {
-            m_shortcutsHost = subitem;
-            identifyMethods();
-            return;
+            return subitem;
         }
     }
 
-    qWarning() << "containmentinterface: PositionShortcutsAbilityHost not found for containment"
-               << (m_view->containment() ? m_view->containment()->id() : 0)
-               << "- entry activation and shortcut badges will not work on this view";
+    return nullptr;
+}
+
+ContainmentInterface::ShortcutsHostMethods ContainmentInterface::resolveShortcutsHostMethods(const QQuickItem *host)
+{
+    ShortcutsHostMethods methods;
+
+    if (!host) {
+        return methods;
+    }
+
+    const QMetaObject *meta = host->metaObject();
+
+    const int aeIndex = meta->indexOfMethod("activateEntryAtIndex(QVariant)");
+    const int niIndex = meta->indexOfMethod("newInstanceForEntryAtIndex(QVariant)");
+    const int sbIndex = meta->indexOfMethod("setShowAppletShortcutBadges(QVariant,QVariant,QVariant,QVariant)");
+    const int afiIndex = meta->indexOfMethod("appletIdForIndex(QVariant)");
+
+    //! QMetaObject::method(-1) is an invalid QMetaMethod, so an absent
+    //! signature stays a visible absence at the call sites
+    methods.activateEntryAtIndex = meta->method(aeIndex);
+    methods.newInstanceForEntryAtIndex = meta->method(niIndex);
+    methods.setShowAppletShortcutBadges = meta->method(sbIndex);
+    methods.appletIdForIndex = meta->method(afiIndex);
+
+    return methods;
+}
+
+void ContainmentInterface::identifyShortcutsHost()
+{
+    if (m_shortcutsHost) {
+        return;
+    }
+
+    QQuickItem *graphicItem = PlasmaQuick::AppletQuickItem::itemForApplet(m_view->containment());
+
+    if (!graphicItem) {
+        return;
+    }
+
+    m_shortcutsHost = findShortcutsHost(graphicItem);
+
+    if (!m_shortcutsHost) {
+        qWarning() << "containmentinterface: PositionShortcutsAbilityHost not found for containment"
+                   << (m_view->containment() ? m_view->containment()->id() : 0)
+                   << "- entry activation and shortcut badges will not work on this view";
+        return;
+    }
+
+    identifyMethods();
 }
 
 void ContainmentInterface::identifyMethods()
 {
-    int aeIndex = m_shortcutsHost->metaObject()->indexOfMethod("activateEntryAtIndex(QVariant)");
-    int niIndex = m_shortcutsHost->metaObject()->indexOfMethod("newInstanceForEntryAtIndex(QVariant)");
-    int sbIndex = m_shortcutsHost->metaObject()->indexOfMethod("setShowAppletShortcutBadges(QVariant,QVariant,QVariant,QVariant)");
-    int afiIndex = m_shortcutsHost->metaObject()->indexOfMethod("appletIdForIndex(QVariant)");
+    const ShortcutsHostMethods methods = resolveShortcutsHostMethods(m_shortcutsHost);
 
-    if (aeIndex < 0 || niIndex < 0 || sbIndex < 0 || afiIndex < 0) {
+    if (!methods.activateEntryAtIndex.isValid() || !methods.newInstanceForEntryAtIndex.isValid()
+            || !methods.setShowAppletShortcutBadges.isValid() || !methods.appletIdForIndex.isValid()) {
         qWarning() << "containmentinterface: shortcuts host found but a method signature did not resolve"
-                   << "(ae/ni/sb/afi:" << aeIndex << niIndex << sbIndex << afiIndex << ")"
+                   << "(ae/ni/sb/afi:" << methods.activateEntryAtIndex.isValid() << methods.newInstanceForEntryAtIndex.isValid()
+                   << methods.setShowAppletShortcutBadges.isValid() << methods.appletIdForIndex.isValid() << ")"
                    << "- the QML host's function signatures drifted";
     }
 
-    m_activateEntryMethod = m_shortcutsHost->metaObject()->method(aeIndex);
-    m_appletIdForIndexMethod = m_shortcutsHost->metaObject()->method(afiIndex);
-    m_newInstanceMethod = m_shortcutsHost->metaObject()->method(niIndex);
-    m_showShortcutsMethod = m_shortcutsHost->metaObject()->method(sbIndex);
+    m_activateEntryMethod = methods.activateEntryAtIndex;
+    m_appletIdForIndexMethod = methods.appletIdForIndex;
+    m_newInstanceMethod = methods.newInstanceForEntryAtIndex;
+    m_showShortcutsMethod = methods.setShowAppletShortcutBadges;
 }
 
 bool ContainmentInterface::applicationLauncherHasGlobalShortcut() const

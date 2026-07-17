@@ -65,6 +65,26 @@ public:
     ContainmentInterface(Latte::View *parent);
     virtual ~ContainmentInterface();
 
+    //! the four QML shortcuts-host invokables Meta+<number> rides; every
+    //! member must resolve or the QML host's function signatures drifted
+    struct ShortcutsHostMethods {
+        QMetaMethod activateEntryAtIndex;
+        QMetaMethod newInstanceForEntryAtIndex;
+        QMetaMethod setShowAppletShortcutBadges;
+        QMetaMethod appletIdForIndex;
+    };
+
+    //! the Plasma 6 shortcuts-host discovery walk and the signature
+    //! resolution over it. Static and side-effect free so the offscreen
+    //! pin test (tests/shortcutshosttest.cpp) drives the exact shipped
+    //! code over a real containment graph - both halves broke SILENTLY
+    //! once (the Plasma 5 child-scan walk, 2026-07-16). They return
+    //! nullptr/invalid methods without logging: only the calling
+    //! identify* slots know which containment failed, so the loud
+    //! refusals live there.
+    static QQuickItem *findShortcutsHost(QQuickItem *containmentGraphicItem);
+    static ShortcutsHostMethods resolveShortcutsHostMethods(const QQuickItem *host);
+
     bool hasExpandedApplet() const;
     bool hasLatteTasks() const;
     bool hasPlasmaTasks() const;

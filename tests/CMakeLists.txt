@@ -340,6 +340,26 @@ target_include_directories(viewmodelstest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# Plasma 6 shortcuts-host discovery pin (the OWED test from the plan's
+# keyboard item): builds a real containment graph through itemForApplet
+# with the REAL abilities/PositionShortcuts.qml aliased into the qrc, and
+# asserts the discovery walk and all four QML invokable signatures through
+# the shipped statics. Needs the devShell's LATTE_QML_MODULE_PATH, like
+# the contract tests; REPO_ROOT feeds the abilities.definition import leaf.
+qt6_add_resources(shortcutshost_QRC shortcutshost/shortcutshost.qrc)
+ecm_add_test(shortcutshosttest.cpp
+    ${shortcutshost_QRC}
+    TEST_NAME shortcutshosttest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(shortcutshosttest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(shortcutshosttest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+target_compile_definitions(shortcutshosttest PRIVATE
+    REPO_ROOT="${CMAKE_SOURCE_DIR}")
+
 ecm_add_test(visualhostwindowtest.cpp
     TEST_NAME visualhostwindowtest
     LINK_LIBRARIES lattedock-core Qt6::Test

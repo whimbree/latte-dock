@@ -1,0 +1,10 @@
+<RCC>
+    <qresource prefix="/qt/qml/plasma/applet">
+        <file alias="test/host/main.qml">main.qml</file>
+        <!-- the REAL shipped ability files, aliased in place so the
+             harness containment instantiates exactly what the dock runs;
+             rcc snapshots them at build time, which is what a pin wants -->
+        <file alias="test/host/abilities/PositionShortcuts.qml">../../containment/package/contents/ui/abilities/PositionShortcuts.qml</file>
+        <file alias="test/host/abilities/privates/PositionShortcutsPrivate.qml">../../containment/package/contents/ui/abilities/privates/PositionShortcutsPrivate.qml</file>
+    </qresource>
+</RCC>

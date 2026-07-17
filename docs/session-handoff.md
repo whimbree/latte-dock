@@ -46,9 +46,36 @@ the 315 swept by hand). STILL OWED, needs me or my approval: the
 services): ps -eo pid,etimes,comm | awk '$3 ~
 /xdg-desktop-por|xdg-document-po|xdg-permission-|ksecretd-wrapp/ &&
 $2 < 30000 {print $1}' | xargs -r kill - or a logout/login clears
-them. ALSO OWED: whether the 23:33 rebuild was deliberate (if
-nixos-upgrade.timer did it, expect this incident class at every
-upgrade until the re-pin flow is scripted).
+them. RESOLVED at the desk: the 23:33 rebuild was Bree's own, deliberate.
+nixos-upgrade.timer also exists (04:00 daily) - the lockstep guard in
+the prompt's new item 0 is what makes either kind of rebuild loud
+instead of mysterious.
+
+PRE-SESSION CHECKLIST handed to Bree (2026-07-17, she plans to
+rebuild and reboot before the next session):
+1. Rebuild + reboot as planned. Any nixpkgs revision is fine - the
+   session re-pins to whatever /run/current-system actually runs at
+   its start, not to a hash from these notes.
+2. The reboot itself clears the ~790 orphaned portal processes and
+   every other leak from tonight - no manual sweep needed anymore.
+3. Decide the autostart question before or at session start (open
+   since session one): ~/.config/autostart/org.kde.latte-dock.desktop
+   launches the PACKAGED latte-dock-ng binary, so post-reboot login
+   brings up NG, not this port. Keep it as interim shell or remove
+   the file; the session restarts our dock after the re-pin rebuild
+   either way (prompt item 0f).
+4. Expect the staged dock NOT to be trustworthy until item 0
+   completes (old pinned build, new system substrate - the exact
+   incident class); do not fight it manually, let the session land
+   the re-pin first.
+5. Decide the standing upgrade story when convenient: if
+   nixos-upgrade.timer keeps auto-rebuilding at 04:00, the pin
+   lockstep breaks at every upgrade; the item-0 guard makes it loud,
+   but the flow (upgrade -> re-pin -> gate -> re-bless) stays manual
+   until scripted.
+6. The reboot doubles as the real logout/login check from the manual
+   list - the session should read the journal for the dock's SIGTERM
+   line and clean exit as its first observability read.
 
 ## 2026-07-16: stabilization execution session TWO (running record)
 

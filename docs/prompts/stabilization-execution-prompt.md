@@ -73,6 +73,29 @@ listed so a re-run knows not to redo them.
 choice, through and beyond the Lattecotta package rename - see that
 plan item for the recorded decision. Never land replacement icons.)
 
+0. **OPEN, FIRST, BLOCKS EVERYTHING - the re-pin** (Phase 11 item;
+   incident record in the handoff's 2026-07-17 entry). The machine
+   was rebuilt on 2026-07-16 and again before this session (assume a
+   reboot happened; verify with `readlink /run/current-system`). Do,
+   in order: (a) read the CURRENT system nixpkgs revision off the
+   generation and re-pin flake.nix/flake.lock to exactly it - never
+   to the incident entry's hash, which may already be stale; (b) full
+   rebuild, both WITH_X11 variants, full ctest; (c) sceneprobe golden
+   re-bless is EXPECTED (Mesa moved) - two-run byte-identical
+   determinism check before blessing, per the standing rule, and
+   inspect the actual/expected diffs before trusting big deltas;
+   (d) verify the nested vehicle end to end (the proto recipe in the
+   handoff); (e) add the lockstep guard to gate-all.sh: compare the
+   running system generation's nixpkgs revision against the flake
+   pin and FAIL FAST with a re-pin message on mismatch, so this
+   incident class dies in one obvious line instead of a night of
+   bisection; (f) restart the real dock on the fresh build
+   (scripts/start-dock.sh) and confirm lifecycleState + viewsData
+   settle; (g) only then resume the numbered items below. If the
+   dock is not running at session start (post-reboot autostart still
+   points at the packaged NG binary - my open decision), bring it up
+   as part of (f), not before the rebuild.
+
 1. DONE - Session shutdown/logout teardown (525f556c6, e02d1bcde,
    9d183984e). One real logout/login check remains in
    docs/manual-flake-removal-testing.md.

@@ -1,0 +1,173 @@
+# SPDX-FileCopyrightText: 2026 Latte Dock contributors
+# SPDX-FileCopyrightText: 2026 Bree Spektor
+# SPDX-License-Identifier: GPL-2.0-or-later
+#
+# Recipe helper library for the e2e suite. Sourced by tests/e2e/*.sh AND by
+# scripts/run-e2e.sh itself (single implementation of the dock lifecycle).
+#
+# Contract: the driver exports the E2E_* variables and, in nested mode, has
+# already switched the AMBIENT environment onto the nested session (private
+# XDG_RUNTIME_DIR, WAYLAND_DISPLAY, DBUS_SESSION_BUS_ADDRESS, DISPLAY unset),
+# so plain busctl/fakepointer in recipes talk to the vehicle, never the desk.
+# Everything here works in both modes unless marked nested-only; nested-only
+# helpers refuse loudly instead of silently touching the live session.
+
+e2e_call() {
+    busctl --user call org.kde.lattedock /Latte org.kde.LatteDock "$@"
+}
+
+# e2e_json <method> [signature args...]: a read surface's payload as plain
+# JSON on stdout (busctl prints one escaped 's' value).
+e2e_json() {
+    e2e_call "$@" | sed 's/^s "//; s/"$//; s/\\"/"/g'
+}
+
+e2e_fail() { echo "FAIL: $*" >&2; exit 1; }
+
+# e2e_wait_running [timeout-s]: poll lifecycleState (never sleep blindly).
+e2e_wait_running() {
+    local timeout="${1:-60}" i state
+    for ((i = 0; i < timeout; i++)); do
+        state="$(e2e_call lifecycleState 2>/dev/null | awk '{print $2}')"
+        [[ "$state" == '"running"' ]] && return 0
+        sleep 1
+    done
+    echo "dock never reached lifecycleState running in ${timeout}s (last: ${state:-no reply})" >&2
+    return 1
+}
+
+# e2e_wait_settled [timeout-s]: all views out of inStartup.
+e2e_wait_settled() {
+    local timeout="${1:-60}" i
+    for ((i = 0; i < timeout; i++)); do
+        if ! e2e_call viewsData 2>/dev/null | grep -q 'inStartup\\":true'; then
+            return 0
+        fi
+        sleep 1
+    done
+    echo "views still inStartup after ${timeout}s" >&2
+    return 1
+}
+
+_e2e_require_nested() {
+    [[ "${E2E_MODE:-}" == "nested" ]] && return 0
+    echo "e2e: $1 is nested-only (it manages the vehicle dock / nested kwin); refusing in mode '${E2E_MODE:-unset}'" >&2
+    return 2
+}
+
+e2e_dock_pid() { cat "${E2E_DOCK_PIDFILE:?}" 2>/dev/null; }
+
+# e2e_dock_start [timeout-s] (nested-only): launch the staged dock into the
+# vehicle, detached, and wait for running + settled. run-staged.sh execs the
+# binary, so the launcher pid IS the dock pid.
+e2e_dock_start() {
+    _e2e_require_nested e2e_dock_start || return 2
+    local timeout="${1:-60}"
+    setsid env LATTE_CONFIG_HOME="$E2E_CONFIG_HOME" BUILD="$E2E_BUILD" \
+        "$E2E_REPO/scripts/run-staged.sh" -d >>"$E2E_DOCK_LOG" 2>&1 &
+    echo $! > "$E2E_DOCK_PIDFILE"
+    e2e_wait_running "$timeout" && e2e_wait_settled "$timeout"
+}
+
+# e2e_dock_stop [timeout-s] (nested-only): SIGTERM and wait for a CLEAN exit.
+# Deliberately no SIGKILL escalation - a dock that survives SIGTERM is a
+# shutdown defect the caller must see, not a nuisance to sweep away.
+e2e_dock_stop() {
+    _e2e_require_nested e2e_dock_stop || return 2
+    local timeout="${1:-25}" pid i
+    pid="$(e2e_dock_pid)"
+    [[ -n "$pid" ]] || { echo "e2e_dock_stop: no dock pid recorded" >&2; return 1; }
+    kill -0 "$pid" 2>/dev/null || { echo "e2e_dock_stop: dock (pid $pid) already gone" >&2; return 1; }
+    kill -TERM "$pid"
+    for ((i = 0; i < timeout * 5; i++)); do
+        kill -0 "$pid" 2>/dev/null || return 0
+        sleep 0.2
+    done
+    echo "dock (pid $pid) survived SIGTERM for ${timeout}s" >&2
+    return 1
+}
+
+# e2e_kwin_js <script-body>: run a transient KWin script on the session's
+# compositor and print what it print()ed. Use the literal token @TAG@ as the
+# line prefix in the script; it is replaced with a unique run tag so
+# concurrent/previous runs cannot bleed into the result.
+# Nested: reads the vehicle kwin's captured log (the vehicle sets
+# QT_FORCE_STDERR_LOGGING=1 - NixOS Qt otherwise logs straight to journald
+# when stderr is not a tty and the file stays empty). Live: reads the
+# session kwin's journal, like scripts/tools/dumpwins.sh.
+e2e_kwin_js() {
+    local body="$1" tag js num mark
+    tag="E2EJS-$$-$(date +%s%N)"
+    js="$(mktemp --suffix=.js)"
+    printf '%s\n' "${body//@TAG@/$tag}" > "$js"
+    mark="$(date +%s.%N)"
+    num="$(busctl --user call org.kde.KWin /Scripting org.kde.kwin.Scripting loadScript ss "$js" "$tag" | awk '{print $2}')"
+    if [[ -z "$num" ]]; then
+        rm -f "$js"
+        echo "e2e_kwin_js: loadScript failed" >&2
+        return 1
+    fi
+    busctl --user call "org.kde.KWin" "/Scripting/Script$num" org.kde.kwin.Script run >/dev/null
+    sleep 0.5
+    busctl --user call "org.kde.KWin" "/Scripting/Script$num" org.kde.kwin.Script stop >/dev/null 2>&1 || true
+    busctl --user call org.kde.KWin /Scripting org.kde.kwin.Scripting unloadScript s "$tag" >/dev/null 2>&1 || true
+    rm -f "$js"
+    if [[ "${E2E_MODE:-}" == "nested" ]]; then
+        grep -a "$tag|" "${E2E_KWIN_LOG:?}" | sed "s/.*$tag|//"
+    else
+        journalctl --user -u plasma-kwin_wayland --since "@$mark" --no-pager -o cat | grep -a "$tag|" | sed "s/.*$tag|//"
+    fi
+}
+
+# e2e_dumpwins: all windows as DUMPWIN|class|caption|x,y WxH|output|layer=N
+# (same shape as scripts/tools/dumpwins.sh, mode-agnostic).
+e2e_dumpwins() {
+    e2e_kwin_js 'for (const w of workspace.windowList()) {
+        print("@TAG@|DUMPWIN|" + w.resourceClass + "|" + w.caption + "|" + w.frameGeometry.x + "," + w.frameGeometry.y + " " + w.frameGeometry.width + "x" + w.frameGeometry.height + "|" + (w.output ? w.output.name : "?") + "|layer=" + w.layer);
+    }'
+}
+
+# e2e_screenshot <out.png> (nested-only): capture the vehicle workspace via
+# KWin ScreenShot2. The image arrives RAW over a pipe fd (the reply vardict
+# carries width/height/stride/format); the vehicle kwin runs with
+# KWIN_SCREENSHOT_NO_PERMISSION_CHECKS=1 so busctl needs no desktop-file
+# authorization. Live sessions keep using spectacle (the screenshot D-Bus
+# call would be refused there - by design, do not work around it).
+e2e_screenshot() {
+    _e2e_require_nested e2e_screenshot || return 2
+    local out="$1" raw reply w h stride format
+    raw="$(mktemp)"
+    reply="$(busctl --user call org.kde.KWin /org/kde/KWin/ScreenShot2 \
+        org.kde.KWin.ScreenShot2 CaptureWorkspace "a{sv}h" 1 native-resolution b true 3 3>"$raw")" \
+        || { rm -f "$raw"; echo "e2e_screenshot: CaptureWorkspace failed" >&2; return 1; }
+    w="$(grep -oE '"width" u [0-9]+' <<<"$reply" | awk '{print $3}')"
+    h="$(grep -oE '"height" u [0-9]+' <<<"$reply" | awk '{print $3}')"
+    stride="$(grep -oE '"stride" u [0-9]+' <<<"$reply" | awk '{print $3}')"
+    format="$(grep -oE '"format" u [0-9]+' <<<"$reply" | awk '{print $3}')"
+    # QImage formats 5/6 are (A)RGB32: BGRA byte order on little-endian.
+    # Anything else (or a padded stride) needs new handling, not guessing.
+    if [[ "$format" != 5 && "$format" != 6 ]] || [[ "$stride" != $((w * 4)) ]]; then
+        rm -f "$raw"
+        echo "e2e_screenshot: unexpected raw layout (format=$format stride=$stride width=$w) - extend the converter" >&2
+        return 1
+    fi
+    magick -size "${w}x${h}" -depth 8 "bgra:$raw" "$out"
+    local rc=$?
+    rm -f "$raw"
+    return "$rc"
+}
+
+# e2e_view_field <containment-id> <python-expr over view dict v>: one field
+# of one view, e.g. e2e_view_field 16 'v["absoluteGeometry"]'.
+e2e_view_field() {
+    local id="$1" expr="$2"
+    e2e_json viewsData | python3 -c "
+import json, sys
+views = json.load(sys.stdin)
+match = [v for v in views if v['containmentId'] == $id]
+if not match:
+    sys.exit('no view with containmentId $id')
+v = match[0]
+print($expr)
+"
+}

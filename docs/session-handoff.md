@@ -52,7 +52,34 @@ containment 1 carries visibility=8 (SidebarOnDemand) from earlier
 type-combo testing - craft the layout deliberately before the EX-10
 matrix instead of trusting it.
 
-DEFECT UNDER INVESTIGATION (root-cause in progress): ~180x
+DEFECT ROOT-CAUSED AND CLOSED (the invalid-color hunt, full story):
+the V4 caller trace (temporary Qt6::QmlPrivate instrumentation in
+tools.cpp, built in build-probe/, since removed) named ~10 distinct
+QML sites all receiving invalid colors at view creation - colorizer
+Manager (all four brightness sites), AddItem, the default indicator,
+config chrome. The simplest site (AddItem.qml:32 reading
+Kirigami.Theme.backgroundColor directly) proves the source: the
+Kirigami attached PlatformTheme serves default-constructed invalid
+QColors on the FIRST evaluation of creation-time bindings, then its
+change notify recomputes every consumer with real colors - a benign
+self-correcting transient, documented at the tools.cpp boundary.
+THE REAL DEFECT was ours: the "throwaway-only" framing was an
+artifact - main.cpp's no-debug message handler swallowed EVERYTHING
+including Criticals, so the real config produced the same refusals
+silently (proven: 35 criticals on a real-config -d restart).
+FIXED: production handler now passes Critical/Fatal to stderr,
+verified live (34 criticals visible on a no-flag restart that was
+previously silent; Qt still aborts after the handler on Fatal).
+Repro recipe that made this cheap, now banked: the staged dock runs
+fully isolated in the sceneprobe nested kwin -
+`nix develop -c tests/sceneprobe/run_in_kwin.sh dbus-run-session --
+env LATTE_CONFIG_HOME=<copy> timeout 45 scripts/run-staged.sh -d`
+(the dock inherits the caller's bus and exits silently on the
+KDBusService unique name without the dbus-run-session wrap; without
+-d it used to print nothing at all). BUILD=<dir> redirects
+run-staged to an alternate build tree for instrumented binaries.
+
+OLD RECORD of the investigation start (kept for the method): ~180x
 "Tools.colorBrightness: invalid color from QML" Criticals per
 throwaway run, bursting at every view creation; ZERO on the real
 config. Ruled out: scheme files missing groups (throwaway kdeglobals

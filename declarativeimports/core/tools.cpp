@@ -10,6 +10,17 @@
 // local
 #include "units/colortools.h"
 
+// KNOWN BENIGN SOURCE of the refusals below, root-caused 2026-07-16 with a
+// V4 caller trace (session-handoff has the method): during item creation the
+// first evaluation of bindings reading Kirigami.Theme colors (directly, or
+// through the colorizer chain they feed) can run before the attached
+// PlatformTheme has resolved its palette, so the getter hands over a
+// default-constructed invalid QColor. Every traced consumer is a live
+// binding, so the theme's change notify recomputes it with the real color a
+// beat later - the refusal's fallback value is only ever a first-evaluation
+// interim. Expect a burst of these per view creation under --debug; a
+// STEADY stream at idle is NOT this and deserves a fresh hunt.
+
 namespace Latte{
 
 Tools::Tools(QObject *parent)

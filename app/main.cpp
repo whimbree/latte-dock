@@ -450,8 +450,19 @@ int main(int argc, char **argv)
     if (parser.isSet(QStringLiteral("debug")) || parser.isSet(QStringLiteral("mask")) || parser.isSet(QStringLiteral("debug-text"))) {
         qInstallMessageHandler(filterDebugMessageOutput);
     } else {
-        const auto noMessageOutput = [](QtMsgType, const QMessageLogContext &, const QString &) {};
-        qInstallMessageHandler(noMessageOutput);
+        //! Deviation from upstream's fully-silent handler: Critical and
+        //! Fatal always reach stderr (and thus the journal). The tree's
+        //! loud-refusal boundaries (qCritical-and-refuse at API borders)
+        //! are pointless if production swallows them - the invalid-color
+        //! hunt of 2026-07-16 chased a "throwaway-only" defect for a full
+        //! session leg because the real config was silently producing the
+        //! same refusals. Debug/Info/Warning stay quiet as before.
+        const auto criticalOnlyOutput = [](QtMsgType type, const QMessageLogContext &, const QString &msg) {
+            if (type == QtCriticalMsg || type == QtFatalMsg) {
+                fprintf(stderr, "%s\n", qPrintable(msg));
+            }
+        };
+        qInstallMessageHandler(criticalOnlyOutput);
     }
 
     //! KJob holds a QEventLoopLocker; with the quit lock enabled, the LAST

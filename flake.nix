@@ -5,14 +5,18 @@
   description = "latte-dock Plasma 6/Qt6 port - development environment";
 
   # Pinned to the exact nixpkgs revision the development machine's NixOS runs
-  # (26.11, Plasma 6.6.5 / Qt 6.11.0), so the dock links the same
+  # (26.11.20260715, Plasma 6.7.3 / Qt 6.11.1), so the dock links the same
   # libplasma/libtaskmanager/Qt as the live KWin compositor it is tested
-  # against. A newer pin (e.g. nixos-unstable's Plasma 6.7.2) mismatches the
-  # running compositor's plasma-window-management, which hands the tasks model
-  # only a partial window list, and its Plasma theme plugin crashes the binary.
+  # against. Any drift between this pin and the running system breaks the
+  # kwin-QPA path for new nested compositors (the 2026-07-17 incident:
+  # SIGSEGV at QApplication init in every new nested kwin_wayland), so
+  # gate-all.sh carries a lockstep guard that compares this pin against
+  # /run/current-system and fails fast with a re-pin message on mismatch.
+  # Re-pin recipe: readlink /run/current-system for the short rev, the root
+  # nixpkgs node of /persist/etc/nixos/flake.lock for the full one.
   # The final packaging (Phase 11) targets whatever the installing system has;
   # this pin is only the dev/test shell.
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/567a49d1913ce81ac6e9582e3553dd90a955875f";
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/753cc8a3a87467296ddd1fa93f0cc3e81120ee46";
 
   outputs = { self, nixpkgs }:
     let

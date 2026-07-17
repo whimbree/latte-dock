@@ -67,6 +67,23 @@ run ~2x faster). qmllint baseline SHRANK (VisibilityManager.qml
 but a Qt5-faithful persisted setting with config UI - retiring it is
 a product call, filed in Phase 4.
 
+MERGE QUEUE STATE (running): color-group-audit MERGED (verdict
+inventory + 2 fixes, b84c1f8ff/c2a0d718c; its missed ratchet-baseline
+entry caught by the merge gate, fixed on master). p3b-transplants
+MERGED (14 suites, ctest 81 entries, 4 upstream-inherited fixes
+9178957fd/6aac18f32/aa2ab9555/9838e9cad; the rebase auto-merge kept a
+stale ratchet count line - caught pre-gate, the union rule again).
+wayland-id-sweep MERGED (ed9416a21 - both PR #1 review leftovers
+closed; NEW plan item: the View-side activity-stop reshow hack needs
+an activity-close reproduction before removal, its frame-extents
+claim may be true on wayland KWin). STILL OUT: keyboard-focus-mode
+agent, e2e-promotion agent (EX-14/15/17 recipes ride with it);
+Accessible.* rollout queued behind the focus-mode landing (same QML
+delegates). Load lesson: gate ctest timeouts under concurrent agent
+builds are LOAD, not defects - verify solo before touching anything
+(qmlcontracts timed out at 1528s total under four agents, passed in
+0.87s solo).
+
 ITEM 0 COMPLETE (all hashes in the Phase 11 plan item): re-pin
 c147fbbdb, askDestroy contract repin 24dc3ee39 (libplasma 6.7 widened
 the containment-type guard to containment()!=q - parking machinery

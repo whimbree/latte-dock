@@ -1,4 +1,4 @@
-73
+75
 abstractlayouttest
 activitiesinfotest
 activitysetalgebratest
@@ -12,7 +12,9 @@ backgroundstatetest
 badgemathtest
 colorizerdecisiontest
 colortoolstest
+commontoolstest
 contextmenudefaulttest
+coretoolstest
 datatypestest
 dbusreportstest
 destroyedtypedemotiontest

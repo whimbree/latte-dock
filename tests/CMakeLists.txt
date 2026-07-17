@@ -141,6 +141,34 @@ target_include_directories(universalsettingstest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# The app/tools free helpers: the rect<->string serialization persisted
+# screen records ride (incl. the malformed-input refusal) and the XDG path
+# resolvers; carries its own main() so both XDG homes are temp dirs.
+ecm_add_test(commontoolstest.cpp
+    TEST_NAME commontoolstest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(commontoolstest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(commontoolstest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
+# The LatteCore QML plugin's engine-free helpers: Environment constants and
+# the extras.h inline helpers; compiles environment.cpp directly (it lives
+# in the QML plugin, not lattedock-core). The color math is NOT here - it is
+# the ColorTools pure core, pinned by tests/units/colortoolstest.cpp.
+ecm_add_test(coretoolstest.cpp
+    ${CMAKE_SOURCE_DIR}/declarativeimports/core/environment.cpp
+    TEST_NAME coretoolstest
+    LINK_LIBRARIES Qt6::Test Qt6::Gui Qt6::Qml KF6::CoreAddons Plasma::Plasma
+)
+set_tests_properties(coretoolstest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(coretoolstest PRIVATE
+    ${CMAKE_SOURCE_DIR}/declarativeimports/core
+    ${CMAKE_BINARY_DIR}/declarativeimports/core)
+
 # The app/data value-type layer: tables, sentinels, state machines and the
 # serialization round trips the settings dialogs and storage ride on.
 ecm_add_test(datatypestest.cpp

@@ -36,16 +36,23 @@ e2e_wait_running() {
     return 1
 }
 
-# e2e_wait_settled [timeout-s]: all views out of inStartup.
+# e2e_wait_settled [timeout-s]: views EXIST and are all out of inStartup.
+# The existence check is load-bearing: lifecycleState flips to "running" at
+# layout-switch time, BEFORE any view is created (views come one per event
+# loop pass, ~1s+ each), so an empty viewsData is "still starting", not
+# "settled" - the vacuous version of this helper let recipes race the whole
+# view-creation window (caught by duplicate-view failing against a view id
+# that did not exist yet).
 e2e_wait_settled() {
-    local timeout="${1:-60}" i
+    local timeout="${1:-60}" i payload
     for ((i = 0; i < timeout; i++)); do
-        if ! e2e_call viewsData 2>/dev/null | grep -q 'inStartup\\":true'; then
+        payload="$(e2e_call viewsData 2>/dev/null)"
+        if [[ -n "$payload" && "$payload" != 's "[]"' ]] && ! grep -q 'inStartup\\":true' <<<"$payload"; then
             return 0
         fi
         sleep 1
     done
-    echo "views still inStartup after ${timeout}s" >&2
+    echo "views still absent or inStartup after ${timeout}s" >&2
     return 1
 }
 
@@ -155,6 +162,58 @@ e2e_screenshot() {
     local rc=$?
     rm -f "$raw"
     return "$rc"
+}
+
+# e2e_tasks_view: the containment id of the widest horizontal view that
+# carries a tasks applet - the canonical target for task-interaction
+# recipes, independent of any particular config's ids.
+e2e_tasks_view() {
+    local id
+    for id in $(e2e_json viewsData | python3 -c '
+import json, sys
+views = [v for v in json.load(sys.stdin) if v["edge"] in ("bottom", "top")]
+views.sort(key=lambda v: -v["absoluteGeometry"][2])
+for v in views:
+    print(v["containmentId"])
+'); do
+        if e2e_json viewAppletsData u "$id" | grep -q '"org.kde.latte.plasmoid"'; then
+            echo "$id"
+            return 0
+        fi
+    done
+    echo "e2e_tasks_view: no horizontal view carries a tasks applet" >&2
+    return 1
+}
+
+# e2e_task_center <containment-id> <appId>: the SCREEN center of a task
+# icon, computed arithmetically (tasks applet geometry is view-local;
+# viewsData's absolute/local pair gives the window origin; icons split the
+# applet evenly at rest). Published task geometries are not usable here:
+# they stay at the window rect until the tasks applet publishes, and the
+# parabolic zoom distorts everything once the pointer is inside the dock -
+# so callers must approach the returned point from OUTSIDE the dock.
+e2e_task_center() {
+    local id="$1" app="$2"
+    { e2e_json viewsData; e2e_json viewAppletsData u "$id"; e2e_json viewTasksData u "$id"; } | python3 -c "
+import json, sys
+views, applets, tasks = (json.loads(line) for line in sys.stdin)
+view = next(v for v in views if v['containmentId'] == $id)
+ax, ay, aw, ah = view['absoluteGeometry']
+lx, ly = view['localGeometry'][:2]
+ox, oy = ax - lx, ay - ly            # window origin on screen
+applet = next(a for a in applets if a['plugin'] == 'org.kde.latte.plasmoid')
+px, py, pw, ph = applet['geometry']
+idx = next(i for i, t in enumerate(tasks) if t['appId'] == '$app')
+n = len(tasks)
+horizontal = view['edge'] in ('bottom', 'top')
+if horizontal:
+    cx = ox + px + (idx + 0.5) * pw / n
+    cy = oy + py + ph / 2
+else:
+    cx = ox + px + pw / 2
+    cy = oy + py + (idx + 0.5) * ph / n
+print(int(cx), int(cy))
+"
 }
 
 # e2e_view_field <containment-id> <python-expr over view dict v>: one field

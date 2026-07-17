@@ -28,8 +28,15 @@ for v in views:
 print("%d views settled" % len(views))
 '
 
+views_before="$(e2e_json viewsData | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')"
+
 e2e_dock_stop || e2e_fail "no clean SIGTERM exit"
 echo "clean SIGTERM exit"
 
 e2e_dock_start || e2e_fail "dock did not come back after restart"
-echo "dock relaunched and settled"
+
+#! the restart must reproduce the same view set, not merely "some views"
+views_after="$(e2e_json viewsData | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))')"
+[[ "$views_after" == "$views_before" ]] \
+    || e2e_fail "restart changed the view count: $views_before -> $views_after"
+echo "dock relaunched; $views_after views settled again"

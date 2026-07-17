@@ -77,12 +77,14 @@ if [[ -n "${XDG_DATA_DIRS:-}" ]]; then
         esac
     done < <(tr ':' '\n' <<<"$XDG_DATA_DIRS" | awk 'NF && !seen[$0]++')
 fi
-# $USER is not exported in a bare (non-login) shell such as a CI container,
-# and this script runs under set -u; resolve it from the passwd db instead of
-# assuming the env var. The nix-profile / per-user / current-system entries
-# are NixOS-specific and simply absent (harmlessly skipped by QStandardPaths)
-# on other distros, where /usr/share backs the icons/themes/plasma assets.
-export XDG_DATA_DIRS="$runtime_data_dirs:$HOME/.nix-profile/share:/etc/profiles/per-user/${USER:-$(id -un)}/share:/run/current-system/sw/share:/usr/share"
+# Neither $USER nor $HOME is guaranteed exported in a bare (non-login) shell
+# such as a CI container, and this script runs under set -u; resolve both from
+# the passwd db instead of assuming the env vars (this line always runs, unlike
+# the --user-config/kdeglobals branches above whose $HOME is only reached off
+# the container path). The nix-profile / per-user / current-system entries are
+# NixOS-specific and simply absent (harmlessly skipped by QStandardPaths) on
+# other distros, where /usr/share backs the icons/themes/plasma assets.
+export XDG_DATA_DIRS="$runtime_data_dirs:${HOME:-$(getent passwd "$(id -un)" | cut -d: -f6)}/.nix-profile/share:/etc/profiles/per-user/${USER:-$(id -un)}/share:/run/current-system/sw/share:/usr/share"
 
 export QT_QPA_PLATFORM=wayland
 

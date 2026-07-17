@@ -5,6 +5,7 @@
 # mapping in the compositor takes the keyboard focus and the mode must
 # fall back to off ON ITS OWN (a dock stuck focusable breaks every
 # fullscreen application - that is the defect class this pins).
+# e2e-mode: nested-only
 #
 # Unlike the sibling e2e scripts this one is self-contained: it starts
 # its own staged dock against a throwaway config copy, so it must run

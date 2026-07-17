@@ -197,6 +197,12 @@ for recipe in "${recipes[@]}"; do
         echo "run-e2e: FAIL missing or non-executable recipe: $name"; failed=$((failed+1)); continue
     fi
     constraint="$(recipe_mode "$recipe")"
+    #! a typo here must fail loud, not silently run the recipe in both
+    #! modes - the empty string (no marker) is the only mode-agnostic value
+    case "$constraint" in
+        ""|nested-only|live-only) ;;
+        *) echo "run-e2e: FAIL unknown e2e-mode marker '$constraint' in $name (allowed: nested-only, live-only, or none)"; failed=$((failed+1)); continue;;
+    esac
     if [[ ( "$constraint" == "nested-only" && "$MODE" != nested ) \
        || ( "$constraint" == "live-only"   && "$MODE" != live   ) ]]; then
         echo "run-e2e: SKIP $name ($constraint)"; skipped=$((skipped+1)); continue

@@ -57,6 +57,19 @@ target_include_directories(screenpooltest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app)
 
+# The real Windows -> TrackedGeneralInfo -> LastActiveWindow tracker graph
+# over a minimal concrete WM: adoption/rejection rules, history pruning
+# bounds, the windowRemoved re-selection chain and the request forwarders.
+ecm_add_test(lastactivewindowtest.cpp
+    TEST_NAME lastactivewindowtest
+    LINK_LIBRARIES lattedock-core Qt6::Test
+)
+set_tests_properties(lastactivewindowtest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(lastactivewindowtest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_BINARY_DIR}/app)
+
 # SyncedLaunchers' client registry driven over the real object: the
 # destroyed-client removal (the d6d57e61 dangling-pointer crash class),
 # identity removal precision, and the layout/group filtering query.

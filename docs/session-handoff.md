@@ -3,6 +3,32 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-17 (stabilization-execution session three, complete).
 
+## 2026-07-17 POST-CLOSE ADDENDUM (master at e089d3d6d)
+
+Two more features landed after the session-three close below, both via
+the PR flow: PR #4 the e2e geometry-agreement guard (state-vs-render
+check + the `# e2e-expect: fail` xfail marker; `060` was XFAIL against
+the Phase 8 drift), and PR #5 the PHASE 8 SURFACE DRIFT FIX itself
+(Opus agent, independent Sonnet review). Root cause: a masked dock
+keeps a full-screen-width window and realises alignment via its mask,
+but a Center dock was anchored to a SINGLE edge, so wlr-layer-shell
+re-centred it inside the band other docks' exclusive zones leave free -
+drift = (leftZone-rightZone)/2, -20px with Bree's 48/88 side docks.
+Fix: horizontal masked docks anchor BOTH length edges (3de174290);
+the review caught a gap (reanchor not wired to behaveAsPlasmaPanelChanged,
+so a Panel->Dock toggle at Center alignment could strand the old
+anchor) - fixed on the branch (e089d3d6d) before merge. `060` is now a
+permanent hard-passing guard (marker removed). Verified live on the
+desk: both bottom docks render at drift 0 on the canonical build, views
+healthy. The desk currently has no side docks so it was already drift 0
+(the fix's benefit shows with side docks); no regression. One live-read
+gotcha banked: the SubWindow edge-helper strip renders 1px wide in its
+normal ISHIDDENMASK state, so a startup dumpwins can catch it at full
+width mid-transition - not a defect. parabolic-hover-preview fails
+deterministically in the vehicle but was proven pre-existing/unrelated
+(fails on the pre-change binary too) - filed for a separate look, does
+not block. Real dock runs the merged e089d3d6d build.
+
 ## 2026-07-17 SESSION THREE CLOSE (master at ed62ce333, all pushed)
 
 The whole open list from the stabilization prompt is landed. Master

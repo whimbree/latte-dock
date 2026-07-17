@@ -702,11 +702,15 @@ QStringList Importer::availableLayoutTemplates()
 QString Importer::nameOfConfigFile(const QString &fileName)
 {
     int lastSlash = fileName.lastIndexOf("/");
-    QString tempLayoutFile = fileName;
-    QString layoutName = tempLayoutFile.remove(0, lastSlash + 1);
+    QString layoutName = fileName.mid(lastSlash + 1);
 
-    int ext = layoutName.lastIndexOf(".latterc");
-    layoutName = layoutName.remove(ext, 8);
+    //! strip the extension only when it is present: on Qt 6 a not-found -1
+    //! index handed to remove() wraps around to the END of the string and
+    //! chops the last character of an unrelated name
+    const QLatin1String extension(".latterc");
+    if (layoutName.endsWith(extension)) {
+        layoutName.chop(extension.size());
+    }
 
     return layoutName;
 }

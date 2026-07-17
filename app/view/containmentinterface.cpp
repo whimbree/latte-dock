@@ -72,21 +72,58 @@ void ContainmentInterface::identifyShortcutsHost()
         return;
     }
 
-    if (QQuickItem *graphicItem = PlasmaQuick::AppletQuickItem::itemForApplet(m_view->containment())) {
+    QQuickItem *graphicItem = PlasmaQuick::AppletQuickItem::itemForApplet(m_view->containment());
+
+    if (!graphicItem) {
+        return;
+    }
+
+    //! Plasma 6: containment roots must BE ContainmentItem types, so
+    //! itemForApplet() hands back the containment's own root - the item
+    //! that carries the containmentViewLayout objectName ITSELF - and the
+    //! ability hosts are its direct children. The Plasma 5 tree wrapped
+    //! that root one level down, so the old child-scan-only walk found
+    //! NOTHING on Plasma 6 and every shortcuts-host method (activate
+    //! entry, new instance, shortcut badges, applet-id lookup) silently
+    //! no-op'd; Meta+number only appeared to work through fallbacks.
+    //! Same tree change and same fix shape as Panel.qml's viewLayout
+    //! discovery (the round-five context-menu repair). Child scan kept
+    //! for safety, mirroring Panel.qml.
+    QQuickItem *viewLayout{nullptr};
+
+    if (graphicItem->objectName() == QLatin1String("containmentViewLayout")) {
+        viewLayout = graphicItem;
+    } else {
         const auto &childItems = graphicItem->childItems();
 
         for (QQuickItem *item : childItems) {
             if (item->objectName() == QLatin1String("containmentViewLayout")) {
-                for (QQuickItem *subitem : item->childItems()) {
-                    if (subitem->objectName() == QLatin1String("PositionShortcutsAbilityHost")) {
-                        m_shortcutsHost = subitem;
-                        identifyMethods();
-                        return;
-                    }
-                }
+                viewLayout = item;
+                break;
             }
         }
     }
+
+    if (!viewLayout) {
+        qWarning() << "containmentinterface: containmentViewLayout not found for containment"
+                   << (m_view->containment() ? m_view->containment()->id() : 0)
+                   << "- entry activation and shortcut badges will not work on this view";
+        return;
+    }
+
+    const auto &layoutChildren = viewLayout->childItems();
+
+    for (QQuickItem *subitem : layoutChildren) {
+        if (subitem->objectName() == QLatin1String("PositionShortcutsAbilityHost")) {
+            m_shortcutsHost = subitem;
+            identifyMethods();
+            return;
+        }
+    }
+
+    qWarning() << "containmentinterface: PositionShortcutsAbilityHost not found for containment"
+               << (m_view->containment() ? m_view->containment()->id() : 0)
+               << "- entry activation and shortcut badges will not work on this view";
 }
 
 void ContainmentInterface::identifyMethods()
@@ -95,6 +132,12 @@ void ContainmentInterface::identifyMethods()
     int niIndex = m_shortcutsHost->metaObject()->indexOfMethod("newInstanceForEntryAtIndex(QVariant)");
     int sbIndex = m_shortcutsHost->metaObject()->indexOfMethod("setShowAppletShortcutBadges(QVariant,QVariant,QVariant,QVariant)");
     int afiIndex = m_shortcutsHost->metaObject()->indexOfMethod("appletIdForIndex(QVariant)");
+
+    if (aeIndex < 0 || niIndex < 0 || sbIndex < 0 || afiIndex < 0) {
+        qWarning() << "containmentinterface: shortcuts host found but a method signature did not resolve"
+                   << "(ae/ni/sb/afi:" << aeIndex << niIndex << sbIndex << afiIndex << ")"
+                   << "- the QML host's function signatures drifted";
+    }
 
     m_activateEntryMethod = m_shortcutsHost->metaObject()->method(aeIndex);
     m_appletIdForIndexMethod = m_shortcutsHost->metaObject()->method(afiIndex);

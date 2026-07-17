@@ -2313,7 +2313,7 @@ showed how much of the dock can only be driven by a pointer today.
       e2e asserts.
       Commits:
 
-- [ ] WindowId newtype hardening (filed 2026-07-16 from the EX-23
+- [x] WindowId newtype hardening (filed 2026-07-16 from the EX-23
       design review). 8e8cdf31 replaced upstream's WindowId = QVariant
       with QByteArray because Qt6 removed QVariant's relational
       operators (QMap<WindowId,...> keys and wid<=0 checks stopped
@@ -2337,7 +2337,24 @@ showed how much of the dock can only be driven by a pointer today.
       the whole wm/ surface - do it as its own pass with the
       windowinfowraptest and EX-23 predicate tests as the safety net,
       not opportunistically inside another unit.
-      Commits:
+      LANDED 2026-07-16 (session two, own pass as required; ledger
+      docs/agent-logs/2026-07-16-layershell-guard-windowid.md): the
+      checked X11 parse retired two latent toInt() overflow bugs and
+      the lattecorona D-Bus silent-0 (refusals are loud now); the
+      wayland trackedWindowId re-resolve's stale numeric premise is
+      recorded in place; windowidtest pins explicit-only construction
+      (static_asserts), exhaustive malformed rows, window-0
+      unproducibility, and QMap ordering against the old substrate.
+      Same wave: the LATTE_LAYERSHELL_HAS_SET_SCREEN try_compile no
+      longer silently flips on a broken configure (result cached on
+      LayerShellQt_DIR; non-signature probe failures FATAL_ERROR;
+      46ce2dfbb). STILL OWED at the desk: one wayland pass over the
+      wm surface (active-window tracking, dodge, scheme following,
+      subwindow uuid re-resolution after reshow) - in the manual
+      list; and the deferred call on tightening the three
+      trackedWindowId() lazy re-resolves to isEmpty().
+      Commits: 46ce2dfbb, 4cdd13a72, 4ada8834a, 77e31bed4, 3c3f2d557,
+      4ebadede9 (post-rebase)
 
 - [ ] Verify against the full known-bug list at the top of this doc by
       actually driving each interaction (add/remove/drag/edit-mode/

@@ -123,17 +123,18 @@ plan item for the recorded decision. Never land replacement icons.)
    surface; the nested-kwin staged-dock recipe in the handoff is the
    vehicle proof), and cross-machine golden verification when a
    second machine exists.
-10. **OPEN - the tail**: Phase 9 color-group audit (surveyed: ~12
+10. **PARTIAL - the tail**: DONE session two: WindowId newtype
+    hardening (own pass, six commits, windowidtest; wm desk pass in
+    the manual list) and the LATTE_LAYERSHELL_HAS_SET_SCREEN guard
+    (cached on LayerShellQt_DIR, env defects FATAL). Extraction-
+    ledger live tail: EX-20 badge arms + EX-11 cold-start PASS; the
+    heavy pointer matrix moved into the nested-kwin vehicle (proven;
+    EX-10 runs there). STILL OPEN: Phase 9 color-group audit (~12
     files read Kirigami.Theme colors; audit each site's theme-object
-    scope), WindowId newtype hardening (its own pass, wm/-wide blast
-    radius), known-bug-list sweep (mostly desk work, see manual
-    list), extraction-ledger live-verification recipes not yet run,
-    Phases 2/3 mechanical tail. Also two small hardening finds from
-    the agent runs: build-check's toolchain guard landed (27668839a
-    lineage) but the unguarded LATTE_LAYERSHELL_HAS_SET_SCREEN
-    try_compile still re-probes every configure and can silently
-    flip the define after one broken-env run - guard it or make it
-    fail loudly.
+    scope), known-bug-list sweep (mostly desk work, see manual
+    list), remaining extraction-ledger recipes (EX-11 2-6, EX-12
+    real-config palette flip, EX-14 drags, EX-15 wheels, EX-17
+    hover, EX-19 visual checks), Phases 2/3 mechanical tail.
 
 ## Session protocol
 

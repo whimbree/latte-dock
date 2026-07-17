@@ -54,30 +54,15 @@ and the full settings UI. Beyond upstream parity, the port has grown
 continuation features of its own, the first being resizable applet popups
 with per-applet size persistence.
 
-As of 2026-07-16 the stabilization initiative is complete: all 25 units
-of the QML logic extraction moved the feel-critical QML math (parabolic
-zoom, previews, launcher ordering, drag classification, visibility
-masks, badges, scrolling, colorization decisions and more) into pure
-C++ cores with sanitized unit tests, and the process itself shook out
-real inherited bugs - among them a wayland tooltip flash loop, a
-desktop-name lookup broken since Qt5, a wheel path dead since Qt5, and
-a D-Bus badge path dead since the port began. Each fix landed with the
-failing evidence in its commit body.
-
-The same date's second wave landed the automation backbone: a complete
-D-Bus observability interface (every view's geometry, visibility,
-applets, tasks, tracker and colorizer state pull-queryable as JSON,
-plus coarse actions - enter/exit edit mode, activate a task, switch a
-view's visibility mode), a headless visual-regression harness that
-renders real pixels on CPU (lavapipe) with bit-exact goldens and works
-with a GPU without ever requiring one, eleven behavioral test suites
-adopted and extended from the CaptSilver fork, and a typed WindowId
-replacing stringly window ids across the window-system layer. The
-test-first sweep kept paying: nine more inherited defects fixed at
-origin, plus two found live the same day - production logging that
-swallowed every Critical, and the Meta+number shortcuts host that had
-been silently dead since the port (its activation, new-instance and
-badge machinery only appeared to work through fallbacks).
+The stabilization initiative is complete: the feel-critical QML math
+(parabolic zoom, previews, launcher ordering, drag classification,
+visibility masks, badges, scrolling, colorization decisions) lives in
+pure C++ cores with sanitized unit tests, the dock's runtime state is
+inspectable and drivable over D-Bus
+([docs/dbus-interface-reference.md](docs/dbus-interface-reference.md)),
+and rendering is guarded by a committed-golden scene gate that runs on
+pure CPU. Inherited bugs found along the way are fixed at origin, each
+with its evidence in the commit body.
 
 Roadmap
 =======
@@ -101,8 +86,8 @@ phases, one commit-traceable checklist item per task. The coarse picture:
       so tests and tooling inspect state instead of peeping pixels
 - [x] Headless visual-regression testing: real-pixel scene rendering on
       pure CPU under a nested compositor, bit-exact committed goldens,
-      shader/validation/blank-frame gates, GPU-optional by design
-      (runs in CI, a plain VM, or against a desktop GPU)
+      shader/validation/blank-frame gates; an opt-in GPU device mode
+      exists but nothing requires it
 - [ ] Layout/config persistence, session shutdown, multi-screen edge cases
       (the open phase; live-driven fixes land here continuously)
 - [ ] Theming and colorization polish audit

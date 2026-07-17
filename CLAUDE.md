@@ -115,7 +115,12 @@ stale checkboxes."
   major change lands (a new surface, harness, phase completion, or defect
   class retired) - a landed major change without its README line is an
   unfinished landing, same discipline as the plan checkbox (my rule,
-  2026-07-16).
+  2026-07-16). REGISTER: the README describes what the project IS, in
+  timeless terms - never session narration ("the same date's second
+  wave", "kept paying"), no date-stamped play-by-play, no war-story
+  defect enumerations (those live in commit bodies and the plan). If a
+  sentence only makes sense to someone who watched the work happen, it
+  does not belong in the README (my correction, 2026-07-17).
 - Prefer new commits over amending, except when explicitly asked (e.g.
   cleaning up history before opening a PR).
 - This file and `docs/PORTING_PLAN.md` are committed, but both are live

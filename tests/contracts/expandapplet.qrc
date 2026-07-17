@@ -1,0 +1,8 @@
+<RCC>
+    <!-- minimal compact-capable PlasmoidItem served through libplasma's qrc
+         applet path, so itemForApplet() can build a real graphic item for
+         plugin id test.expandapplet -->
+    <qresource prefix="/qt/qml/plasma/applet">
+        <file alias="test/expandapplet/main.qml">expandappletmain.qml</file>
+    </qresource>
+</RCC>

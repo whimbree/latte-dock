@@ -555,10 +555,22 @@ ContainmentItem {
     Containment.onAppletRemoved: fastLayoutManager.removeAppletItem(applet);
 
     Plasmoid.onUserConfiguringChanged: {
-        if (Plasmoid.userConfiguring) {
-            for (var i = 0; i < Plasmoid.applets.length; ++i) {
-                Plasmoid.applets[i].expanded = false;
-            }
+        if (!Plasmoid.userConfiguring) {
+            return;
+        }
+
+        //! Qt5 collapsed every expanded applet popup here with
+        //! `Plasmoid.applets[i].expanded = false`. On Plasma 6 that loop is dead:
+        //! Containment::applets hands back Plasma::Applet objects (returning the
+        //! graphic items instead is a KF6 TODO in libplasma) and `expanded` lives
+        //! on the applet's graphic item, so the first write threw a TypeError that
+        //! aborted the whole handler. The applet-to-item hop (itemForApplet) is
+        //! C++ territory; extendedInterface.deactivateApplets() is exactly that
+        //! walk, already used for the hide-on-autohide collapse (view.cpp).
+        if (latteView && latteView.extendedInterface) {
+            latteView.extendedInterface.deactivateApplets();
+        } else {
+            console.warn("containment main: no extended interface while entering configure mode; expanded applet popups stay open");
         }
     }
 

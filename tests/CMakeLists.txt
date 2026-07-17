@@ -345,6 +345,19 @@ ecm_add_test(contracts/userconfiguringcontracttest.cpp
 set_tests_properties(userconfiguringcontracttest PROPERTIES
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+# Contract: where `expanded` lives at the pin - absent on Plasma::Applet, so
+# the Qt5 `Plasmoid.applets[i].expanded = false` loop cannot work on Plasma 6,
+# and writable on the graphic item itemForApplet() builds, which is what the
+# configure-mode popup collapse routes through (deactivateApplets).
+qt6_add_resources(expandapplet_QRC contracts/expandapplet.qrc)
+ecm_add_test(contracts/appletsexpandedpropertytest.cpp
+    ${expandapplet_QRC}
+    TEST_NAME appletsexpandedpropertytest
+    LINK_LIBRARIES Qt6::Test Qt6::Gui Qt6::Qml Qt6::Quick KF6::CoreAddons Plasma::Plasma Plasma::PlasmaQuick
+)
+set_tests_properties(appletsexpandedpropertytest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
 # Contract: the Qt shutdown sequence the Corona teardown design relies on
 # (aboutToQuit fires inside exit() while the app is live; execCleanup()
 # flushes deferred deletes once; nothing flushes them after exec() returns).

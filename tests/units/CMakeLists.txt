@@ -239,6 +239,14 @@ target_link_libraries(dropclassifiertest
     Qt6::Gui
     Qt6::Qml)
 
+# Edit-mode settings audit diff core (tests/units/configsnapshotdiff.h): the
+# pure Tier B check (docs/edit-mode-settings-audit-plan.md section 2) over two
+# viewConfigData "config" snapshots. The HC3 acceptance property lives here -
+# every rejection direction (stray coupled write, no-op, default-deletion) is
+# pinned so the harness cannot green-light a wrong outcome. QJsonObject-only,
+# Qt6::Test brings QtCore.
+latte_add_unit_test(configsnapshotdifftest)
+
 # viewsData D-Bus serializer (docs/dbus-observability-interface.md): the
 # pure ViewRecord -> JSON layer of app/dbusreports.h - enum-name mappings
 # and serialization. The live collectors stay in app/dbusreports.cpp

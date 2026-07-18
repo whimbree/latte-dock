@@ -66,6 +66,46 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX DIRECTION: classify the shrink axis against the previous logical band
   while still unioning against the applied region for coverage.
 
+### D15 - the Maximum ruler drags the Minimum (coupled-min side effect)
+- STATUS: ACCEPTED (Bree 2026-07-18: KEEP the Qt5-faithful coupling - it keeps a
+  fixed-length dock fixed as the ruler scrolls, easy to use). The real confusion
+  was D16: the settings sliders did not update to SHOW the coupled min moving, so
+  it looked broken. Fixing D16 makes the coupling legible. The CL-1 audit pins
+  the coupling as intended behaviour, not a bug to remove.
+- FOUND: 2026-07-18, edit-mode settings audit.
+- EVIDENCE: shell/.../canvas/maxlength/RulerMouseArea.qml updateMaxLength()
+  (47-63) writes minLength from the clamp result; app/settings/lengthoffsetclamp.h
+  clampMaxLengthByStep (122-128) couples them when maxLength==minLength. Inherited
+  Qt5 behaviour (latte-dock-qt6 carries the identical coupling).
+
+### D16 - settings length sliders desync from the on-canvas ruler
+- STATUS: OPEN (fix - this is the real culprit behind the D15 confusion).
+- FOUND: 2026-07-18, edit-mode settings audit.
+- SYMPTOM: after a settings-window Max/Min slider is dragged once, changing the
+  same length from the on-canvas ruler no longer moves the slider handle - the
+  two views disagree.
+- EVIDENCE: both config views share ONE config map (subconfigview.cpp:228, so not
+  view isolation). ROOT: the declarative `value: plasmoid.configuration.maxLength`
+  binding (AppearanceConfig.qml:264 / minLength :359) is CLOBBERED by the first
+  imperative `value =` assignment (a drag) and never re-established. FIX: the
+  offset slider's proxy-property + Binding{} re-sync pattern in the same file
+  (:458-474). A QML regression test (drag, then external config change, assert the
+  handle followed).
+
+### D17 - the Maximum clamp floors by minLength even for Justify (alignment-blind)
+- STATUS: OPEN (fix).
+- FOUND: 2026-07-18, edit-mode settings audit.
+- SYMPTOM: on a Justify dock the Minimum slider is correctly disabled, but the
+  Maximum cannot be lowered below the frozen stored minLength (stuck at an
+  un-editable floor).
+- EVIDENCE: AppearanceConfig.qml:347 disables Min for Justify, but
+  lengthoffsetclamp.h floors maxLength by minLength unconditionally
+  (clampMaxLengthByStep:130, clampMaxLengthToValue:154). The core Alignment enum
+  is two-valued {Edge, Centered} (:48-51) and folds Justify into Centered (:43-47),
+  so it cannot tell Justify apart. FIX: extend the core to carry Justify distinctly
+  (third enum value or a minimumApplies flag) and skip the minLength floor for
+  Justify. Touches core + bridge + both slider handlers.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here

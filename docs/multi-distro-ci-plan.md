@@ -303,8 +303,29 @@ pass on every distro regardless of tier.
       schemesmodeltest non-hermetic against the neon base's real Breeze
       schemes) - the same pair every non-nix leg excludes, no per-leg action.
       neon is on the Plasma 6.7 branch so the askDestroy contract needs no
-      #if gate (unlike Debian 6.6.5). Remaining distros TBD.
-      Commits: 00400f16c, d68ad64c0, 3fb8f899d, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7
+      #if gate (unlike Debian 6.6.5). VOID DONE
+      (ci/containers/Containerfile.void): builds clean (565/565, same target
+      count) against Void's Qt 6.11.1 / KF6 6.25.0 / libplasma 6.6.3. NO ng
+      docker reference exists for Void, so every name was resolved by
+      xbps-query -Rs prototyping (full table in
+      docs/agent-logs/2026-07-17-void-leg.md). Void name deltas: KF6 is
+      kf6-<name>-devel (like Tumbleweed) but ECM is the BARE
+      extra-cmake-modules (no kf6- prefix, unlike Tumbleweed); Qt private
+      headers split into qt6-base-private-devel (like Tumbleweed); libplasma
+      is libplasma-devel and plasma-workspace/-activities/plasma5support keep
+      bare names + -devel (NOT version-prefixed like Tumbleweed's plasma6-*);
+      kwayland is kf6-kwayland-devel; layer-shell is layer-shell-qt-devel;
+      kwin (bare) ships kwin_wayland; lavapipe is mesa-vulkan-lavapipe;
+      Vulkan headers/validation use Khronos CamelCase (Vulkan-Headers,
+      Vulkan-ValidationLayers); setcap is in libcap-progs; the glibc-full
+      base image ships NO bash (a hard build dep). One PORTABILITY GAP fixed
+      in the image (a distro dep-split, NOT a source defect): Void splits the
+      gcc ASan/UBSan runtime + static preinit into libsanitizer-devel, which
+      the step-2.5 law's -fsanitize test targets need to link. test stage:
+      80/82 ctest (schemesmodeltest non-hermetic XDG + qmllintgate ratchet -
+      the known classes; better than Arch/Tumbleweed because the image
+      exports LATTE_QML_MODULE_PATH + Qt6 QML host-tool PATH). Remaining: gentoo.
+      Commits: 00400f16c, d68ad64c0, 3fb8f899d, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab
 - [~] A3 Pin the exact base image tags that meet the Plasma 6.5 floor;
       document the floor check per distro. Arch is rolling (archlinux:
       latest for the prototype; archive-snapshot pin TBD). DEBIAN DONE:
@@ -332,8 +353,17 @@ pass on every distro regardless of tier.
       stale Docker Hub kdeneon/* tags (Ubuntu 22.04 / Plasma 5.27, 2023) are
       below floor and were rejected. neon User rolls with each Plasma
       release, so a registry digest pin is the open reproducibility item
-      (same as Arch/Tumbleweed). Remaining: gentoo/void tags.
-      Commits: 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7
+      (same as Arch/Tumbleweed). VOID floor CHECKED in-container 2026-07-17 and
+      recorded in the Containerfile comment: Qt 6.11.1 / KF6 6.25.0 /
+      libplasma+kwin 6.6.3 / Mesa lavapipe 26.1.5 (LLVM 21.1.7), well past
+      the >=6.5/>=6.6 floor. Void is rolling and has no dated archive
+      (ghcr.io/void-linux/void-glibc-full:latest for the prototype; the
+      -full image's frozen packages are stale until the leg's first
+      xbps-install -Suy sync, which is the initial RUN step), so a
+      reproducible pin would be an image digest, same open item as
+      Arch/Tumbleweed. GLIBC image deliberately (musl is a separate axis).
+      Remaining: gentoo tags.
+      Commits: 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab
 
 ### Phase B - headless gates in-container
 - [~] B1 Get nested kwin_wayland + lavapipe running in each container
@@ -361,8 +391,13 @@ pass on every distro regardless of tier.
       so the setcap -r is a harmless no-op - kept for parity/robustness. No
       neon-specific suppressions needed: the only validation message is the
       known VK_KHR_create_renderpass2/multiview/maintenance2 lavapipe
-      emulation warning, already covered by vk-suppressions.txt.
-      Commits: 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7
+      emulation warning, already covered by vk-suppressions.txt. VOID DONE:
+      nested kwin_wayland (from the bare kwin package) comes up headless in
+      podman and drives the full sceneprobe suite (13/13). SAME cap_sys_nice=ep
+      trap as Arch/Tumbleweed (getcap showed cap_sys_nice=ep before strip,
+      empty after); the image strips it (libcap-progs provides setcap on Void
+      too).
+      Commits: 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab
 - [~] B2 Run the behavioral e2e recipes in-container; make them a hard
       pass on each distro. GATE STAGE PRODUCTIONIZED (branch
       multi-distro-ci-b2-gate): ci/build-and-gate.sh's gate stage is
@@ -478,8 +513,17 @@ pass on every distro regardless of tier.
       Phase C (C1/C2), not this leg, and sceneprobe-gate.sh exiting 1 at the
       bit-exact tier is correct (neon is not a bit-exact distro). Second
       concrete proof of the graduated-rigor premise after Fedora. Detail:
-      docs/agent-logs/2026-07-17-neon-leg.md.
-      Commits: 18aac31b0, 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7
+      docs/agent-logs/2026-07-17-neon-leg.md. VOID DONE: all 13 scenes render
+      and PASS in the Void container, self-test valid - and bit-exact against
+      the nix-blessed lavapipe goldens too. Void's Mesa 26.1.5 / LLVM 21.1.7
+      lavapipe matches nix Mesa for these text-free scenes (delta 0 at the
+      {0,0} tier), same LLVM 21 major as Debian/Tumbleweed, so no tolerance
+      tier was needed at this Mesa version (recorded, not relied on - Phase C
+      owns the rolling-drift axis). The image ENV (LATTE_QML_MODULE_PATH=/usr/
+      lib/qt6/qml, arch-suffixed lvp_icd.x86_64.json) resolves the framework
+      qml tree and ICD; note /usr/lib64 is a symlink to lib on Void, so the
+      canonical lib path is used.
+      Commits: 18aac31b0, 79a8008f0, 3eaa21261, a14c6efef, 2b2469b5e, 0d052f3b7, 72dc44dab
 
 ### Phase C - per-distro golden tiers
 - [ ] C1 Extend the sceneprobe device/tier axis to per-distro naming

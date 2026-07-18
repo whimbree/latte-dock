@@ -3,7 +3,31 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-18 (panel bug fixes + UB-catching initiative + a dev-loop
 shadow fix all landed; clangd editor-intelligence setup in flight as its own
-PR; #4 maximize-length and A3 sanitized-gate in flight).
+PR; #4 maximize-length and A3 sanitized-gate in flight; D14 startup
+invalid-color qCriticals fixed at the QML call sites, own PR).
+
+## 2026-07-18 D14: startup invalid-color qCriticals fixed at the source (own PR)
+
+The startup burst of `Tools.colorBrightness: invalid color from QML` qCriticals
+(known-defects D14) is FIXED. ROOT confirmed in the nested vehicle: Kirigami's
+attached PlatformTheme (and the colorizer/colorPalette chain it feeds) serves a
+default-constructed invalid QColor on the FIRST evaluation of a creation-time
+binding, before its palette resolves; the change notify recomputes the real
+color a beat later. The C++ boundary guard in tools.cpp is correct and UNTOUCHED
+(comment reworded only); the fix guards each of the 13 LatteCore.Tools
+brightness/isLight call sites on color validity
+(`COLOR.valid ? Tools.f(COLOR) : <fallback>`). Nested-vehicle evidence (3 runs
+against the real config copied read-only): baseline 80 invalid qCriticals (all
+spec=0); after 0, with temporary per-site attribution summing to exactly 80 (no
+site missed); settled brightness values identical before/after (37.445 / 239.815
+/ true). Method banked: with Qt private QML headers absent in this nixpkgs
+qtdeclarative, the old V4-backtrace caller trace is not available; instead a
+behavior-preserving QML wrapper (`f(C.valid ? C : (console.warn("tag"), C))`)
+tagged each site while still passing the invalid color through so the C++
+counter kept the baseline - and a per-site `console.warn` in the guard's else
+branch gave the attribution. The throwaway probe recipe was tests/e2e/
+zzz-d14-probe.sh (removed). Colors readback used temporary `onXChanged`
+console.warn loggers in Manager (removed).
 
 ## 2026-07-18 SIDE TRACK: clangd editor code intelligence (own PR)
 

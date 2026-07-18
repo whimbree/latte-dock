@@ -148,16 +148,29 @@ the PR. Do not local-ff-and-push a feature straight to master; the PR
 is the reviewable unit and the record.
 
 Merge mechanics: the bisectable small-commit discipline lives INSIDE
-the branch - never squash-merge, it destroys the bisection tool. Prefer
-a local `git merge --ff-only` of the reviewed branch then a master push
-(sha-preserving, the PR auto-closes as merged) over GitHub's
-rebase-merge, which REWRITES every commit sha and forces a
-re-resolution of every plan/handoff hash the branch just filed (the
-2bba6cb8b lesson, re-paid on PR #1). gate-all.sh green on the branch
-head before the PR opens and again at merge if master moved (the
-pre-push hook enforces the stamp on every code push, any branch). Push
-the branch after each landed, verified chunk. Plan checkboxes get their
-final hashes at merge time if a rebase rewrote them. Never append a
+the branch - never squash-merge, it destroys the bisection tool. LAND
+EVERY PR THROUGH GITHUB SO IT SHOWS MERGED, NOT CLOSED (my direction,
+2026-07-18, after a push race left PR #18 CLOSED-not-merged). The old
+"local `git merge --ff-only` then a master push, sha-preserving, the PR
+auto-closes as merged" flow is RACE-PRONE: if GitHub has not registered
+the branch-head update when the master push lands, it records the PR as
+CLOSED, and once the commits are in master there is NO way to flip a
+closed PR to merged (reopen refuses; no API sets the merged flag). So
+use `gh pr merge --rebase` - GitHub performs the merge, the PR is ALWAYS
+marked MERGED, and history stays linear (bisection intact). The tradeoff
+is GitHub REWRITES the commit shas (the 2bba6cb8b/PR #1 lesson), so
+re-resolve every plan/handoff hash the branch filed at merge time and
+`git fetch && git reset --hard origin/master` to re-sync local master.
+Flow per PR: review -> rebase the branch onto current master locally
+(resolve conflicts, fix plan-tick hashes) -> gate-all green on the
+rebased head (a real gate for code; the docs+Containerfile-only
+distro-leg case may reuse the branch's gate) -> push the rebased branch
+-> `gh pr merge --rebase` -> fetch. Never squash. gate-all.sh green on
+the branch head before the PR opens and again at merge if master moved
+(the pre-push hook enforces the stamp on every code push, any branch;
+--no-verify is a deliberate act you explain, e.g. a Containerfile-only
+leg whose port code is already gated). Plan checkboxes get their final
+hashes at merge time since the rebase rewrote them. Never append a
 "Generated with Claude Code" or any tool-attribution footer to a PR
 body (same ban as commit trailers).
 
@@ -487,8 +500,7 @@ from here, not a re-read of the whole history:
 
 ## Current status
 
-(This section was stale for a long time - keep it honest.) The port is
-a daily driver: I run it against my real config. Phases 0-7 are
+The port is a daily driver: I run it against my real config. Phases 0-7 are
 substantially done; Phase 4 is now WAYLAND-ONLY (X11 backend removed
 2026-07-17, main() refuses non-wayland platforms); Phase 8 still has
 open items (shutdown/latency/lock-unlock/stranding) though its

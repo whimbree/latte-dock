@@ -66,6 +66,24 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
 - FIX DIRECTION: classify the shrink axis against the previous logical band
   while still unioning against the applied region for coverage.
 
+### D14 - 46 invalid-color qCriticals at every startup
+- STATUS: OPEN (found live 2026-07-18; previously noticed at
+  session-handoff.md:890 but never root-caused).
+- SYMPTOM: startup logs ~46 `Tools.colorBrightness: invalid color from QML,
+  returning 0 (dark)` (plus colorLumina / isLight siblings) - qCriticals, not
+  warnings.
+- EVIDENCE: the guard at declarativeimports/core/tools.cpp:33 is CORRECT (loud
+  refuse of an invalid QColor at the QML boundary). The root is a QML call site
+  handing it an invalid QColor before the theme/palette resolves at item
+  creation. Likely per-item bindings (the ~46 count tracks item count):
+  declarativeimports/abilities/client/indicators/LatteIndicator.qml:31 and
+  abilities/items/basicitem/ShortcutBadge.qml:32 (Kirigami.Theme.textColor),
+  indicators/default/package/ui/main.qml:34 (indicator.colorPalette.textColor),
+  containment/.../colorizer/Manager.qml:32 (plasmaTheme.textColor).
+- FIX DIRECTION: at the call sites, do not evaluate colorBrightness on an
+  invalid color (guard the binding on color validity, or defer until the theme
+  resolves) - fix the source, do not silence the guard. Keep the guard.
+
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here

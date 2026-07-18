@@ -196,6 +196,22 @@ target_compile_definitions(configcontrolstest PRIVATE
     TEXTFIELD_QML_PATH="${CMAKE_SOURCE_DIR}/declarativeimports/components/TextField.qml"
     ITEMDELEGATE_QML_PATH="${CMAKE_SOURCE_DIR}/declarativeimports/components/ItemDelegate.qml")
 
+# The edit-mode settings audit's QML-handler WIRING harness
+# (docs/edit-mode-settings-audit-plan.md section 2): runs a control's handler
+# body against a stub QQmlPropertyMap and runs the Tier B diff predicates
+# (tests/units/configsnapshotdiff.h) over the delta. Its own HC3 acceptance
+# test - it proves the harness catches a wrong-key/no-op/stray-coupled write
+# driven through real QML. Qt6::Qml for the engine/property map, Qt6::Gui for
+# the QColor stable-scalar fallback.
+ecm_add_test(settingswiringharnesstest.cpp
+    TEST_NAME settingswiringharnesstest
+    LINK_LIBRARIES Qt6::Test Qt6::Qml Qt6::Gui
+)
+set_tests_properties(settingswiringharnesstest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(settingswiringharnesstest PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/units) # configsnapshotdiff.h
+
 # The shell view wrapper's no-band contract: the legacy backgroundHints
 # ternary demonstrably falls through on Plasma 6 (live engine), and the
 # shipped Panel.qml keeps its imagePath empty (source scan).

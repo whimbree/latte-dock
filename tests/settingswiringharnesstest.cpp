@@ -1,0 +1,213 @@
+/*
+    SPDX-FileCopyrightText: 2026 Bree Spektor
+    SPDX-FileCopyrightText: 2026 Latte Dock contributors
+    SPDX-License-Identifier: GPL-2.0-or-later
+*/
+
+// The QML-handler WIRING harness of the edit-mode settings audit
+// (docs/edit-mode-settings-audit-plan.md section 2, the cheaper decisive
+// driver). A settings control's WIRING - which config key its handler writes -
+// is the P2 question, and the fiddliest to answer through the mapped settings
+// window (combos and text fields are pointer-drivable but awkward). This
+// harness answers it deterministically instead: it runs a control's handler
+// body as a QML fragment against a STUB config map (a QQmlPropertyMap standing
+// in for plasmoid.configuration), snapshots the map before and after, and runs
+// the audit's Tier B diff predicates (tests/units/configsnapshotdiff.h) over
+// the delta. A cluster agent reproduces a real handler here - e.g. AU-1b's
+// slider-binding re-sync check - by pasting the control's handler expression
+// into runHandler().
+//
+// This file is also the harness's HC3 acceptance test: it proves the harness
+// OBSERVES A REJECTION when a handler misbehaves (writes the wrong key, writes
+// a stray coupled key, or writes nothing), not only when it behaves. A harness
+// that only passes the happy path cannot be trusted to find the suspected-broken
+// controls, so every rejection direction is driven through a REAL QML write.
+
+// Qt
+#include <QColor>
+#include <QJsonObject>
+#include <QJsonValue>
+#include <QQmlComponent>
+#include <QQmlContext>
+#include <QQmlEngine>
+#include <QQmlPropertyMap>
+#include <QScopedPointer>
+#include <QTest>
+#include <QVariant>
+
+#include "configsnapshotdiff.h"
+
+using namespace Latte::AuditHarness;
+
+class SettingsWiringHarnessTest : public QObject
+{
+    Q_OBJECT
+
+private Q_SLOTS:
+    void harnessSeesACorrectWrite();
+    void reflectReadsBackTheWrittenValue();
+
+    //! HC3: the harness catches a wrong outcome driven through a REAL handler
+    void harnessCatchesNoOpHandler();
+    void harnessCatchesWrongKeyWrite();
+    void harnessCatchesStrayCoupledWrite();
+
+private:
+    //! seed a stub config map with the keys a handler under test may touch.
+    //! QML can only assign to properties that already exist on a QQmlPropertyMap
+    //! (exactly like the real KConfigPropertyMap, which carries every schema
+    //! key), so the keys are pre-inserted here.
+    static void seed(QQmlPropertyMap &config, std::initializer_list<std::pair<QString, QVariant>> pairs);
+
+    //! run a control's handler BODY as a QML fragment against the stub map,
+    //! exposed as `configuration` (mirrors plasmoid.configuration). Returns
+    //! the QML error string (empty on success) so a malformed fragment fails
+    //! loudly instead of silently writing nothing and reading as a no-op.
+    static QString runHandler(QQmlPropertyMap &config, const QString &handlerBody);
+
+    //! snapshot the stub map's current values as a "config" JSON object, the
+    //! same shape viewConfigData()'s "config" object carries (dbusreports.h
+    //! serializeConfigMap/configValueToJson), so the diff predicates see the
+    //! same thing live and stubbed.
+    static QJsonObject snapshot(const QQmlPropertyMap &config);
+};
+
+void SettingsWiringHarnessTest::seed(QQmlPropertyMap &config, std::initializer_list<std::pair<QString, QVariant>> pairs)
+{
+    for (const auto &pair : pairs) {
+        config.insert(pair.first, pair.second);
+    }
+}
+
+QString SettingsWiringHarnessTest::runHandler(QQmlPropertyMap &config, const QString &handlerBody)
+{
+    QQmlEngine engine;
+    engine.rootContext()->setContextProperty(QStringLiteral("configuration"), &config);
+
+    QQmlComponent component(&engine);
+    const QString qml = QStringLiteral(
+        "import QtQml\n"
+        "QtObject { Component.onCompleted: { %1 } }\n").arg(handlerBody);
+    component.setData(qml.toUtf8(), QUrl());
+
+    if (component.isError()) {
+        return component.errorString();
+    }
+
+    QScopedPointer<QObject> root(component.create());
+
+    if (!root) {
+        return component.errorString().isEmpty()
+            ? QStringLiteral("handler fragment produced no object") : component.errorString();
+    }
+
+    return QString();
+}
+
+QJsonObject SettingsWiringHarnessTest::snapshot(const QQmlPropertyMap &config)
+{
+    QJsonObject json;
+    const QStringList keys = config.keys();
+
+    for (const QString &key : keys) {
+        const QVariant value = config.value(key);
+        //! same stable-scalar rule as dbusreports.h configValueToJson: a JSON
+        //! scalar where one exists, a canonical string for a typed value (a
+        //! QColor) that has none, so the diff compares equal-means-equal
+        const QJsonValue direct = QJsonValue::fromVariant(value);
+
+        if (direct.type() != QJsonValue::Null && direct.type() != QJsonValue::Undefined) {
+            json[key] = direct;
+        } else if (value.canConvert<QColor>()) {
+            json[key] = value.value<QColor>().name(QColor::HexArgb);
+        } else {
+            json[key] = value.toString();
+        }
+    }
+
+    return json;
+}
+
+//! a well-behaved handler writes exactly its own key: the harness sees the
+//! write (P1) and confirms no stray key moved (P2).
+void SettingsWiringHarnessTest::harnessSeesACorrectWrite()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("maxLength"), 100}, {QStringLiteral("minLength"), 30}, {QStringLiteral("offset"), 0}});
+
+    const QJsonObject before = snapshot(config);
+    QCOMPARE(runHandler(config, QStringLiteral("configuration.maxLength = 90")), QString());
+    const QJsonObject after = snapshot(config);
+
+    QVERIFY(controlApplies(before, after, QStringLiteral("maxLength")));
+    QVERIFY(onlyExpectedKeysChanged(before, after, {QStringLiteral("maxLength")}));
+}
+
+void SettingsWiringHarnessTest::reflectReadsBackTheWrittenValue()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("iconSize"), 48}});
+
+    QCOMPARE(runHandler(config, QStringLiteral("configuration.iconSize = 64")), QString());
+
+    QVERIFY(valueReflects(snapshot(config), QStringLiteral("iconSize"), 64));
+}
+
+//! HC3: a handler that writes nothing (the D10 dead-control class) leaves the
+//! map unchanged; the harness must FAIL P1, not pass because "nothing broke".
+void SettingsWiringHarnessTest::harnessCatchesNoOpHandler()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("titleTooltips"), false}, {QStringLiteral("maxLength"), 100}});
+
+    const QJsonObject before = snapshot(config);
+    //! a handler that reads but never writes - the shape of a control wired to
+    //! a value nothing consumes
+    QCOMPARE(runHandler(config, QStringLiteral("var v = configuration.titleTooltips")), QString());
+    const QJsonObject after = snapshot(config);
+
+    QVERIFY2(!controlApplies(before, after, QStringLiteral("titleTooltips")),
+             "a no-op handler must be REJECTED by the harness (P1 fails), not silently passed");
+    QVERIFY(changedConfigKeys(before, after).isEmpty());
+}
+
+//! HC3: a handler mislabelled to its key - it writes offset when the audit
+//! expects maxLength. The harness must FAIL both P1 (maxLength did not move)
+//! and P2 (a key outside the expected set moved).
+void SettingsWiringHarnessTest::harnessCatchesWrongKeyWrite()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("maxLength"), 100}, {QStringLiteral("offset"), 0}});
+
+    const QJsonObject before = snapshot(config);
+    QCOMPARE(runHandler(config, QStringLiteral("configuration.offset = 5")), QString());
+    const QJsonObject after = snapshot(config);
+
+    QVERIFY2(!controlApplies(before, after, QStringLiteral("maxLength")),
+             "a handler that wrote the WRONG key must FAIL the maxLength P1 check");
+    QVERIFY2(!onlyExpectedKeysChanged(before, after, {QStringLiteral("maxLength")}),
+             "a handler that wrote the WRONG key must FAIL the P2 right-key-only check");
+    //! and the harness names what actually moved, so the audit reports the bug
+    QCOMPARE(changedConfigKeys(before, after), (QStringList{QStringLiteral("offset")}));
+}
+
+//! HC3: the D15 shape driven through a real handler - writing maxLength also
+//! writes minLength. P2 with the expected set {maxLength} must FAIL on the
+//! stray coupled key.
+void SettingsWiringHarnessTest::harnessCatchesStrayCoupledWrite()
+{
+    QQmlPropertyMap config;
+    seed(config, {{QStringLiteral("maxLength"), 100}, {QStringLiteral("minLength"), 100}, {QStringLiteral("offset"), 0}});
+
+    const QJsonObject before = snapshot(config);
+    QCOMPARE(runHandler(config, QStringLiteral("configuration.maxLength = 90; configuration.minLength = 90")), QString());
+    const QJsonObject after = snapshot(config);
+
+    QVERIFY2(!onlyExpectedKeysChanged(before, after, {QStringLiteral("maxLength")}),
+             "a coupled minLength side effect must be REJECTED by the harness (P2 fails)");
+    QCOMPARE(changedConfigKeys(before, after), (QStringList{QStringLiteral("maxLength"), QStringLiteral("minLength")}));
+}
+
+QTEST_GUILESS_MAIN(SettingsWiringHarnessTest)
+
+#include "settingswiringharnesstest.moc"

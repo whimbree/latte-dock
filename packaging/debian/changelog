@@ -1,0 +1,11 @@
+latte-dock (0.20.0) unstable; urgency=medium
+
+  * packaging/debian/: initial dh cmake recipe for Tier-1 .deb.
+  * Build against the Debian testing Qt6/KF6/Plasma stack using
+    debhelper/cmake with Ninja.  Runtime dependencies are resolved via
+    shlibdeps plus the Plasma workspace stack needed by the QML shells.
+  * Verified by building in a latte-debian:proto podman container and
+    running the nested 000-smoke e2e recipe against the installed
+    /usr/bin/latte-dock.
+
+ -- Bree Spektor <maintainer@latte-dock.org>  Sun, 19 Jul 2026 20:38:33 +0000

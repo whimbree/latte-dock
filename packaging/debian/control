@@ -1,0 +1,80 @@
+Source: latte-dock
+Section: kde
+Priority: optional
+Maintainer: Bree Spektor <maintainer@latte-dock.org>
+Build-Depends: debhelper-compat (= 13),
+               cmake (>= 3.16),
+               extra-cmake-modules (>= 6.5.0),
+               ninja-build,
+               pkgconf,
+               gettext,
+               build-essential,
+               qt6-base-dev (>= 6.6.0),
+               qt6-base-dev-tools,
+               qt6-declarative-dev,
+               qt6-wayland-dev,
+               qt6-5compat-dev,
+               qt6-shadertools-dev,
+               qt6-tools-dev,
+               qt6-tools-dev-tools,
+               libqt6svg6-dev | qt6-svg-dev,
+               libkf6archive-dev,
+               libkf6config-dev,
+               libkf6coreaddons-dev,
+               libkf6crash-dev,
+               libkf6dbusaddons-dev,
+               libkf6declarative-dev,
+               libkf6doctools-dev,
+               libkf6globalaccel-dev,
+               libkf6guiaddons-dev,
+               libkf6i18n-dev,
+               libkf6iconthemes-dev,
+               libkf6idletime-dev,
+               libkf6itemmodels-dev,
+               libkf6kcmutils-dev,
+               libkf6kio-dev,
+               libkirigami-dev,
+               libkf6newstuff-dev,
+               libkf6notifications-dev,
+               libkf6package-dev,
+               libkf6service-dev,
+               libkf6solid-dev,
+               libkf6sonnet-dev,
+               libkf6svg-dev | kf6-ksvg-dev,
+               libkf6textwidgets-dev,
+               libkf6windowsystem-dev,
+               libkf6xmlgui-dev,
+               libksysguard-dev,
+               liblayershellqtinterface-dev,
+               libplasma-dev (>= 6.5.0),
+               libplasmaactivities-dev | plasma-activities-dev,
+               libplasmaactivitiesstats-dev | plasma-activities-stats-dev,
+               libplasma5support-dev | plasma5support-dev,
+               libkpipewire-dev,
+               plasma-pa,
+               plasma-wayland-protocols,
+               plasma-workspace-dev,
+               qml6-module-org-kde-desktop | kf6-qqc2-desktop-style,
+               kwayland-dev,
+               libwayland-dev,
+               wayland-protocols,
+               libvulkan-dev,
+               vulkan-validationlayers
+Standards-Version: 4.7.0
+Homepage: https://userbase.kde.org/LatteDock
+Rules-Requires-Root: no
+
+Package: latte-dock
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         plasma-workspace (>= 6.5.0),
+         qml6-module-org-kde-desktop | kf6-qqc2-desktop-style,
+         libqt6svg6
+Recommends: kwin-wayland,
+            fonts-noto-core
+Description: Plasma 6 dock / launch bar
+ Lattecotta Dock is a from-scratch Plasma 6 / Qt6 port of Latte Dock, a
+ flexible dock and launch bar for the Plasma desktop.  It supports multiple
+ layouts, parabolic zoom effects, indicator themes, and tight integration
+ with KWin under Wayland.

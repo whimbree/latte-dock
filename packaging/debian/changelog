@@ -1,4 +1,4 @@
-latte-dock (0.20.0) unstable; urgency=medium
+latte-dock (0.10.77) unstable; urgency=medium
 
   * packaging/debian/: initial dh cmake recipe for Tier-1 .deb.
   * Build against the Debian testing Qt6/KF6/Plasma stack using

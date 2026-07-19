@@ -51,15 +51,12 @@ Build-Depends: debhelper-compat (= 13),
                libplasmaactivitiesstats-dev | plasma-activities-stats-dev,
                libplasma5support-dev | plasma5support-dev,
                libkpipewire-dev,
-               plasma-pa,
                plasma-wayland-protocols,
                plasma-workspace-dev,
-               qml6-module-org-kde-desktop | kf6-qqc2-desktop-style,
                kwayland-dev,
                libwayland-dev,
                wayland-protocols,
-               libvulkan-dev,
-               vulkan-validationlayers
+               libvulkan-dev
 Standards-Version: 4.7.0
 Homepage: https://userbase.kde.org/LatteDock
 Rules-Requires-Root: no
@@ -72,7 +69,8 @@ Depends: ${shlibs:Depends},
          qml6-module-org-kde-desktop | kf6-qqc2-desktop-style,
          libqt6svg6
 Recommends: kwin-wayland,
-            fonts-noto-core
+             plasma-pa,
+             fonts-noto-core
 Description: Plasma 6 dock / launch bar
  Lattecotta Dock is a from-scratch Plasma 6 / Qt6 port of Latte Dock, a
  flexible dock and launch bar for the Plasma desktop.  It supports multiple

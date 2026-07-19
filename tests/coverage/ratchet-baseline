@@ -23,6 +23,7 @@ dbusreportstest
 destroyedtypedemotiontest
 dropclassifiertest
 editmodehandleactiontest
+effectshandleraudittest
 extraviewhintstest
 filldistributortest
 generictoolstest

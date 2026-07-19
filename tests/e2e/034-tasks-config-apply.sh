@@ -30,7 +30,9 @@
 # neighbour) is pinned deterministically in tests/taskshandleraudittest.cpp; the
 # action-dispatch completeness (a chosen click/scroll action always has a
 # handler) in tests/qml/tst_taskactions.qml. This recipe is the third leg: the
-# live map carries what the page would write.
+# live map carries what the page would write, AND one write (launchersGroup)
+# visibly changes the running bar - the plasmoid consuming the config end to end,
+# not just the map holding it.
 #
 # A full backup of the layout file is restored on exit so the vehicle is left as
 # found (the multi-key, multi-value seed makes a whole-file restore the simplest
@@ -43,6 +45,22 @@ source "$E2E_REPO/tests/e2e/audit/audit-lib.sh"
 view="$(e2e_tasks_view)" || e2e_fail "no tasks view"
 applet="$(audit_tasks_applet_id "$view")" || e2e_fail "could not resolve the single tasks plasmoid under view $view"
 echo "CL-5: tasks-config-apply view=$view tasks-applet=$applet"
+
+# tasks_launcher_count: the launcher rows the tasks plasmoid currently shows,
+# read from viewTasksData. A live behavioural probe used before and after the
+# seed - the seed switches launchersGroup Unique -> Global (an empty group in
+# this layout), so the visible launcher set MUST change if the write applied.
+tasks_launcher_count() {
+    e2e_json viewTasksData u "$view" | grep -o '"isLauncher":true' | wc -l
+}
+
+# baseline: the default layout ships the tasks bar with its Unique-group
+# launchers, so viewTasksData shows them now. Captured BEFORE the seed so the
+# post-seed change is a real before/after, not an assumed absolute.
+baseline_launchers="$(tasks_launcher_count)"
+[[ "$baseline_launchers" -ge 1 ]] \
+    || e2e_fail "the default tasks bar shows no launchers ($baseline_launchers) - the vehicle cannot show a launchersGroup change"
+echo "baseline: tasks bar shows $baseline_launchers launcher row(s) under the default config"
 
 backup="$(mktemp --suffix=.latte)"
 cp "$E2E_LAYOUT" "$backup"
@@ -155,17 +173,21 @@ audit_assert_reflects "$snap" modifierClick 2                      || rc=1
 rm -f "$snap"
 (( rc == 0 )) || e2e_fail "a tasks config value did not reflect through the applet's live map (see the snapshot above)"
 
-# ---- the plasmoid stayed functional under the non-default config -------------
-# hideAllTasks=true and the filters are behaviourally inert on this launcher-only
-# vehicle (no window tasks to filter), but the plasmoid must still consume the
-# config and render its launchers - a crash-or-hang here would be a real apply
-# defect masquerading as a passing readback. viewTasksData answering with the
-# launcher rows confirms the tasks plasmoid is alive and reading its config.
-tasks_json="$(e2e_json viewTasksData u "$view")" || e2e_fail "viewTasksData failed after the seed"
-launcher_count="$(grep -o '"isLauncher":true' <<<"$tasks_json" | wc -l)"
-[[ "$launcher_count" -ge 1 ]] \
-    || e2e_fail "the tasks plasmoid exposes no launchers after the seed - it did not survive the non-default config"
-echo "tasks plasmoid alive under the seeded config: $launcher_count launcher row(s) in viewTasksData"
+# ---- behavioural P1: a tasks-page write visibly changed the running bar -------
+# The config readback above proves the writes reach the applet's live MAP; this
+# proves one of them reaches the plasmoid's RENDERED state. The seed switched
+# launchersGroup from Unique (the default, populated) to Global (empty in this
+# layout), so the visible launcher set must change. The delegate observes
+# plasmoid.configuration.launchersGroup live, so a changed launcher count is the
+# tasks plasmoid consuming the write end to end - the D10 "applies at all"
+# question answered behaviourally, not just at the config layer. (The other
+# filters need real window tasks, absent on this launcher-only vehicle, so
+# launchersGroup is the deterministic behavioural probe here.)
+seeded_launchers="$(tasks_launcher_count)"
+[[ "$seeded_launchers" -lt "$baseline_launchers" ]] \
+    || e2e_fail "launchersGroup=Global did not change the visible launcher set ($baseline_launchers -> $seeded_launchers) - a tasks-page write did not reach the running plasmoid"
+echo "behavioural apply: launchersGroup Unique->Global changed the bar ($baseline_launchers -> $seeded_launchers launcher rows)"
 
-echo "PASS: CL-5 D10 - the Tasks page's writes reach the running plasmoid; appletConfigData"
-echo "      reflects all 30 seeded tasks-page values through the applet's live map (AU-5a/5b/5c)"
+echo "PASS: CL-5 D10 (Tasks config page applies its settings) - the page's writes reach the"
+echo "      running plasmoid: appletConfigData reflects all 30 seeded tasks-page values through"
+echo "      the applet's live map, and launchersGroup visibly changed the bar (AU-5a/5b/5c)"

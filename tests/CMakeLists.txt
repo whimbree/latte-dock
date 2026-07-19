@@ -246,6 +246,22 @@ set_tests_properties(behaviorwiringaudittest PROPERTIES
 target_include_directories(behaviorwiringaudittest PRIVATE
     ${CMAKE_SOURCE_DIR}/tests/units) # configsnapshotdiff.h
 
+# The Effects page's real-handler wiring audit (CL-4,
+# docs/edit-mode-settings-audit-plan.md): the same QML-fragment/stub-map pattern
+# as settingswiringharnesstest, plus a stub latteView.indicator for the ind-class
+# indicator controls (they write a C++ property, not a config key). Pins the
+# shadow/animation right-key deltas, the S-c durationTime sense verdict, and the
+# indicator switch/tab wiring. No extra sources: the handlers are self-contained
+# QML fragments over the stub map.
+ecm_add_test(effectshandleraudittest.cpp
+    TEST_NAME effectshandleraudittest
+    LINK_LIBRARIES Qt6::Test Qt6::Qml Qt6::Gui
+)
+set_tests_properties(effectshandleraudittest PROPERTIES
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+target_include_directories(effectshandleraudittest PRIVATE
+    ${CMAKE_SOURCE_DIR}/tests/units) # configsnapshotdiff.h
+
 # The shell view wrapper's no-band contract: the legacy backgroundHints
 # ternary demonstrably falls through on Plasma 6 (live engine), and the
 # shipped Panel.qml keeps its imagePath empty (source scan).

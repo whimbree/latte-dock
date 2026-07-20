@@ -687,12 +687,12 @@ format. CLAUDE.md caps subagents at 4, so batch: wave A = deb, rpm, arch
       validate all five plugin identities with a verified Qt 6 inspector under
       bounded loading; prove startup mappings, isolated environment and clean
       process-group shutdown under nested KWin.
-      Commits: 7646cb241, 2fdb90d42, ea95945e0, aa947b8eb, f2d85dbc1,
-      d7e4f7723, 52d18f4de, 70faf758e, 21acc0445, 770cbad33,
-      560937549, 5fd6d0741, 11472197a, 771b96fe0, 660c85525,
-      660a6f211, 6257b5ce2, 5d3ce250d, 43c736644, 41eec828c,
-      5da9a49a0, 2fdce6968, bc7981939, 270b72fb1, cc1176e82,
-      31b768e5a.
+      Commits: e50a7ad21, 728fdf675, dabaf058b, 9a24b538d, 0032e17f2,
+      f08fbe2c4, 035d38da8, 3074c6adf, 1895c6c30, 14543f43f,
+      cfe736213, 484052179, f8bd05d60, ce8950b11, 1d091efe8,
+      c394c43cf, 02153ed63, 9fe8ddd1d, 3b025df03, 40ad5a245,
+      ebcda72fa, 29a5e4ce6, c329eb138, 98f4ff797, 009c406dc,
+      3fb92a05a.
 - [ ] F1 packaging/debian/ (control, rules via dh cmake, changelog,
       DEP-5 copyright from the SPDX audit); build .deb in the Ubuntu-family
       container, install, gate. Commits:

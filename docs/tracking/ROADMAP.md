@@ -14,8 +14,9 @@ every target, at which point VERSION bumps to 0.20.0 and the tag lands.
   X11 backend was removed); Phase 8 (layout, shutdown, multi-screen) still has
   open items.
 - [Multi-distro CI and native packaging](multi-distro-ci-plan.md) - the v0.20.0
-  release CI matrix plus native packages per format. Arch is proven end to end;
-  the other distro legs and the release tag are pending.
+  release CI matrix plus native packages per format. The shared installed-package
+  gate is proven in the Arch package environment. F1-F5 (the Debian, RPM, Arch,
+  Gentoo, and Void native package recipes) and the release tag remain pending.
 - [Edit-mode settings audit](edit-mode-settings-audit-plan.md) - a driven audit
   proving every edit-mode control keeps its contract (applies, right key, stays
   in sync). COMPLETE - CL-0 (harness), CL-1 (length), wave-2 (CL-2/3/4/6:

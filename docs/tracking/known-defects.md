@@ -244,24 +244,6 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   normal-mode always-shown feed carries the full set, closing the verification
   gap that let the collapse be invisible.
 
-### D25 - Task icons do not refresh on an icon-theme change (stale until restart)
-- STATUS: SUSPECTED (found by code-reading during the ng-upstream commit audit;
-  not yet reproduced under a live driver in this port). Migrated here 2026-07-19
-  from that audit (its Top ADOPT (adopt-this-fix) finding F, also listed as a
-  feature GAP) so archiving the audit does not bury the action item.
-- FOUND: code-reading, ng-upstream audit (archived at
-  docs/archive/ng-upstream-audit.md). ng's own remedy is commit ef2989ec2
-  (refresh task icons when the icon theme changes).
-- SYMPTOM (per the audit): after the desktop icon theme changes, task-manager
-  icons keep rendering the previous theme's pixmaps until the dock is restarted.
-- MECHANISM (code-reading): this port carries no icon-theme-change refresh path -
-  no forceRefreshTaskIconSource() and no QPixmapCache::clear() anywhere in
-  plasmoid/ or app/ (grep is empty). ng's ef2989ec2 adds exactly that refresh on
-  the icon-theme-changed signal.
-- NEXT: reproduce live (switch icon theme, watch a pinned/running task icon),
-  then adopt ng's refresh if it reproduces, or resolve as HAVE if a Plasma 6 icon
-  source already repaints on a theme change.
-
 ## Recorded elsewhere - indexed here so the flat scan is complete
 
 These predate the registry and are detailed in their source docs; indexed here
@@ -303,6 +285,30 @@ app/wm/waylandinterface.cpp:299 (Phase 4 WId), app/layouts/synchronizer.cpp:507
 carries its own detail or points into the plan and the reference docs.
 
 ## Fixed (kept for the record)
+
+### D25 - Task icons stay stale after icon-theme changes
+- STATUS: FIXED (PR #76, 8423fab40; coverage ratchet 6765b2320).
+- FOUND: 2026-07-19, code-reading during the ng-upstream commit audit, then
+  reproduced by the focused production-QML render test.
+- SYMPTOM: task-manager and tooltip preview icons kept rendering the previous
+  theme's pixmaps until the dock restarted.
+- ROOT CAUSE: `Kirigami.Icon` cached the raster resolved from a stable
+  task-model `QIcon` QVariant. `KIconLoader` updated the underlying theme data
+  without changing that source, so the icon binding was never reevaluated.
+- FIX: `Environment` forwards `iconLoaderSettingsChanged` only for real
+  `KIconTheme::current()` transitions. `ThemeAwareIcon` retains the original
+  QVariant in `iconSource`, then synchronously clears and rebinds the inherited
+  source so Kirigami rebuilds its per-item raster without an empty rendered
+  interval. The primary task icon and both tooltip preview icons use that
+  component.
+- PRIOR ART: latte-dock-ng commit `ef2989ec2` identified the missing refresh
+  path and supplied the idea. Its global QIcon theme mutation, QPixmap cache
+  clearing, file watching, and deferred rebind were not carried.
+- EVIDENCE: the focused test was red with the named fixture icon still rendered
+  red after its `QIcon` resolved blue. The fixed path renders blue without an
+  `iconSourceChanged` emission or cache-key change; a nameless pixmap-backed
+  icon stays green. The full build, QML compile gate, and qmllint ratchet pass.
+  The coverage ratchet reports 94 ctest entries and 31 paired unit headers.
 
 ### D31 - Valid Justify splitter moves reset after restart
 - STATUS: FIXED (PR #73: functional fix 91eff7c46; source-attribution commit
@@ -359,7 +365,7 @@ carries its own detail or points into the plan and the reference docs.
   AutoSize's 24 curated qmllint warnings drop to zero.
 
 ### D55 - String service metadata passed containment-actions category checks
-- STATUS: FIXED (PR #72 branch, 31b768e5a).
+- STATUS: FIXED (PR #72, 3fb92a05a).
 - FOUND: 2026-07-20, final independent review of the installed-package gate.
 - ROOT CAUSE: jq `index()` searches both arrays and strings, so a scalar
   `ServiceTypes` value containing `Plasma/ContainmentActions` passed the category
@@ -372,7 +378,7 @@ carries its own detail or points into the plan and the reference docs.
   typed metadata still passes.
 
 ### D54 - Qt inspector version probes could hang or accept unrelated text
-- STATUS: FIXED (PR #72 branch, cc1176e82).
+- STATUS: FIXED (PR #72, 009c406dc).
 - FOUND: 2026-07-20, final independent review of the installed-package gate.
 - ROOT CAUSE: `qtplugininfo --version` had no deadline and accepted any 6.x
   substring, including unrelated diagnostic text from a Qt 5 candidate.
@@ -382,7 +388,7 @@ carries its own detail or points into the plan and the reference docs.
   the next real Qt 6 inspector is selected within the fixed bound.
 
 ### D53 - Optional indicator mapping terminated the runtime gate
-- STATUS: FIXED (PR #72 branch, 270b72fb1).
+- STATUS: FIXED (PR #72, 98f4ff797).
 - FOUND: 2026-07-20, final independent review of the installed-package gate.
 - ROOT CAUSE: mapped-artifact registration returned the status of its final
   `required == 1` comparison. The optional indicator returned 1 under `set -e`,
@@ -391,11 +397,12 @@ carries its own detail or points into the plan and the reference docs.
   collision failure as a separate status-2 path.
 - EVIDENCE: optional registration under active `set -e` reaches its following
   assertions with the expected map entry and an unchanged required set. The
-  Arch package runtime at exact mounted source head `3ee077529` continued
-  through mapping audit, clean shutdown, and both PASS lines.
+  Arch package runtime at exact pre-merge source head `3ee077529`
+  (post-rebase tree-equivalent `10b4c4565`) continued through mapping audit,
+  clean shutdown, and both PASS lines.
 
 ### D52 - Selected package artifacts bypassed package-namespace resolution
-- STATUS: FIXED (PR #72 branch, bc7981939).
+- STATUS: FIXED (PR #72, c329eb138).
 - FOUND: 2026-07-20, cross-check against the complete extraction-root contract.
 - ROOT CAUSE: nested content used package-namespace link resolution, but selected
   executables, plugins, and metadata first dereferenced links against host `/`.
@@ -412,7 +419,7 @@ carries its own detail or points into the plan and the reference docs.
   RUNPATH passes.
 
 ### D51 - Recursive package links could escape to foreign providers
-- STATUS: FIXED (PR #72 branch, ea95945e0).
+- STATUS: FIXED (PR #72, dabaf058b).
 - FOUND: 2026-07-20, implementation review of the installed-package gate.
 - ROOT CAUSE: selected artifacts were canonicalized, but nested QML, shell,
   plasmoid, and indicator content links were not inspected.
@@ -422,7 +429,7 @@ carries its own detail or points into the plan and the reference docs.
   link controls all fail.
 
 ### D50 - Emergency dock cleanup could hang after failure
-- STATUS: FIXED (PR #72 branch, 2fdb90d42).
+- STATUS: FIXED (PR #72, 728fdf675).
 - FOUND: 2026-07-20, implementation review of the installed-package gate.
 - ROOT CAUSE: after the 25-second shutdown contract failed, EXIT cleanup sent
   SIGTERM again and immediately waited, so a TERM-ignoring dock blocked forever.
@@ -433,7 +440,7 @@ carries its own detail or points into the plan and the reference docs.
   the fixed bounds.
 
 ### D49 - Validation preflight omitted the environment launcher
-- STATUS: FIXED (PR #72 branch, 5da9a49a0).
+- STATUS: FIXED (PR #72, ebcda72fa).
 - FOUND: 2026-07-20, second independent review of the installed-package gate.
 - ROOT CAUSE: plugin loading invoked `env`, but the validation preflight did
   not require it. Missing `env` was discovered only after package traversal.
@@ -443,9 +450,9 @@ carries its own detail or points into the plan and the reference docs.
   immediately with the missing-`env` diagnostic; all 67 focused controls pass.
 
 ### D48 - Plugin inspection could silently select a Qt 5 tool
-- STATUS: FIXED (PR #72 branch, 41eec828c; bounded exact parsing completed by
+- STATUS: FIXED (PR #72, 40ad5a245). Bounded exact parsing was completed by
   D54 (Qt inspector version probes could hang or accept unrelated text) in
-  cc1176e82).
+  009c406dc.
 - FOUND: 2026-07-20, second independent review of the installed-package gate.
 - ROOT CAUSE: unsuffixed `qtplugininfo` was selected before Qt 6-specific names,
   and no version check established which Qt major supplied the command.
@@ -455,7 +462,7 @@ carries its own detail or points into the plan and the reference docs.
   unsuffixed Qt 5 tool, and a Qt 5-only candidate is rejected.
 
 ### D47 - Absolute nested-content links resolved against the host filesystem
-- STATUS: FIXED (PR #72 branch, 43c736644).
+- STATUS: FIXED (PR #72, 3b025df03).
 - FOUND: 2026-07-20, second independent review of the installed-package gate.
 - ROOT CAUSE: recursive audits passed package-absolute symlink targets directly
   to host `realpath`, so `/usr/...` inside an isolated root meant host `/usr`.
@@ -466,19 +473,19 @@ carries its own detail or points into the plan and the reference docs.
   fail. D52 covers selected executable, plugin, and metadata paths.
 
 ### D46 - Executable wrappers contradicted runtime provenance
-- STATUS: FIXED (PR #72 branch, 5d3ce250d).
+- STATUS: FIXED (PR #72, 9fe8ddd1d).
 - FOUND: 2026-07-20, second independent review of the installed-package gate.
 - ROOT CAUSE: check-only skipped ELF validation for executable wrappers, while
   runtime required `/proc/<pid>/exe` to equal that resolved wrapper pathname.
   A wrapper could pass static validation but could not satisfy runtime identity.
 - FIX: require the installed `latte-dock` CMake target to be ELF. This replaces
-  the earlier wrapper-compatible claim in `70faf758e`; wrapper support would
+  the earlier wrapper-compatible claim in `3074c6adf`; wrapper support would
   require a separate owned-target contract.
 - EVIDENCE: the positive fixture carries ELF and an executable shell wrapper is
   rejected during check-only before runtime provenance can diverge.
 
 ### D45 - Process-group polling confused errors and zombies with live members
-- STATUS: FIXED (PR #72 branch, 6257b5ce2).
+- STATUS: FIXED (PR #72, 02153ed63).
 - FOUND: 2026-07-20, second independent review of the installed-package gate.
 - ROOT CAUSE: every nonzero `pgrep` result meant no members, while every listed
   member, including an unreaped zombie, meant the group remained live.
@@ -488,7 +495,8 @@ carries its own detail or points into the plan and the reference docs.
   real zombie held unreaped outside the group counts as successfully stopped.
 
 ### D44 - Missing validation tools could yield partial package checks
-- STATUS: FIXED (PR #72 branch, 560937549; completed by D49 in 5da9a49a0).
+- STATUS: FIXED (PR #72, cfe736213). The command audit was completed by D49
+  (validation preflight omitted the environment launcher) in ebcda72fa.
 - FOUND: 2026-07-20, implementation review of the installed-package gate.
 - ROOT CAUSE: artifact parsing began before every external command was checked.
   A missing producer such as `awk` could leave an empty consumer result.
@@ -498,7 +506,7 @@ carries its own detail or points into the plan and the reference docs.
   the later audit's missed `env` dependency.
 
 ### D43 - A crashed dock could satisfy the shutdown gate
-- STATUS: FIXED (PR #72 branch, 770cbad33).
+- STATUS: FIXED (PR #72, 14543f43f).
 - FOUND: 2026-07-20, implementation review of the installed-package gate.
 - ROOT CAUSE: shutdown checked only process disappearance and discarded the
   leader's wait status, so prompt aborts and other nonzero exits passed.
@@ -508,7 +516,7 @@ carries its own detail or points into the plan and the reference docs.
   a SIGTERM handler returning status 7 both fail.
 
 ### D42 - Nested compositor cleanup could block indefinitely
-- STATUS: FIXED (PR #72 branch, 21acc0445).
+- STATUS: FIXED (PR #72, 1895c6c30).
 - FOUND: 2026-07-20, implementation review of the installed-package gate.
 - ROOT CAUSE: dock cleanup was bounded, but nested KWin cleanup still sent
   SIGTERM and waited on the session leader without a deadline.
@@ -518,7 +526,7 @@ carries its own detail or points into the plan and the reference docs.
   live group returns after fixed polling without entering `wait`.
 
 ### D41 - Corrupt or unloadable plugins passed installed checks
-- STATUS: FIXED (PR #72 branch, 70faf758e).
+- STATUS: FIXED (PR #72, 3074c6adf).
 - FOUND: 2026-07-20, implementation review of the installed-package gate.
 - ROOT CAUSE: plugin existence was accepted even when ELF inspection failed,
   and the startup-lazy containment-actions plugin was never loaded.
@@ -529,7 +537,7 @@ carries its own detail or points into the plan and the reference docs.
   with an unresolved symbol are rejected.
 
 ### D40 - Symlinked runtime roots escaped recursive inspection
-- STATUS: FIXED (PR #72 branch, 52d18f4de).
+- STATUS: FIXED (PR #72, 035d38da8).
 - FOUND: 2026-07-20, implementation review of the installed-package gate.
 - ROOT CAUSE: each Latte runtime tree was canonicalized before traversal, making
   a root symlink's destination the accepted boundary while skipping the link.
@@ -539,7 +547,7 @@ carries its own detail or points into the plan and the reference docs.
   external provider are rejected.
 
 ### D39 - In-prefix cross-tree links escaped recursive audit
-- STATUS: FIXED (PR #72 branch, d7e4f7723).
+- STATUS: FIXED (PR #72, f08fbe2c4).
 - FOUND: 2026-07-20, implementation review of the installed-package gate.
 - ROOT CAUSE: nested links could target any path under the broad package prefix,
   including an unaudited sibling tree whose content could escape again.
@@ -549,7 +557,7 @@ carries its own detail or points into the plan and the reference docs.
   even though both endpoints share the package prefix.
 
 ### D38 - Signal cleanup could lose status or wait forever
-- STATUS: FIXED (PR #72 branch, f2d85dbc1).
+- STATUS: FIXED (PR #72, 0032e17f2).
 - FOUND: 2026-07-20, implementation review of the installed-package gate.
 - ROOT CAUSE: one callback handled EXIT, INT, and TERM directly, allowing caught
   signals to resume, cleanup to replace an existing failure, and post-KILL
@@ -560,7 +568,7 @@ carries its own detail or points into the plan and the reference docs.
   and a simulated unkillable group never reaches `wait`.
 
 ### D37 - Loader state and mapped paths could bypass installed provenance
-- STATUS: FIXED (PR #72 branch, aa947b8eb).
+- STATUS: FIXED (PR #72, 9a24b538d).
 - FOUND: 2026-07-20, implementation review of the installed-package gate.
 - ROOT CAUSE: only two loader variables were cleared, foreign ELF search paths
   were accepted, and `/proc` parsing split mapped pathnames on whitespace.
@@ -570,7 +578,7 @@ carries its own detail or points into the plan and the reference docs.
   mappings, and foreign mapped paths containing spaces are rejected.
 
 ### D36 - Installed dock cleanup left surviving descendants
-- STATUS: FIXED (PR #72 branch, 660c85525).
+- STATUS: FIXED (PR #72, 1d091efe8).
 - FOUND: 2026-07-20, independent review of the installed-package gate.
 - ROOT CAUSE: the dock was started with `setsid`, but normal shutdown and EXIT
   cleanup signalled only the leader PID. A descendant could survive after the
@@ -583,9 +591,9 @@ carries its own detail or points into the plan and the reference docs.
   returned within its fixed bound without calling `wait` on a live group.
 
 ### D35 - Arbitrary shared libraries passed installed plugin validation
-- STATUS: FIXED (PR #72 branch, 771b96fe0; typed category validation completed
-  by D55 (string service metadata passed containment-actions category checks) in
-  31b768e5a).
+- STATUS: FIXED (PR #72, ce8950b11). Typed category validation was completed by
+  D55 (string service metadata passed containment-actions category checks) in
+  3fb92a05a.
 - FOUND: 2026-07-20, independent review of the installed-package gate.
 - ROOT CAUSE: valid ELF plus successful `dlopen` did not establish that a file
   was the expected QML, containment-actions, or KPackage plugin. The unbounded
@@ -598,11 +606,12 @@ carries its own detail or points into the plan and the reference docs.
   bounded loading.
 - EVIDENCE: a generic library, valid plugins with wrong IID, class, or category,
   and a valid QML plugin with a TERM-ignoring constructor are rejected. The Arch
-  package runtime at exact mounted source head `3ee077529` mapped all four
-  startup plugin categories from the installed root.
+  package runtime at exact pre-merge source head `3ee077529` (post-rebase
+  tree-equivalent `10b4c4565`) mapped all four startup plugin categories from
+  the installed root.
 
 ### D34 - Partial artifact scanners could produce vacuous gate success
-- STATUS: FIXED (PR #72 branch, 11472197a).
+- STATUS: FIXED (PR #72, f8bd05d60).
 - FOUND: 2026-07-20, independent review of the installed-package gate.
 - ROOT CAUSE: process substitutions and pipelines reported consumer status, so
   failed `find`, `readelf`, `awk`, or `/proc` parsing could publish an
@@ -613,7 +622,7 @@ carries its own detail or points into the plan and the reference docs.
   partial output before status 73. Each path failed before consuming that output.
 
 ### D33 - Live-root package checks accepted stale same-prefix artifacts
-- STATUS: FIXED (PR #72 branch, 5fd6d0741).
+- STATUS: FIXED (PR #72, 484052179).
 - FOUND: 2026-07-20, independent review of the installed-package gate.
 - ROOT CAUSE: package-prefix containment becomes tautological when both the
   package root and artifact prefix cover the live filesystem. A file omitted by

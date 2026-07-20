@@ -1017,6 +1017,15 @@ into C++. There is no drop-in replacement to import.
       cross-boundary "does the containment deliver wheel into the
       plasmoid at all" question depends on the Phase 8 wheel bridge and
       is recorded in docs/reference/live-only.md for live verification)
+- [x] Fix D25 (task icons stay stale after icon-theme changes): forward real
+      icon-theme transitions to a shared icon component, then synchronously
+      rebind each stable QIcon source so task and tooltip preview rasters refresh
+      without an empty rendered interval.
+      Commits: 8423fab40 (fix and focused render regression), 6765b2320
+      (coverage ratchet). Evidence: the named fixture changes from red to blue
+      with its source signal and cache key unchanged; a nameless pixmap icon
+      remains green. The coverage ratchet reports 94 ctest entries and 31 paired
+      unit headers.
 
 ### Phase 7: Widget management, drag-and-drop, edit mode
 

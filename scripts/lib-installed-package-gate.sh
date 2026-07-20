@@ -175,6 +175,44 @@ latte_package_gate_stop_process() {
     wait "$pid" 2>/dev/null || true
 }
 
+latte_package_gate_process_group_exists() {
+    local process_group="$1"
+    pgrep -g "$process_group" >/dev/null 2>&1
+}
+
+latte_package_gate_wait_until_process_group_exits() {
+    local process_group="$1" attempts="$2" delay="$3" attempt
+    for ((attempt = 0; attempt < attempts; attempt++)); do
+        latte_package_gate_process_group_exists "$process_group" || return 0
+        sleep "$delay"
+    done
+    ! latte_package_gate_process_group_exists "$process_group"
+}
+
+latte_package_gate_stop_process_group() {
+    local process_group="$1" label="$2"
+    local term_attempts="${3:-25}" term_delay="${4:-0.2}"
+    local kill_attempts="${5:-25}" kill_delay="${6:-0.2}"
+
+    latte_package_gate_process_group_exists "$process_group" || {
+        wait "$process_group" 2>/dev/null || true
+        return 0
+    }
+    kill -TERM -- "-$process_group" 2>/dev/null || kill -TERM "$process_group" 2>/dev/null || true
+    if latte_package_gate_wait_until_process_group_exits "$process_group" "$term_attempts" "$term_delay"; then
+        wait "$process_group" 2>/dev/null || true
+        return 0
+    fi
+
+    echo "installed-package-gate: cleanup: $label survived SIGTERM; sending SIGKILL" >&2
+    kill -KILL -- "-$process_group" 2>/dev/null || kill -KILL "$process_group" 2>/dev/null || true
+    if ! latte_package_gate_wait_until_process_group_exits "$process_group" "$kill_attempts" "$kill_delay"; then
+        echo "installed-package-gate: cleanup: $label still exists after bounded SIGKILL wait" >&2
+        return 2
+    fi
+    wait "$process_group" 2>/dev/null || true
+}
+
 _latte_package_gate_exit_with_cleanup() {
     local status=$? cleanup_status
     trap - EXIT INT TERM

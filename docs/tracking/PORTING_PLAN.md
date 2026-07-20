@@ -1329,14 +1329,16 @@ multi-view, multi-monitor setup.
       absolute/screen/off-screen geometry remains throttled. GUARDS:
       `windowchangedebouncetest` pins immediate same-window delivery,
       unrelated-pending ordering, and no late duplicate;
-      `sourceguardtest` pins direct thickness versus throttled geometry and
-      fails when the old connection is restored; both passed 20 consecutive
-      runs. `tests/e2e/071-maximized-window-length.sh` drove a real nested
-      Wayland client, measured 69 ms, and verified KWin's 88 px work area.
+      `sourceguardtest` pins direct thickness versus exclusively throttled
+      geometry and rejects parallel routes; both passed 20 consecutive runs.
+      `tests/e2e/071-maximized-window-length.sh` drove one uniquely tagged
+      active nested Wayland client through both transitions, measured 284 ms,
+      and verified KWin's complete screen-derived 88 px work area.
       Two cleaned real-session Firefox runs measured 114 ms and exact
       `0,26 1440x2534` KWin frame geometry.
       Commits: 983685c00, f6d5271c4 (bounded coalescing, PR #61),
-      <follow-up filled after merge>
+      393d1f2bf, 7d3269011, e61a70016, 11861e947 (synchronous
+      maximize/exclusive-zone follow-up, PR #70)
 
 - [x] Render-thread crash whenever an overflowing dock relayouts (enter
       edit mode, add a widget, right-click an applet in edit mode - all

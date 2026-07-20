@@ -352,8 +352,8 @@ carries its own detail or points into the plan and the reference docs.
 
 ### D27 - Maximize transitions leave a stale floating-gap work area
 - STATUS: FIXED (PR #61 bounded continuous window-change starvation in
-  983685c00 + f6d5271c4; the synchronous maximize/exclusive-zone follow-up
-  commits are filled after merge).
+  983685c00 + f6d5271c4; PR #70 completed synchronous maximize/exclusive-zone
+  delivery in 393d1f2bf + 7d3269011 + e61a70016 + 11861e947).
 - FOUND: 2026-07-19, live on a floating top panel, then traced through the
   window-tracking and layer-shell publication paths.
 - SYMPTOM: maximizing a window leaves the client below the floating panel's
@@ -380,12 +380,16 @@ carries its own detail or points into the plan and the reference docs.
   `absoluteGeometryChanged`, screen geometry, and off-screen churn retain the
   one-second throttle.
 - EVIDENCE: `windowchangedebouncetest` and `sourceguardtest` passed 20
-  consecutive repetitions. Reverting only the thickness connection makes the
-  source guard fail. `tests/e2e/071-maximized-window-length.sh` drives a real
-  Wayland Konsole through restore/maximize, observed a 69 ms reservation
-  update, and verified KWin reapplied the 88 px work area. The cleaned staged
-  dock then passed two real-session Firefox runs at 114 ms with exact
-  `0,26 1440x2534` KWin frame geometry. Temporary trace instrumentation was
+  consecutive repetitions. Negative controls rejected the old coalesced
+  maximize route, a parallel direct geometry route, and a second throttled
+  thickness route. `tests/e2e/071-maximized-window-length.sh` drove one uniquely
+  tagged active Wayland Konsole through restore/maximize, correlated both
+  tracker facts, observed a 284 ms reservation update, and verified KWin
+  reapplied the complete screen-derived 88 px work area. The cleaned staged dock
+  then passed two real-session Firefox runs at 114 ms with exact
+  `0,26 1440x2534` KWin frame geometry. The full gate passed at pre-merge
+  `29a7b63bf`, including the sanitized nested dock; GitHub rewrote that
+  tree-identical head to `11861e947`. Temporary trace instrumentation was
   removed.
 
 ### D21 - Light/Layout applet contrast: clock has no text, show-desktop is white

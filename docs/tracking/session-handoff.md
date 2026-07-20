@@ -6,7 +6,7 @@ Last updated 2026-07-20.
 ## 2026-07-20 SESSION: D27 (stale maximize work area) latency follow-up
 
 The D27 (maximize transitions leave a stale floating-gap work area) follow-up
-is implemented and fully driven on `fix/d27-live-acceptance`. PR #61 fixed
+landed through PR #70. PR #61 fixed
 unbounded `windowChanged` starvation by preserving the first 150 ms deadline,
 but its records incorrectly described an immediate maximize route. A direct
 trace found two remaining delays: `PlasmaWindow::maximizedChanged` still shared
@@ -18,13 +18,17 @@ later.
 The follow-up adds typed immediate/coalesced window-change delivery, routes
 maximize edges immediately, and publishes discrete strut-thickness changes
 directly while retaining the throttle for absolute/screen/off-screen geometry
-churn. `windowchangedebouncetest` and `sourceguardtest` passed 20 repetitions;
-the source guard fails when the old throttled connection is restored. The new
-`tests/e2e/071-maximized-window-length.sh` drove a real nested Wayland Konsole,
-measured a 69 ms reservation update, and verified KWin reapplied the 88 px work
-area. Two cleaned real-session Firefox runs both measured 114 ms with exact
-`0,26 1440x2534` KWin frame geometry. Temporary instrumentation is removed. Full
-gate, independent review, and PR landing remain.
+churn. `windowchangedebouncetest` and `sourceguardtest` passed 20 repetitions.
+Negative controls rejected the old coalesced maximize route, a parallel direct
+geometry route, and a second throttled thickness route. The strict
+`tests/e2e/071-maximized-window-length.sh` acceptance drove one uniquely tagged
+active Wayland Konsole, correlated both tracker facts through two maximize
+cycles, measured a 284 ms reservation update, and verified positive frame
+geometry covering KWin's exact screen-derived 88 px work area. Two cleaned
+real-session Firefox runs both measured 114 ms with exact `0,26 1440x2534` KWin
+frame geometry. Temporary instrumentation is removed. The full gate passed at
+pre-merge `29a7b63bf`, including 93/93 ctest, sceneprobe 13/13, and the
+sanitized nested dock; GitHub rewrote that tree-identical head to `11861e947`.
 
 ## 2026-07-20: D32 (disabled Always Visible floating-gap tracking)
 

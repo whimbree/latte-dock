@@ -3,6 +3,24 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-20.
 
+## 2026-07-20: D25 (task icons stay stale after icon-theme changes) fixed
+
+PR #76 landed the icon-theme refresh path on `origin/main`. `Kirigami.Icon`
+cached the raster resolved from a stable task-model `QIcon` QVariant, so
+`KIconLoader` theme-data updates did not reevaluate the source binding.
+`Environment` now emits only for real theme transitions, and `ThemeAwareIcon`
+retains the QVariant while synchronously clearing and rebinding its inherited
+source. The primary task icon and both tooltip preview icons use the component.
+
+The focused production-QML test changes a named fixture from red to blue while
+its source signal and cache key remain unchanged, and keeps a nameless
+pixmap-backed icon green. The full build, QML compile gate, and qmllint ratchet
+pass. The coverage ratchet records 94 ctest entries and 31 paired unit headers.
+Post-rebase commits: `8423fab40` (fix and render regression) and `6765b2320`
+(coverage ratchet). latte-dock-ng commit `ef2989ec2` supplied the missing-refresh
+idea; its global theme mutation, cache clearing, file watching, and deferred
+rebind were not carried.
+
 ## 2026-07-20: D26 (VisibilityManager normal-state binding loop) and D31 (Justify splitter moves reset after restart)
 
 Two normal-state and splitter defects landed on `origin/main`.
@@ -23,11 +41,11 @@ Two normal-state and splitter defects landed on `origin/main`.
 
 ## 2026-07-20 SESSION: shared installed-package gate hardened (PR #72)
 
-PR #72's F0 (the shared installed-package provenance and nested-runtime gate)
-branch was rebased onto `7a5314130`; blockers from independent reviews and
-follow-up cross-checks are fixed. Live `--root /` checks require an explicit
-newline-delimited package manifest, while isolated package extraction roots
-remain valid without one.
+PR #72 landed F0 (the shared installed-package provenance and nested-runtime
+gate) on `origin/main` at `468baf961` after rebasing onto `7a5314130`. Blockers
+from independent reviews and follow-up cross-checks are fixed. Live `--root /`
+checks require an explicit newline-delimited package manifest, while isolated
+package extraction roots remain valid without one.
 Every selected Latte artifact and file below the audited QML/data trees must be
 owned by that manifest. All links in an isolated extraction resolve from its
 package namespace rather than host `/`; selected targets remain inside their
@@ -68,10 +86,10 @@ localhost/latte-ci-arch:latest bash -lc 'cmake -S /src -B /build -G Ninja
 -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF && cmake --build /build
 --parallel "$(nproc)" && BUILD=/build
 /src/tests/installed-package-gate-runtime-test.sh'`. The successful command
-mounted exact source head `3ee077529` read-only and exited 0. Its code head was
-`31b768e5a`; `3ee077529` added only the tracking records above after all three
-final-review code fixes. This evidence correction moves the branch through
-tracking documentation only and does not alter the tested runtime tree.
+mounted exact pre-merge source head `3ee077529` read-only and exited 0. Its
+post-rebase tree-equivalent is `10b4c4565`. The executed code head was
+pre-merge `31b768e5a`, post-rebase tree-equivalent `3fb92a05a`;
+`3ee077529` added only tracking records after the final code fixes.
 
 The Release payload installed under a fresh `/tmp` root, the dock settled under
 nested KWin, `/proc` reported the exact installed executable and four startup
@@ -84,13 +102,17 @@ Qt 6 tool selection, wrong-but-valid plugin metadata, polling failures, a real
 unreaped zombie, selected-artifact tree and manifest containment, coherent ELF
 search-path semantics, optional mapping continuation, bounded exact version
 parsing, typed plugin categories, and a TERM-ignoring surviving descendant.
+The canonical full gate exited 0 at pre-merge head `9baf22ac7`, whose
+post-rebase tree-equivalent is merged main head `468baf961`: 94/94 ctests and
+all 77 focused installed-package controls passed. The runtime, gate, and merged
+heads differ only by tracking documentation after the final code fix.
 
 The install-assertion idea is credited to latte-dock-ng's
 `docker/verify-install.sh` at exact commit
 `9c12a79aaf9350e73059da5b293c931218419c05`; the nested-runtime implementation
-is original. Review follow-up commits: `6257b5ce2`, `5d3ce250d`, `43c736644`,
-`41eec828c`, `5da9a49a0`, `2fdce6968`, `bc7981939`, `270b72fb1`, `cc1176e82`,
-`31b768e5a`.
+is original. Post-rebase review follow-up commits: `02153ed63`, `9fe8ddd1d`,
+`3b025df03`, `40ad5a245`, `ebcda72fa`, `29a5e4ce6`, `c329eb138`, `98f4ff797`,
+`009c406dc`, `3fb92a05a`.
 
 ## 2026-07-20 SESSION: D27 (stale maximize work area) latency follow-up
 

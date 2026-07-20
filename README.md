@@ -47,7 +47,8 @@ Status
 
 Working and in daily use on Wayland: multi-dock and multi-screen layouts,
 the tasks applet with live window previews, group thumbnails, badges and
-audio indicators, parabolic zoom, edit mode with drag rearranging,
+audio indicators, task and tooltip preview icons that refresh immediately
+after icon-theme changes, parabolic zoom, edit mode with drag rearranging,
 per-applet context menus and settings, the three bundled indicator styles,
 layer-shell placement with struts and auto-hide/dodge visibility modes,
 layout management with templates and import/export, applet colorization,
@@ -155,9 +156,9 @@ How it is built
 ===============
 
 Every fix names its root cause and the evidence in its commit body, and
-the tree defends itself: 82 ctest entries including 29 pure-core unit
-test suites that run under ASan+UBSan with forced asserts, a QML compile
-gate that loads every shipped QML file in a real engine, contract tests
+the tree defends itself: 94 ctest entries and 31 paired unit headers,
+with the unit suites running under ASan+UBSan with forced asserts, a QML
+compile gate that loads every shipped QML file in a real engine, contract tests
 that pin the exact libplasma/KSvg/Qt behaviors the dock relies on (so a
 dependency bump fails in ctest instead of misbehaving on screen), a
 scene-render gate that compares real rasterized pixels against

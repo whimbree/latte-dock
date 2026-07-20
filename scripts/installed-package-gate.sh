@@ -387,7 +387,7 @@ if [[ "$check_only" == 1 ]]; then
     exit 0
 fi
 
-for command in kwin_wayland dbus-run-session busctl setsid; do
+for command in kwin_wayland dbus-run-session busctl pgrep setsid; do
     command -v "$command" >/dev/null 2>&1 \
         || fail "required runtime command '$command' is missing; install the package-gate dependencies"
 done
@@ -395,12 +395,25 @@ done
 source "$repo/scripts/lib-nested-kwin.sh"
 
 dock_pid=""
+cleanup_nested_vehicle() {
+    local cleanup_status=0
+    if [[ -n "${NESTED_KWIN_PID:-}" ]]; then
+        latte_package_gate_stop_process_group "$NESTED_KWIN_PID" \
+            "nested KWin process group $NESTED_KWIN_PID" || cleanup_status=2
+        # Process cleanup is bounded above. Clear the handle so the shared
+        # helper performs only its FUSE and runtime-directory cleanup.
+        NESTED_KWIN_PID=""
+    fi
+    nested_kwin_cleanup || cleanup_status=2
+    return "$cleanup_status"
+}
+
 cleanup() {
     local cleanup_status=0
     if [[ -n "$dock_pid" ]] && kill -0 "$dock_pid" 2>/dev/null; then
         latte_package_gate_stop_process "$dock_pid" "dock (pid $dock_pid)" || cleanup_status=2
     fi
-    nested_kwin_cleanup || cleanup_status=2
+    cleanup_nested_vehicle || cleanup_status=2
     return "$cleanup_status"
 }
 latte_package_gate_install_exit_cleanup cleanup

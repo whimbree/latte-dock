@@ -499,6 +499,44 @@ set -e
     || { echo "FAIL: cleanup called unbounded wait while the process still existed" >&2; exit 1; }
 echo "PASS: post-SIGKILL cleanup returns without an unbounded wait"
 
+group_ignored_ready="$work/group-term-ignored.ready"
+setsid bash -c '
+    trap "" TERM
+    : >"$1"
+    while :; do sleep 1; done
+' bash "$group_ignored_ready" &
+group_ignored_pid=$!
+for ((ready_wait = 0; ready_wait < 50; ready_wait++)); do
+    [[ -e "$group_ignored_ready" ]] && break
+    sleep 0.01
+done
+[[ -e "$group_ignored_ready" ]] \
+    || { kill -KILL -- "-$group_ignored_pid" 2>/dev/null || true; echo "FAIL: process-group fixture did not start" >&2; exit 1; }
+latte_package_gate_stop_process_group "$group_ignored_pid" "TERM-ignoring process group" 1 0.01 50 0.01
+latte_package_gate_process_group_exists "$group_ignored_pid" \
+    && { echo "FAIL: cleanup left the TERM-ignoring process group alive" >&2; exit 1; }
+echo "PASS: nested-style process-group cleanup escalates within fixed bounds"
+
+bounded_group_wait_log="$work/unbounded-group-wait-called"
+set +e
+bounded_group_output="$(
+    (
+        source "$repo/scripts/lib-installed-package-gate.sh"
+        pgrep() { return 0; }
+        kill() { return 0; }
+        sleep() { :; }
+        wait() { : >"$bounded_group_wait_log"; }
+        latte_package_gate_stop_process_group 424242 "unkillable process group" 1 0 1 0
+    ) 2>&1
+)"
+bounded_group_status=$?
+set -e
+[[ "$bounded_group_status" -eq 2 && "$bounded_group_output" == *"still exists after bounded SIGKILL wait"* ]] \
+    || { echo "FAIL: simulated unkillable process-group cleanup was not bounded" >&2; exit 1; }
+[[ ! -e "$bounded_group_wait_log" ]] \
+    || { echo "FAIL: process-group cleanup called unbounded wait while members still existed" >&2; exit 1; }
+echo "PASS: nested-style post-SIGKILL cleanup never waits on a live group"
+
 incomplete="$work/incomplete"
 cp -a "$good" "$incomplete"
 rm "$incomplete/usr/lib/qt6/qml/org/kde/latte/private/tasks/liblattetasksplugin.so"
@@ -506,4 +544,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (42 focused controls)"
+echo "installed-package-gate-selftest: PASS (44 focused controls)"

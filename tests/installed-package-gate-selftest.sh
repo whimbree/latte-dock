@@ -9,8 +9,8 @@
 set -euo pipefail
 
 for required_command in \
-        awk bash c++ cc chmod cp dirname env find ld ln mkdir mktemp mv patchelf pgrep \
-        perl pkg-config readelf realpath rm setsid sleep timeout; do
+        awk bash c++ cc chmod cp dirname env find git gzip install ld ln mkdir mktemp mv \
+        patchelf perl pgrep pkg-config readelf realpath rm setsid sha256sum sleep tar timeout; do
     command -v "$required_command" >/dev/null 2>&1 || {
         printf "installed-package-gate-selftest: FAIL: required command '%s' is missing\n" \
             "$required_command" >&2
@@ -182,6 +182,25 @@ expect_failure() {
 framework="$work/framework-qml"
 runtime_data="$work/framework-data"
 mkdir -p "$framework" "$runtime_data"
+
+void_packages="$work/void-packages"
+mkdir -p "$void_packages/srcpkgs"
+git init -q "$void_packages"
+printf '%s\n' '#!/bin/sh' 'exit 99' >"$void_packages/xbps-src"
+chmod +x "$void_packages/xbps-src"
+void_stage_output="$("$repo/packaging/void/build-package" --stage-only "$void_packages")"
+expected_source_commit="$(git -C "$repo" rev-parse HEAD)"
+void_recipe="$void_packages/srcpkgs/latte-dock"
+void_archive="$void_packages/hostdir/sources/latte-dock-0.10.77/$expected_source_commit.tar.gz"
+[[ "$void_stage_output" == *"source_commit=$expected_source_commit"* ]]
+[[ ! -e "$void_recipe/patches" ]]
+void_metadata="$(tar -xOf "$void_archive" \
+    "lattecotta-dock-$expected_source_commit/app/org.kde.latte-dock.appdata.xml.cmake")"
+[[ "$void_metadata" == *'<component type="desktop-application">'* \
+        && "$void_metadata" == *'<id>org.kde.latte-dock</id>'* \
+        && "$void_metadata" != *'<extends>'* \
+        && "$void_metadata" != *'liblatte2plugin.so'* ]]
+echo "PASS: Void current-HEAD staging omits the old patch and archives corrected metadata"
 
 missing_awk_path="$work/missing-awk-path"
 mkdir -p "$missing_awk_path"
@@ -1228,4 +1247,4 @@ expect_failure "incomplete package" "missing tasks QML plugin" \
     env LATTE_QML_MODULE_PATH="$framework" LATTE_RUNTIME_DATA_PATH="$runtime_data" \
     bash "$gate" --root "$incomplete" --prefix /usr --check-only
 
-echo "installed-package-gate-selftest: PASS (85 focused controls)"
+echo "installed-package-gate-selftest: PASS (86 focused controls)"

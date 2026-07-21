@@ -14,8 +14,9 @@ merged. PR #95 supplied its generic prerequisites at `57bc03ce0`, `7f747f944`,
 D57 (ConfigOverlay wheel threshold accepts nonnegative decrease deltas) is OPEN:
 `ConfigOverlay.qml` decreases for `angle < 12` instead of `angle < -12`.
 Both view axes produced +120:+8, -120:-8, +96:0, -96:-8, +90:-8, -90:-8, and
-horizontal +/-120:-8. Explicit `axisstop` requests `wl_pointer.axis_stop`; Qt
-emits no `QWheelEvent`, and the post-stop +120 still increases length.
+horizontal +/-120:-8. Explicit `axisstop` sends a zero fake-input axis; KWin
+forwards it as `wl_pointer.axis_stop`, and Qt emits no `QWheelEvent` in this
+isolated sequence. The post-stop +120 still increases length.
 
 Status 57 requires the complete matrix, clean shutdown, byte-identical config
 restoration, and zero fixture residue. Status 0 is XPASS; input, query, partial-

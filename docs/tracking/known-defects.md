@@ -325,10 +325,11 @@ outranks a sanitizer abort outranks a code-reading hypothesis.
   `angle < -12`; horizontal events enter that arm with `angle == 0`.
 - EVIDENCE: repeated nested runs observed +120:+8, -120:-8, +96:0, -96:-8,
   +90:-8, -90:-8, and horizontal +/-120:-8 on both view axes. Normal mode was a
-  no-op. Explicit `axisstop` requests `wl_pointer.axis_stop`; Qt emits no
-  `QWheelEvent`, and the following +120 still increases length. Status 57 means
-  this complete matrix after cleanup; status 0 is XPASS, and partial signatures
-  or harness failures remain FAIL.
+  no-op. Explicit `axisstop` sends a zero fake-input axis; KWin forwards it as
+  `wl_pointer.axis_stop`, and Qt emits no `QWheelEvent` in this isolated sequence.
+  The following +120 still increases length. Status 57 means this complete matrix
+  after cleanup; status 0 is XPASS, and partial signatures or harness failures
+  remain FAIL.
 - NEXT: SC-CW2 (the D57 signed decrease-threshold fix and regression promotion)
   is unchecked and requires explicit approval after SC-CW1 merges.
 

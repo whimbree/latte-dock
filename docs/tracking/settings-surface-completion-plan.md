@@ -267,9 +267,11 @@ Status is OPEN at provisional local SC-CW1 commit `81ca28d95`; it is not merged.
 `ConfigOverlay.qml` divides `wheel.angleDelta.y` by 8 but decreases for
 `angle < 12` instead of `angle < -12`. Both view axes produced +120:+8,
 -120:-8, +96:0, -96:-8, +90:-8, -90:-8, and horizontal +/-120:-8. Explicit
-`axisstop` requests `wl_pointer.axis_stop`; Qt emits no `QWheelEvent`, and the
-following +120 still increases length. Only the complete cleaned-up matrix exits
-57; corrected behavior exits 0 as XPASS, and partial or harness failures fail.
+`axisstop` sends a zero fake-input axis; KWin forwards it as
+`wl_pointer.axis_stop`, and Qt emits no `QWheelEvent` in this isolated sequence.
+The following +120 still increases length. Only the complete cleaned-up matrix
+exits 57; corrected behavior exits 0 as XPASS, and partial or harness failures
+fail.
 SC-CW2 (the D57 signed decrease-threshold fix and regression promotion) remains approval-required and unapproved.
 
 ### D58 (close-only and minimize-toggle settings do not enable window tracking)

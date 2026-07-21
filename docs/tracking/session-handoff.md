@@ -3,6 +3,84 @@
 Rolling handoff for the next session to pick up without re-deriving context.
 Last updated 2026-07-21.
 
+## 2026-07-21: SC-T5 revised locally after PR #101 review
+
+SC-T5 (the permanent runtime-effect acceptance for D29, task-icon middle click
+appears to execute left-click behavior) is rewritten on branch
+`test/tasks-middle-click-runtime` from exact `origin/main`
+`8bc5f6a4a91e0b87c8bbd68508438f27531e9bf8`. Test commit `9dc9f0e3f` contains
+the complete nested-only `023-task-middle-click-runtime.sh` recipe. The
+disposable fixture is a compiled Qt Widgets executable that sets desktop-file
+name `org.kde.latte.sc-t5` before creating its Wayland surface. KWin reports
+that exact resource class, while the task model reports
+`appId=org.kde.latte.sc-t5.desktop` and launcher URL
+`applications:org.kde.latte.sc-t5.desktop`. No product behavior or D-Bus
+surface changed. SC-T5 remains unchecked pending rereview and merge. D29
+remains ACCEPTED as Qt5-faithful configuration-scope behavior.
+
+The recipe seeds one pure launcher with `middleClickAction=2` (`NewInstance`)
+and no fixture window. Exactly one status-0 fakepointer middle click produced
+SC-T3 (the D29 narrow middle-click dispatch readback) JSON
+`{"configuredAction":"newInstance","dispatchedOperation":"requestActivate","rowIdentity":"applications:org.kde.latte.sc-t5.desktop","rowKind":"launcher","sequence":1}`.
+Independent KWin state changed from no matching window to one active
+`org.kde.latte.sc-t5` window, while `viewTasksData` changed the stable identity
+from one pure launcher to one active, ungrouped, unminimized window row. The
+fixture process record matched its live `/proc/<pid>/stat` start time and
+`/proc/<pid>/exe` before counting.
+
+PR #101's independent review returned MERGE AFTER FIXES because phase two could
+locate a single row, settle the pointer, and then accept a changed or already
+grouped target before input. The revised target lookup requires exactly one
+fixture KWin window, one validated PID/start-time/executable tuple, and one
+active, unminimized, ungrouped task row with `childCount=0`. The same complete
+state is queried again immediately after pointer settlement and captured before
+the single click. A grouped or extra-process state cannot satisfy the precondition.
+
+The phase-two click produced
+`{"configuredAction":"newInstance","dispatchedOperation":"requestNewInstance","rowIdentity":"applications:org.kde.latte.sc-t5.desktop","rowKind":"task","sequence":2}`.
+The captured original active window became the sole inactive, unminimized old
+window with the same internal id, resource class, and caption. Its exact
+PID/start-time/executable tuple remained live. Exactly one distinct active,
+unminimized fixture window and one new validated process tuple appeared, for
+totals of two. The task retained its app id, launcher URL, applet id, and row
+identity while becoming `isGrouped=true,childCount=2`. After settlement, the
+sequence remained exactly two and the same old/new identity relation persisted.
+
+The negative control restarts the dock with the actually offered
+`middleClickAction=0` (`None`), whose documented process-local sequence resets
+to no event. Exactly one group-row middle click returned
+`{"configuredAction":"none","dispatchedOperation":"none","rowIdentity":"applications:org.kde.latte.sc-t5.desktop","rowKind":"task","sequence":1}`.
+For a three-second settled interval, sequence stayed exactly one; both KWin
+internal ids and each window's active/minimized state stayed exact; both
+validated process tuples stayed exact; and task app id, launcher URL, applet id,
+active/minimized state, grouping, and `childCount=2` stayed exact. Every pass
+also queried absent containment `4294967295` and received `{}`; the one-view
+hermetic seed supplied no second valid containment.
+
+Five controlled probes went RED before removal. A process launched between
+pointer settlement and the final pre-click snapshot produced two windows, two
+processes, and a grouped task and was rejected before input. An interrupted
+`mktemp` allocation failed without a backup-residue cleanup error. A status-0
+no-input path produced no dispatch. A numeric process start-time mismatch was
+rejected before counting or signaling, and cleanup refused raw-PID signaling.
+A nonexistent D-Bus method failed immediately at the query boundary. Three
+fresh full corrected nested runs then passed. The focused compatibility batch
+passed `020-wheel-task-cycle.sh`, `021-launcher-wheel.sh`, and
+`022-empty-area-window-actions.sh` 3/3. The full local build, Bash syntax,
+ShellCheck, desktop-file validation, and diff checks passed.
+
+The installed `~/.local/bin/fakepointer` predates the tracked `middleclick`
+verb, so verification used the worktree-built binary without modifying the
+live-session installation. This exposed D64 (distro-gate fakepointer build
+omits the xkbcommon link dependency), recorded separately at `56aaa2300`; B2a
+(the D64 distro-gate fakepointer xkbcommon link repair) remains open and
+`ci/build-and-gate.sh` remains unchanged.
+
+PR #101 exists, but its remote head and prior full-gate stamp name obsolete
+pre-rewrite commit `fd0ad8117`. No full gate was run after the local rewrite.
+Remote update, a fresh gate, and independent rereview remain pending; no
+force-push or merge was performed.
+
 ## 2026-07-21: SC-T3 (the D29 narrow middle-click dispatch readback) merged
 
 PR #99 merged SC-T3 (the D29 narrow middle-click dispatch readback) into

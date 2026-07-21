@@ -32,8 +32,8 @@ The exact approved or completed boundary is:
 - SC-C5 (the color-control and dialog component family);
 - SC-T1 (the D29 middle-click evidence capture), SC-T2 (the D29 disposition),
   and SC-B1 (the D30 current-contract investigation) are complete records;
-- SC-T3 (the D29 narrow dispatch readback), followed by SC-T5 (the D29
-  permanent runtime-effect acceptance);
+- SC-T3 (the D29 narrow middle-click dispatch readback), followed by SC-T5 (the
+  D29 permanent runtime-effect acceptance);
 - SC-W1 (the launcher-wheel regression guard) for D56 (pure-launcher task wheel
   uses inherited asymmetric activation);
 - SC-CW1 (the D57 ConfigOverlay wheel-threshold reproduction); and
@@ -474,7 +474,8 @@ in SC-R6.
       plus the zero-to-one active-window and one-to-two grouped-child effects,
       and include a negative control. Dependencies: SC-T2 and completed SC-T3;
       SC-T4 is not applicable. The existing approval is now dependency-unblocked;
-      this unit remains unchecked. Commits:
+      this unit remains unchecked. Commits: PROVISIONAL 9dc9f0e3f (local PR
+      #101 rewrite; remote update, rereview, and final post-rebase hash pending)
 - [x] **SC-W1 (the D56 launcher-wheel regression guard):** pin inherited pure
       launcher positive activation, negative no-op, `ScrollNone` refusal,
       manual-scroll enablement, and no-overflow behavior. Dependencies: existing

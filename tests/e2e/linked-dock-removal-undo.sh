@@ -172,13 +172,13 @@ plugin = sys.argv[1]
 a = next((a for a in json.load(sys.stdin) if a["plugin"] == plugin), None)
 print("true" if a and a["inScheduledDestruction"] else "false")
 ' "$added_plugin")"
-    member_scheduled="$(e2e_json viewAppletsData u "$member_id" | python3 -c '
+    member_removed="$(e2e_json viewAppletsData u "$member_id" | python3 -c '
 import json, sys
 plugin = sys.argv[1]
 a = next((a for a in json.load(sys.stdin) if a["plugin"] == plugin), None)
-print("true" if a and a["inScheduledDestruction"] else "false")
+print("true" if a is None else "false")
 ' "$added_plugin")"
-    if [[ "$root_scheduled" == true && "$member_scheduled" == true ]]; then
+    if [[ "$root_scheduled" == true && "$member_removed" == true ]]; then
         applet_removal_visible=true
         break
     fi
@@ -259,4 +259,54 @@ sys.exit(0 if len(views) == 2 and root and member
          and root[\"linkedDockIds\"] == [$member_id] else 1)
 " "reloading after Undo did not reproduce the restored relationship" >/dev/null
 
-echo "linked-member removal Undo restored containment $member_id under root $root_id and survived reload"
+# A shutdown during the applet Undo window must preserve the removal, including
+# member-local instances whose scheduled state is mirrored by the coordinator.
+member_applet_id="$(e2e_json viewAppletsData u "$member_id" | python3 -c '
+import json, sys
+plugin = sys.argv[1]
+print(next(a["id"] for a in json.load(sys.stdin) if a["plugin"] == plugin))
+' "$added_plugin")" || e2e_fail "could not resolve the restored member applet"
+e2e_call removeApplet uu "$member_id" "$member_applet_id" >/dev/null \
+    || e2e_fail "second member-originated applet removal failed"
+
+for _ in $(seq 1 80); do
+    root_scheduled="$(e2e_json viewAppletsData u "$root_id" | python3 -c '
+import json, sys
+plugin = sys.argv[1]
+a = next((a for a in json.load(sys.stdin) if a["plugin"] == plugin), None)
+print("true" if a and a["inScheduledDestruction"] else "false")
+' "$added_plugin")"
+    member_removed="$(e2e_json viewAppletsData u "$member_id" | python3 -c '
+import json, sys
+plugin = sys.argv[1]
+print("true" if not any(a["plugin"] == plugin for a in json.load(sys.stdin)) else "false")
+' "$added_plugin")"
+    [[ "$root_scheduled" == true && "$member_removed" == true ]] && break
+    sleep 0.1
+done
+[[ "$root_scheduled" == true && "$member_removed" == true ]] \
+    || e2e_fail "second linked applet removal did not enter the Undo window"
+
+e2e_dock_stop || e2e_fail "could not stop inside the linked applet Undo window"
+e2e_dock_start || e2e_fail "could not restart after the linked applet tombstone"
+wait_for_state "
+import json, sys
+views = json.load(sys.stdin)[\"views\"]
+root = next((v for v in views if v[\"persistentDockId\"] == $root_id), None)
+member = next((v for v in views if v[\"persistentDockId\"] == $member_id), None)
+sys.exit(0 if len(views) == 2 and root and member
+         and member[\"originalDockId\"] == $root_id else 1)
+" "relationship did not survive the applet-removal restart" >/dev/null
+
+for view in "$root_id" "$member_id"; do
+    e2e_json viewAppletsData u "$view" | python3 -c '
+import json, sys
+plugin = sys.argv[1]
+sys.exit(1 if any(a["plugin"] == plugin for a in json.load(sys.stdin)) else 0)
+' "$added_plugin" || e2e_fail "restart resurrected the removed applet in view $view"
+done
+if grep -Fq "plugin=$added_plugin" "$E2E_LAYOUT"; then
+    e2e_fail "restart retained the removed applet in persistence"
+fi
+
+echo "linked applet and dock Undo preserved direct root $root_id, member $member_id, and restart tombstones"

@@ -184,6 +184,18 @@ latte_add_unit_test(lengthoffsetclamptest
 target_include_directories(lengthoffsetclamptest PRIVATE
     ${CMAKE_SOURCE_DIR}/app
     ${CMAKE_BINARY_DIR}/app) # coretypes.h is generated there
+
+# PlacementState: normalized semantic placement plus absolute output-axis
+# extent solving. The QML boundary is compiled into the sanitized binary so its
+# raw enum translation and loud refusals run under the same contract.
+latte_add_unit_test(placementstatetest
+    ${CMAKE_SOURCE_DIR}/containment/plugin/placementnormalizer.cpp)
+target_include_directories(placementstatetest PRIVATE
+    ${CMAKE_SOURCE_DIR}/app
+    ${CMAKE_SOURCE_DIR}/containment/plugin
+    ${CMAKE_BINARY_DIR}/app)
+target_link_libraries(placementstatetest
+    Plasma::Plasma)
 # EX-11 LauncherListOps: header-only pure list algebra plus its QML-facing
 # wrappers compiled IN per the sanitized-core rule (the boundary refusals
 # and QVariant mapping run instrumented).

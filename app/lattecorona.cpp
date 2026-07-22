@@ -1680,7 +1680,7 @@ void Corona::addApplet(const uint &containmentId, const QString &pluginId)
     //! (end-appended, Qt5-faithful). A plugin id matching no installed
     //! plasmoid is outside input refused loudly here, not the historical
     //! silent no-op inside ContainmentInterface::addApplet.
-    if (!view->extendedInterface()->addApplet(pluginId)) {
+    if (!view->extendedInterface()->addAppletAndNotify(pluginId)) {
         qWarning() << "corona: addApplet found no installed plasmoid named" << pluginId
                    << "for containment" << containmentId << "; no applet created";
     }

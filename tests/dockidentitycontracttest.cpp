@@ -72,6 +72,7 @@ private Q_SLOTS:
     void ignoredWindowCleanupRetainsOtherOwners();
     void persistentMenuIdentitySurvivesRuntimeGap();
     void geometryDiagnosticsReadEachViewsSizingAuthority();
+    void appletCreationNotifiesRelationshipWithoutFeedback();
 };
 
 void DockIdentityContractTest::relationshipActionsGuardEveryProductionBoundary()
@@ -289,6 +290,18 @@ void DockIdentityContractTest::geometryDiagnosticsReadEachViewsSizingAuthority()
         QStringLiteral("readLiveProperty(metrics,\"availablePrimaryLength\")")));
     QVERIFY(!reportsSource.contains(
         QStringLiteral("readLiveProperty(editController,\"maxLength\")")));
+}
+
+void DockIdentityContractTest::appletCreationNotifiesRelationshipWithoutFeedback()
+{
+    const QString coronaSource = normalized(readFile(QStringLiteral("app/lattecorona.cpp")));
+    const QString interfaceSource = normalized(readFile(QStringLiteral("app/view/containmentinterface.cpp")));
+    const QString linkedSource = normalized(readFile(QStringLiteral("app/view/clonedview.cpp")));
+
+    QVERIFY(coronaSource.contains(QStringLiteral("extendedInterface()->addAppletAndNotify(pluginId)")));
+    QVERIFY(interfaceSource.contains(QStringLiteral("Q_EMITappletCreated(pluginId)")));
+    QVERIFY(linkedSource.contains(QStringLiteral("extendedInterface()->addApplet(pluginId)")));
+    QVERIFY(!linkedSource.contains(QStringLiteral("extendedInterface()->addAppletAndNotify(pluginId)")));
 }
 
 QTEST_GUILESS_MAIN(DockIdentityContractTest)

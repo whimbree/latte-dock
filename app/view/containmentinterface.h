@@ -145,7 +145,11 @@ public Q_SLOTS:
     //! Plasma::Containment::createApplet). Returns whether a plugin was
     //! found and created, so the coarse addApplet D-Bus action can refuse a
     //! bad plugin id loudly instead of the historical silent no-op.
-    bool addApplet(const QString &pluginId);
+    [[nodiscard]] bool addApplet(const QString &pluginId);
+    //! Create locally, then announce the external action to the relationship
+    //! coordinator. Coordinator-driven copies use addApplet() so the
+    //! announcement cannot feed back through the linked group.
+    [[nodiscard]] bool addAppletAndNotify(const QString &pluginId);
     void addApplet(QObject *metadata, int x, int y);
     //! trigger the same coarse "Remove this Widget" the applet context menu
     //! does (Applet::destroy(), which enters the libplasma undo window).

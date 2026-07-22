@@ -715,6 +715,8 @@ Loader {
                 PlasmaComponents.Button {
                     id: removeView
                     Layout.fillWidth: true
+                    // latteView and i18n are shell context properties.
+                    // qmllint disable unqualified
                     enabled: dialog.advancedLevel && latteView.canRemove
                     text: latteView.canRemove
                             ? i18n("Remove")
@@ -727,6 +729,7 @@ Loader {
                     QQC2.ToolTip.visible: hovered
 
                     onClicked: latteView.removeView()
+                    // qmllint enable unqualified
                 }
 
                 PlasmaComponents.Button {

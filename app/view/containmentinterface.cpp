@@ -687,11 +687,11 @@ bool ContainmentInterface::addApplet(const QString &pluginId)
         return false;
     }
 
-    QStringList paths = Latte::Layouts::Importer::standardPaths();
+    const QStringList paths = Latte::Layouts::Importer::standardPaths();
     QString pluginpath;
 
-    for(int i=0; i<paths.count(); ++i) {
-        QString cpath = paths[i] + QStringLiteral("/plasma/plasmoids/") + pluginId;
+    for (const QString &path : paths) {
+        const QString cpath = path + QStringLiteral("/plasma/plasmoids/") + pluginId;
 
         if (QDir(cpath).exists()) {
             pluginpath = cpath;
@@ -708,6 +708,16 @@ bool ContainmentInterface::addApplet(const QString &pluginId)
     }
 
     m_view->containment()->createApplet(pluginId);
+    return true;
+}
+
+bool ContainmentInterface::addAppletAndNotify(const QString &pluginId)
+{
+    if (!addApplet(pluginId)) {
+        return false;
+    }
+
+    Q_EMIT appletCreated(pluginId);
     return true;
 }
 

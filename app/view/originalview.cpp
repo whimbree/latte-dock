@@ -217,14 +217,21 @@ void OriginalView::setNextLocationForClones(const QString layoutName, int edge, 
     }
 }
 
-void OriginalView::addApplet(const QString &pluginId, const int &excludecloneid)
+bool OriginalView::addApplet(const QString &pluginId, const uint excludedContainmentId)
 {
     if (m_clones.count() == 0) {
-        return;
+        qCritical() << "OriginalView: linked applet addition has no registered linked member";
+        Q_ASSERT(!m_clones.isEmpty());
+        return false;
     }
 
     // add applet in original view
-    extendedInterface()->addApplet(pluginId);
+    if (!extendedInterface()->addApplet(pluginId)) {
+        qCritical() << "OriginalView: failed to add linked applet" << pluginId << "to the relationship root";
+        return false;
+    }
+
+    bool addedToEveryMember{true};
 
     // add applet in clones and exclude the one that probably produced this triggering
     for (const auto &clone : m_clones) {
@@ -233,16 +240,22 @@ void OriginalView::addApplet(const QString &pluginId, const int &excludecloneid)
             continue;
         }
 
-        if (clone->containment()->id() == excludecloneid) {
+        if (clone->containment()->id() == excludedContainmentId) {
             // this way we make sure that an applet will not be double added
             continue;
         }
 
-        clone->extendedInterface()->addApplet(pluginId);
+        if (!clone->extendedInterface()->addApplet(pluginId)) {
+            qCritical() << "OriginalView: failed to add linked applet" << pluginId
+                        << "to containment" << clone->containment()->id();
+            addedToEveryMember = false;
+        }
     }
+
+    return addedToEveryMember;
 }
 
-void OriginalView::addApplet(QObject *mimedata, const int &x, const int &y, const int &excludecloneid)
+void OriginalView::addApplet(QObject *mimedata, const int x, const int y, const uint excludedContainmentId)
 {
     if (m_clones.count() == 0) {
         return;
@@ -258,7 +271,7 @@ void OriginalView::addApplet(QObject *mimedata, const int &x, const int &y, cons
             continue;
         }
 
-        if (clone->containment()->id() == excludecloneid) {
+        if (clone->containment()->id() == excludedContainmentId) {
             // this way we make sure that an applet will not be double added
             continue;
         }

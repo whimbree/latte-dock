@@ -81,7 +81,10 @@ void ClonedView::initSync()
     connect(extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletsOrderChanged, this, &ClonedView::onSyncProgress);
     connect(extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletDataCreated, this, &ClonedView::onSyncProgress);
     connect(extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletCreated, this, [&](const QString &pluginId) {
-        m_originalView->addApplet(pluginId, containment()->id());
+        if (!m_originalView->addApplet(pluginId, containment()->id())) {
+            qCritical() << "ClonedView: linked applet addition from containment" << containment()->id()
+                        << "did not reach every relationship member";
+        }
     });
 
     connect(extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletDropped, this, [&](QObject *data, int x, int y) {
@@ -100,7 +103,10 @@ void ClonedView::initSync()
     connect(m_originalView->extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletsDisabledColoringChanged, this, &ClonedView::onOriginalAppletsDisabledColoringChanged);
     connect(m_originalView->extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletDataCreated, this, &ClonedView::onSyncProgress);
     connect(m_originalView->extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletCreated, this->extendedInterface(), [&](const QString &pluginId) {
-        extendedInterface()->addApplet(pluginId);
+        if (!extendedInterface()->addApplet(pluginId)) {
+            qCritical() << "ClonedView: linked applet addition" << pluginId
+                        << "failed for containment" << containment()->id();
+        }
     });
     connect(m_originalView->extendedInterface(), &Latte::ViewPart::ContainmentInterface::appletDropped, this->extendedInterface(), [&](QObject *data, int x, int y) {
         extendedInterface()->addApplet(data, x, y);

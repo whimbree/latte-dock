@@ -104,7 +104,7 @@ private:
 int main(int argc, char **argv)
 {
     QCoreApplication application(argc, argv);
-    const QDBusConnection bus = QDBusConnection::sessionBus();
+    QDBusConnection bus = QDBusConnection::sessionBus();
     if (!bus.registerService(QStringLiteral("org.freedesktop.Notifications"))) {
         qCritical() << "fake notification service: could not own org.freedesktop.Notifications:"
                     << bus.lastError().message();

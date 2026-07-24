@@ -1039,7 +1039,6 @@ ContainmentItem {
         layouts: layoutsContainer
         layouter: _layouter
         metrics: _metrics
-        parabolic: _parabolic
         view: latteView
         visibility: visibilityManager
     }
@@ -1077,7 +1076,7 @@ ContainmentItem {
 
     Ability.Metrics {
         id: _metrics
-        availablePrimaryLength: root.maxLength
+        availablePrimaryLength: _layouter.contentsMaxLength
         animations: _animations
         autosize: _autosize
         background: _background

@@ -1,6 +1,7 @@
 /*
     SPDX-FileCopyrightText: 2016 Smith AR <audoban@openmailbox.org>
     SPDX-FileCopyrightText: 2016 Michail Vourlakos <mvourlakos@gmail.com>
+    SPDX-FileCopyrightText: 2026 Bree Spektor
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
@@ -111,6 +112,15 @@ Item{
     property bool animationSent: false
     property bool shouldCheckHalfs: (Plasmoid.configuration.alignment === LatteCore.Types.Justify) && (_mainLayout.children>1)
 
+    function registerLengthAnimation() : void {
+        if (layoutsContainer.animationSent) {
+            return;
+        }
+
+        layoutsContainer.animationSent = true;
+        animations.needLength.addEvent(layoutsContainer);
+    }
+
     property int contentsWidth: root.isHorizontal ? _startLayout.width + _mainLayout.width + _endLayout.width :
                                                     Math.max(_startLayout.width, _mainLayout.width ,_endLayout.width)
     property int contentsHeight: root.isVertical ? _startLayout.height + _mainLayout.height + _endLayout.height :
@@ -215,10 +225,7 @@ Item{
                 autosize.updateIconSize();
             }
 
-            if (!animationSent) {
-                animationSent = true;
-                animations.needLength.addEvent(layoutsContainer);
-            }
+            layoutsContainer.registerLengthAnimation();
 
             contentsLengthChanged();
 
@@ -240,10 +247,7 @@ Item{
                 autosize.updateIconSize();
             }
 
-            if (!animationSent) {
-                animationSent = true;
-                animations.needLength.removeEvent(layoutsContainer);
-            }
+            layoutsContainer.registerLengthAnimation();
 
             contentsLengthChanged();
 
@@ -299,7 +303,10 @@ Item{
                 return background.offset + lengthTailPadding;
             }
 
-            return (root.myView.alignment === LatteCore.Types.Justify) ? inJustifyCenterOffset : background.offset - parabolicOffsetting
+            //! The applet row owns the configured placement offset. The
+            //! background adds and bounds parabolic presentation movement
+            //! independently, so its visual clamp must never move content.
+            return (root.myView.alignment === LatteCore.Types.Justify) ? inJustifyCenterOffset : root.offset
         }
 
         ignoredLength: startParabolicSpacer.length + endParabolicSpacer.length
